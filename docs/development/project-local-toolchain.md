@@ -74,6 +74,27 @@ which python
 
 which should resolve to the repository's `.venv/bin/python`.
 
+### Preserve the virtual-environment launcher path
+
+On Unix, `.venv/bin/python` is often a symlink to the base interpreter used to create the environment. That symlink path is significant because Python uses the virtual-environment layout and `pyvenv.cfg` to establish `sys.prefix` and discover the environment's installed packages.
+
+Do **not** canonicalize the launcher before passing it to another process:
+
+```bash
+# Correct
+SCHOLION_PYTHON="../.venv/bin/python" npm run tauri dev
+
+# Also correct when an absolute spelling is useful
+SCHOLION_PYTHON="$(pwd)/../.venv/bin/python" npm run tauri dev
+
+# Wrong: may dereference the venv launcher into uv's/base Python runtime
+SCHOLION_PYTHON="$(realpath ../.venv/bin/python)" npm run tauri dev
+```
+
+Likewise, avoid `readlink -f` on the venv Python executable. Dereferencing the final symlink can bypass the application environment and produce `ModuleNotFoundError: No module named 'scholion'` even though `.venv` itself is healthy.
+
+For normal debug source builds, no `SCHOLION_PYTHON` override is required: the Tauri host already prefers the repository `.venv` when it exists.
+
 ## Bootstrap on Windows PowerShell
 
 From the repository root:

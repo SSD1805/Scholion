@@ -74,6 +74,27 @@ def test_stdio_bridge_runs_only_valid_bounded_json_and_keeps_diagnostics_off_std
     assert "diagnostic from application service" in stderr
 
 
+def test_stdio_bridge_normalizes_unexpected_handler_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def handler(_payload: object) -> dict[str, object]:
+        raise RuntimeError("private implementation detail")
+
+    response, stderr = _run(
+        monkeypatch,
+        b'{"request_id":"r-bootstrap"}',
+        handler,
+    )
+
+    assert response == failure_response(
+        "r-bootstrap",
+        code="internal_error",
+        message="Scholion could not initialize the local desktop service",
+    )
+    assert stderr == ""
+    assert "private implementation detail" not in json.dumps(response)
+
+
 def test_stdio_bridge_rejects_invalid_json_before_dispatch(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:

@@ -42,6 +42,15 @@ def failure_response(request_id: str, *, code: str, message: str) -> BridgeRespo
     }
 
 
+def _request_id(payload: object) -> str:
+    if not isinstance(payload, dict):
+        return "unknown"
+    value = payload.get("request_id")
+    if not isinstance(value, str) or not value:
+        return "unknown"
+    return value[:128]
+
+
 def run_stdio_bridge(
     handler: BridgeHandler,
     *,
@@ -52,7 +61,8 @@ def run_stdio_bridge(
 
     ``handler`` remains bridge-specific. Constructing services inside it happens while
     stdout is redirected to stderr so application diagnostics cannot corrupt the single
-    JSON response expected by the Rust host.
+    JSON response expected by the Rust host. Unexpected handler/bootstrap failures are
+    normalized into one bounded protocol response instead of crashing the Python process.
     """
     raw = sys.stdin.buffer.read(MAX_REQUEST_BYTES + 1)
     if len(raw) > MAX_REQUEST_BYTES:
@@ -71,8 +81,15 @@ def run_stdio_bridge(
                 message=invalid_json_message,
             )
         else:
-            with redirect_stdout(sys.stderr):
-                response = handler(payload)
+            try:
+                with redirect_stdout(sys.stderr):
+                    response = handler(payload)
+            except Exception:
+                response = failure_response(
+                    _request_id(payload),
+                    code="internal_error",
+                    message="Scholion could not initialize the local desktop service",
+                )
 
     sys.stdout.write(json.dumps(response, sort_keys=True))
     sys.stdout.write("\n")

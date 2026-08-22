@@ -70,14 +70,19 @@ function looksLikePath(value) {
   return isAbsolute(value) || value.includes("/") || value.includes("\\");
 }
 
+function pythonBootstrapRemedy(source) {
+  const bootstrap = "From the repository root run: python3.12 scripts/bootstrap_python.py";
+  return source === "SCHOLION_PYTHON"
+    ? `Fix or unset SCHOLION_PYTHON. ${bootstrap}`
+    : bootstrap;
+}
+
 function checkPythonBackend(command, source) {
   if (looksLikePath(command) && !existsSync(command)) {
     fail(
       "Python backend",
       `${source} points to a file that does not exist: ${command}`,
-      source === "SCHOLION_PYTHON"
-        ? "Fix or unset SCHOLION_PYTHON, or create the repository environment with: uv sync --locked --extra transcription"
-        : "From the repository root run: uv sync --locked --extra transcription",
+      pythonBootstrapRemedy(source),
     );
     return;
   }
@@ -97,9 +102,7 @@ function checkPythonBackend(command, source) {
   fail(
     "Python backend",
     detail,
-    source === "SCHOLION_PYTHON"
-      ? "Fix or unset SCHOLION_PYTHON, or create the repository environment with: uv sync --locked --extra transcription"
-      : "From the repository root run: uv sync --locked --extra transcription",
+    pythonBootstrapRemedy(source),
   );
 }
 
@@ -215,7 +218,7 @@ if (mode === "mock") {
     fail(
       "Python backend",
       "the repository .venv is missing",
-      "From the repository root run: uv sync --locked --extra transcription",
+      pythonBootstrapRemedy("repository .venv"),
     );
   }
 
