@@ -45,10 +45,19 @@ export interface ProcessingModel {
   verification: string | null;
 }
 
+export interface ProcessingCapability {
+  available: boolean;
+  reason_code: string | null;
+  message: string | null;
+}
+
 export interface ProcessingReadiness {
   health: {
     status: "healthy" | "degraded" | "unhealthy";
     checks: ProcessingHealthCheck[];
+  };
+  capabilities: {
+    speaker_labeling: ProcessingCapability;
   };
   resources: {
     platform: string;
@@ -413,6 +422,7 @@ class MockProcessingClient implements ProcessingClient {
 
   async readiness(profile: ProcessingProfile): Promise<ProcessingReadiness> {
     const recommendedModel = profile === "screening" ? "tiny" : profile === "accuracy" ? "medium" : "small";
+    const speakerLabelingHeld = new URLSearchParams(window.location.search).get("speaker-labeling-held") === "1";
     return {
       health: {
         status: "healthy",
@@ -421,6 +431,15 @@ class MockProcessingClient implements ProcessingClient {
           { check_id: "ffmpeg", status: "pass", summary: "FFmpeg and FFprobe are available", required: true, error_code: null },
           { check_id: "system_resources", status: "pass", summary: "Local resources are available", required: true, error_code: null },
         ],
+      },
+      capabilities: {
+        speaker_labeling: speakerLabelingHeld
+          ? {
+              available: false,
+              reason_code: "security_hold",
+              message: "Speaker labeling is temporarily unavailable because a local dependency does not meet Scholion's security requirement.",
+            }
+          : { available: true, reason_code: null, message: null },
       },
       resources: {
         platform: "Linux",
