@@ -131,6 +131,8 @@ export interface ProcessingTaskStatus {
   task_id: string;
   state: "running" | "completed" | "failed" | "cancelled";
   exit_code: number | null;
+  error_code: string | null;
+  error_message: string | null;
 }
 
 export interface PreflightOptions {
@@ -565,6 +567,8 @@ class MockProcessingClient implements ProcessingClient {
     if (!task) throw new Error("Unknown processing task");
     task.state = "cancelled";
     task.exit_code = null;
+    task.error_code = null;
+    task.error_message = null;
     return { ...task };
   }
 
@@ -574,6 +578,8 @@ class MockProcessingClient implements ProcessingClient {
       task_id: `mock-task-${this.taskCounter}`,
       state: "running",
       exit_code: null,
+      error_code: null,
+      error_message: null,
     };
     this.tasks.set(status.task_id, status);
     return { ...status };
