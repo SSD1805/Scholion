@@ -1,5 +1,6 @@
 # Virtual environments
 .venv/         # In case `.venv` accidentally appears locally
+.tools/        # Project-local developer tool bootstrap (for example uv)
 
 # Pre-commit cache
 .pre-commit/
