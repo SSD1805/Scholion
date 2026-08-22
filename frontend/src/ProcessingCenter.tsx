@@ -204,6 +204,29 @@ export function ProcessingCenter({
   }, [refresh]);
 
   useEffect(() => {
+    if (readiness?.capabilities.speaker_labeling.available !== false) return;
+    setExecution((current) => {
+      if (
+        !current.diarize &&
+        !current.allowDiarizationModelDownload &&
+        current.speakers === null &&
+        current.minSpeakers === null &&
+        current.maxSpeakers === null
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        diarize: false,
+        allowDiarizationModelDownload: false,
+        speakers: null,
+        minSpeakers: null,
+        maxSpeakers: null,
+      };
+    });
+  }, [readiness]);
+
+  useEffect(() => {
     if (!task || task.state !== "running") return undefined;
     const timer = window.setInterval(() => {
       void processing
@@ -240,6 +263,7 @@ export function ProcessingCenter({
     () => readiness?.strategies.filter((strategy) => strategy.feasible) ?? [],
     [readiness],
   );
+  const speakerLabeling = readiness?.capabilities.speaker_labeling ?? null;
 
   const preflightOptions: PreflightOptions = {
     profile,
@@ -763,12 +787,20 @@ export function ProcessingCenter({
               <label className="checkbox-row">
                 <input
                   type="checkbox"
-                  checked={execution.diarize}
+                  checked={execution.diarize && speakerLabeling?.available === true}
+                  disabled={busy || speakerLabeling?.available !== true}
                   onChange={(event) => setExecution((current) => ({ ...current, diarize: event.target.checked, allowDiarizationModelDownload: event.target.checked ? current.allowDiarizationModelDownload : false }))}
                 />
-                <span><strong>Label speakers automatically</strong><small>Adds recording-specific labels such as Speaker 1 and Speaker 2 after transcription.</small></span>
+                <span>
+                  <strong>Label speakers automatically</strong>
+                  <small>
+                    {speakerLabeling?.available
+                      ? "Adds recording-specific labels such as Speaker 1 and Speaker 2 after transcription."
+                      : speakerLabeling?.message ?? "Checking whether local speaker labeling is available."}
+                  </small>
+                </span>
               </label>
-              {execution.diarize && (
+              {execution.diarize && speakerLabeling?.available === true && (
                 <label className="checkbox-row">
                   <input
                     type="checkbox"
