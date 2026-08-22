@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from io import BytesIO
 from pathlib import Path
 from types import SimpleNamespace
@@ -9,6 +10,7 @@ import pytest
 
 from scholion.desktop import processing_worker as worker
 from scholion.runner.models import ProcessingProfile
+from scholion.transcription.errors import DiarizationDependencyError
 from scholion.transcription.export import TranscriptExportFormat
 from scholion.workspace.models import JobId
 
@@ -325,19 +327,24 @@ def _stdin(monkeypatch: pytest.MonkeyPatch, payload: bytes) -> None:
 
 def test_main_rejects_oversized_invalid_and_validation_payloads(
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     _stdin(monkeypatch, b"x" * (worker._MAX_TASK_BYTES + 1))
     assert worker.main() == 2
+    assert json.loads(capsys.readouterr().out)["error"]["code"] == "invalid_task"
 
     _stdin(monkeypatch, b"not-json")
     assert worker.main() == 2
+    assert json.loads(capsys.readouterr().out)["error"]["code"] == "invalid_task"
 
     _stdin(monkeypatch, b"{}")
     assert worker.main() == 2
+    assert json.loads(capsys.readouterr().out)["error"]["code"] == "invalid_task"
 
 
 def test_main_maps_success_interrupt_and_unexpected_failure(
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     payload = b'{"task_id":"task","kind":"model_install","model_id":"small"}'
     monkeypatch.setattr(worker, "AppContainer", lambda: cast(Any, object()))
@@ -345,6 +352,11 @@ def test_main_maps_success_interrupt_and_unexpected_failure(
     _stdin(monkeypatch, payload)
     monkeypatch.setattr(worker, "run_task", lambda value, container: None)
     assert worker.main() == 0
+    assert json.loads(capsys.readouterr().out) == {
+        "error": None,
+        "ok": True,
+        "protocol_version": 1,
+    }
 
     _stdin(monkeypatch, payload)
 
@@ -353,6 +365,7 @@ def test_main_maps_success_interrupt_and_unexpected_failure(
 
     monkeypatch.setattr(worker, "run_task", interrupt)
     assert worker.main() == 130
+    assert json.loads(capsys.readouterr().out)["error"]["code"] == "cancelled"
 
     _stdin(monkeypatch, payload)
 
@@ -361,3 +374,33 @@ def test_main_maps_success_interrupt_and_unexpected_failure(
 
     monkeypatch.setattr(worker, "run_task", explode)
     assert worker.main() == 1
+    unknown = json.loads(capsys.readouterr().out)
+    assert unknown["error"] == {
+        "code": "internal_error",
+        "message": "Local processing did not complete successfully",
+    }
+    assert "private internal failure" not in json.dumps(unknown)
+
+
+def test_main_emits_only_public_scholion_error(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    payload = b'{"task_id":"task","kind":"model_install","model_id":"small"}'
+    monkeypatch.setattr(worker, "AppContainer", lambda: cast(Any, object()))
+    _stdin(monkeypatch, payload)
+
+    def unavailable(value: object, container: object) -> None:
+        raise DiarizationDependencyError(
+            "Speaker labeling is unavailable in this build",
+            cause=RuntimeError("private dependency detail"),
+        )
+
+    monkeypatch.setattr(worker, "run_task", unavailable)
+    assert worker.main() == 2
+    outcome = json.loads(capsys.readouterr().out)
+    assert outcome["error"] == {
+        "code": "diarization_dependency_unavailable",
+        "message": "Speaker labeling is unavailable in this build",
+    }
+    assert "private dependency detail" not in json.dumps(outcome)
