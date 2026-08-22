@@ -80,7 +80,9 @@ export async function invokeNativeProtocol<T>(
       },
     });
   } catch (caught) {
-    throw new Error(nativeInvokeErrorMessage(caught, messages.failure));
+    throw new Error(nativeInvokeErrorMessage(caught, messages.failure), {
+      cause: caught,
+    });
   }
 
   const response = parseNativeProtocolResponse<T>(rawResponse, messages);
