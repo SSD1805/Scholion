@@ -6,6 +6,7 @@ This area explains how Scholion turns architecture claims into failing tests ins
 
 | Page | What it is for |
 |---|---|
+| [Project-local developer toolchain](project-local-toolchain.md) | isolated `.tools/uv`, `.venv`, lockfile ownership, stale-environment recovery, no required system-wide uv |
 | [Desktop development prerequisites](desktop-development.md) | browser mock, native Tauri, real processing, Node/Rust/Python/native prerequisites |
 | [Desktop source-build troubleshooting](troubleshooting.md) | symptom-first recovery for Tauri/Python/WebKitGTK/Wayland/port failures and safe cleanup |
 | [Desktop themes and accessibility](desktop-accessibility.md) | semantic theme contract, eight skins, contrast/native-control rules, adding a skin safely |
@@ -84,6 +85,8 @@ The frontend currently does not use Stryker. That is deliberate: decision-heavy 
 A new interactive desktop slice should normally include semantic-role/keyboard assertions, an axe pass, positive behavior, at least one meaningful negative/boundary case, and path/capability assertions when sensitive local state is involved.
 
 Theme-aware components inherit the shared registry-driven contrast matrix. Do not create a private palette test for every component.
+
+Mock-browser coverage is not native transport coverage. Any release-critical path that crosses React → Tauri → Rust → Python must also have a native integration/representative-device qualification path; `?e2e=1` intentionally replaces the real native client and therefore cannot prove that IPC/process wiring works on an installed machine.
 
 ## Performance qualification
 
