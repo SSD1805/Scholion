@@ -8,6 +8,7 @@ This area explains how Scholion turns architecture claims into failing tests ins
 |---|---|
 | [Project-local developer toolchain](project-local-toolchain.md) | isolated `.tools/uv`, `.venv`, lockfile ownership, stale-environment recovery, no required system-wide uv |
 | [Native Processing diagnostics](native-processing-diagnostics.md) | isolate Processing failures across React, Tauri, Rust, Python, Wayland, and interpreter selection |
+| [Native release qualification checklist](release-native-checklist.md) | real-device React → Tauri → Rust → Python qualification across supported OSes |
 | [Desktop development prerequisites](desktop-development.md) | browser mock, native Tauri, real processing, Node/Rust/Python/native prerequisites |
 | [Desktop source-build troubleshooting](troubleshooting.md) | symptom-first recovery for Tauri/Python/WebKitGTK/Wayland/port failures and safe cleanup |
 | [Pre-release security hardening](../security/release-hardening.md) | signed manifests/updates/models, parser/process isolation, keychain, and application-layer encryption sequencing |
