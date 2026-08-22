@@ -1,12 +1,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::io::Write;
+use std::io::{Read, Write};
 use std::process::{Child, Command, ExitStatus, Stdio};
 use std::sync::Mutex;
 use tauri::State;
 
 const MAX_TASK_BYTES: usize = 64 * 1024;
+const MAX_TASK_RESULT_BYTES: usize = 8 * 1024;
+const WORKER_PROTOCOL_VERSION: u8 = 1;
 
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -24,17 +26,34 @@ struct TaskEnvelope {
     kind: TaskKind,
 }
 
+#[derive(Debug, Deserialize)]
+struct WorkerError {
+    code: String,
+    message: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct WorkerOutcome {
+    protocol_version: u8,
+    ok: bool,
+    error: Option<WorkerError>,
+}
+
 #[derive(Clone, Serialize)]
 pub struct TaskStatus {
     task_id: String,
     state: &'static str,
     exit_code: Option<i32>,
+    error_code: Option<String>,
+    error_message: Option<String>,
 }
 
 struct ProcessEntry {
     child: Option<Child>,
     state: &'static str,
     exit_code: Option<i32>,
+    error_code: Option<String>,
+    error_message: Option<String>,
 }
 
 impl ProcessEntry {
@@ -43,6 +62,8 @@ impl ProcessEntry {
             child: Some(child),
             state: "running",
             exit_code: None,
+            error_code: None,
+            error_message: None,
         }
     }
 
@@ -60,12 +81,22 @@ impl ProcessEntry {
     }
 
     fn finish(&mut self, status: ExitStatus) {
+        let outcome = self.child.as_mut().and_then(read_worker_outcome);
         self.exit_code = status.code();
-        self.state = if status.success() {
+        self.state = if status.success() && outcome.as_ref().is_none_or(|item| item.ok) {
             "completed"
         } else {
             "failed"
         };
+        if self.state == "failed" {
+            if let Some(error) = outcome.and_then(|item| item.error) {
+                self.error_code = Some(error.code);
+                self.error_message = Some(error.message);
+            } else {
+                self.error_code = Some("worker_failed".to_string());
+                self.error_message = Some("Local processing stopped before completion".to_string());
+            }
+        }
         self.child = None;
     }
 
@@ -74,8 +105,25 @@ impl ProcessEntry {
             task_id: task_id.to_string(),
             state: self.state,
             exit_code: self.exit_code,
+            error_code: self.error_code.clone(),
+            error_message: self.error_message.clone(),
         }
     }
+}
+
+fn read_worker_outcome(child: &mut Child) -> Option<WorkerOutcome> {
+    let stdout = child.stdout.take()?;
+    let mut bounded = stdout.take((MAX_TASK_RESULT_BYTES + 1) as u64);
+    let mut bytes = Vec::new();
+    bounded.read_to_end(&mut bytes).ok()?;
+    if bytes.len() > MAX_TASK_RESULT_BYTES {
+        return None;
+    }
+    let outcome: WorkerOutcome = serde_json::from_slice(&bytes).ok()?;
+    if outcome.protocol_version != WORKER_PROTOCOL_VERSION {
+        return None;
+    }
+    Some(outcome)
 }
 
 #[derive(Default)]
@@ -151,7 +199,7 @@ pub async fn processing_start_task(
     let mut child = Command::new(crate::backend::configured_python())
         .args(["-m", "scholion.desktop.processing_worker"])
         .stdin(Stdio::piped())
-        .stdout(Stdio::null())
+        .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
         .map_err(|_| python_unavailable_message())?;
@@ -217,6 +265,8 @@ pub async fn processing_cancel_task(
         })?;
         entry.exit_code = status.code();
         entry.state = "cancelled";
+        entry.error_code = None;
+        entry.error_message = None;
         entry.child = None;
     }
     Ok(entry.status(&task_id))
