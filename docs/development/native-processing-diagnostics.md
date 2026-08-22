@@ -90,26 +90,38 @@ WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run tauri dev
 
 Do not make the workaround a global environment setting.
 
+In a debug source build, Rust automatically prefers the repository `.venv` interpreter when `../.venv/bin/python` (or the Windows equivalent) exists. An explicit `SCHOLION_PYTHON` override is normally unnecessary.
+
 ## 5. Force the known repository interpreter for one launch
 
-macOS/Linux:
+Only use an override when diagnosing interpreter selection.
+
+On macOS/Linux, preserve the `.venv/bin/python` path itself:
 
 ```bash
-SCHOLION_PYTHON="$(realpath ../.venv/bin/python)" npm run tauri dev
+SCHOLION_PYTHON="../.venv/bin/python" npm run tauri dev
 ```
 
 Linux/Wayland when the DMABUF workaround is also required:
 
 ```bash
 WEBKIT_DISABLE_DMABUF_RENDERER=1 \
-SCHOLION_PYTHON="$(realpath ../.venv/bin/python)" \
+SCHOLION_PYTHON="../.venv/bin/python" \
 npm run tauri dev
 ```
 
-PowerShell:
+If an absolute path is useful, construct it without resolving the final `python` symlink:
+
+```bash
+SCHOLION_PYTHON="$(pwd)/../.venv/bin/python" npm run tauri dev
+```
+
+**Do not run `realpath` or `readlink -f` on `.venv/bin/python`.** On Unix, virtual-environment launchers are commonly symlinks to a base interpreter. Resolving that symlink first can turn the command into the underlying uv/Python runtime path, bypass the virtual environment's `pyvenv.cfg`, and make `python -m scholion...` fail with `ModuleNotFoundError` even though `.venv` itself is healthy.
+
+PowerShell can use the repository path directly:
 
 ```powershell
-$env:SCHOLION_PYTHON = (Resolve-Path ..\.venv\Scripts\python.exe)
+$env:SCHOLION_PYTHON = "..\.venv\Scripts\python.exe"
 npm.cmd run tauri dev
 ```
 
@@ -128,6 +140,14 @@ Debug builds log a narrow lifecycle line for each Python bridge request. The log
 It deliberately does **not** log request params, evidence paths, transcript text, or model/source contents.
 
 A successful request should show a `bridge start` line followed by `bridge finish`. If start appears without finish, the Python child did not return. If finish appears and a `bridge parse failure` follows, the child returned bytes that were not one valid protocol JSON response.
+
+If every bridge exits immediately with status 1, `stdout_bytes=0`, and a small nonzero stderr after an explicit `SCHOLION_PYTHON` override, first run:
+
+```bash
+"$SCHOLION_PYTHON" -c "import sys, scholion; print(sys.executable); print(sys.prefix); print(scholion.__file__)"
+```
+
+An import failure means the selected executable is not entering Scholion's application environment. Remove the override and let the debug host select the repository `.venv`, or point the override at `.venv/bin/python` without resolving symlinks.
 
 ## 7. Processing-specific behavior
 
