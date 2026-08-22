@@ -6,8 +6,12 @@ This area explains how Scholion turns architecture claims into failing tests ins
 
 | Page | What it is for |
 |---|---|
+| [Project-local developer toolchain](project-local-toolchain.md) | isolated `.tools/uv`, `.venv`, lockfile ownership, stale-environment recovery, no required system-wide uv |
+| [Native Processing diagnostics](native-processing-diagnostics.md) | isolate Processing failures across React, Tauri, Rust, Python, Wayland, and interpreter selection |
+| [Native release qualification checklist](release-native-checklist.md) | real-device React → Tauri → Rust → Python qualification across supported OSes |
 | [Desktop development prerequisites](desktop-development.md) | browser mock, native Tauri, real processing, Node/Rust/Python/native prerequisites |
 | [Desktop source-build troubleshooting](troubleshooting.md) | symptom-first recovery for Tauri/Python/WebKitGTK/Wayland/port failures and safe cleanup |
+| [Pre-release security hardening](../security/release-hardening.md) | signed manifests/updates/models, parser/process isolation, keychain, and application-layer encryption sequencing |
 | [Desktop themes and accessibility](desktop-accessibility.md) | semantic theme contract, eight skins, contrast/native-control rules, adding a skin safely |
 | [Frontend testing strategy](frontend-testing.md) | frontend/backend test ownership, Processing/Library/Research/transcript-tools coverage, and why Stryker is not currently a routine tool |
 | [Testing and regression bisection](testing-and-bisect.md) | repository-wide test strategy, colocation, mutation anticipation, deterministic bisect oracles |
@@ -84,6 +88,8 @@ The frontend currently does not use Stryker. That is deliberate: decision-heavy 
 A new interactive desktop slice should normally include semantic-role/keyboard assertions, an axe pass, positive behavior, at least one meaningful negative/boundary case, and path/capability assertions when sensitive local state is involved.
 
 Theme-aware components inherit the shared registry-driven contrast matrix. Do not create a private palette test for every component.
+
+Mock-browser coverage is not native transport coverage. Any release-critical path that crosses React → Tauri → Rust → Python must also have a native integration/representative-device qualification path; `?e2e=1` intentionally replaces the real native client and therefore cannot prove that IPC/process wiring works on an installed machine.
 
 ## Performance qualification
 

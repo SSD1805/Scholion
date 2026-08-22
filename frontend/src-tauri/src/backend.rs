@@ -30,7 +30,7 @@ pub(crate) fn configured_python() -> PathBuf {
 
 fn python_unavailable_message() -> String {
     if cfg!(debug_assertions) {
-        "Scholion's local Python service is unavailable. From the repository root run `uv sync --locked --extra transcription`, or set SCHOLION_PYTHON to a compatible interpreter."
+        "Scholion's local Python service is unavailable. From the repository root run `python3.12 scripts/bootstrap_python.py`, or set SCHOLION_PYTHON to a compatible interpreter."
             .to_string()
     } else {
         "Scholion's local Python service is unavailable".to_string()
@@ -46,14 +46,30 @@ fn python_exit_message() -> String {
     }
 }
 
+fn request_method(request: &Value) -> &str {
+    request
+        .get("method")
+        .and_then(Value::as_str)
+        .unwrap_or("<unknown>")
+}
+
 fn run_python_request(module: &'static str, request: Value) -> Result<Value, String> {
+    let method = request_method(&request).to_string();
     let encoded =
         serde_json::to_vec(&request).map_err(|_| "Could not encode desktop request".to_string())?;
     if encoded.len() > MAX_REQUEST_BYTES {
         return Err("Desktop request exceeded the safe size limit".to_string());
     }
 
-    let mut child = Command::new(configured_python())
+    let python = configured_python();
+    if cfg!(debug_assertions) {
+        eprintln!(
+            "[scholion-desktop] bridge start module={module} method={method} python={}",
+            python.display()
+        );
+    }
+
+    let mut child = Command::new(&python)
         .args(["-m", module])
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
@@ -73,12 +89,30 @@ fn run_python_request(module: &'static str, request: Value) -> Result<Value, Str
     let output = child
         .wait_with_output()
         .map_err(|_| "Scholion's local Python service did not finish cleanly".to_string())?;
+
+    if cfg!(debug_assertions) {
+        eprintln!(
+            "[scholion-desktop] bridge finish module={module} method={method} status={} stdout_bytes={} stderr_bytes={}",
+            output.status,
+            output.stdout.len(),
+            output.stderr.len()
+        );
+    }
+
     if !output.status.success() {
         return Err(python_exit_message());
     }
 
-    serde_json::from_slice(&output.stdout)
-        .map_err(|_| "Scholion's local Python service returned an invalid response".to_string())
+    serde_json::from_slice(&output.stdout).map_err(|_| {
+        if cfg!(debug_assertions) {
+            eprintln!(
+                "[scholion-desktop] bridge parse failure module={module} method={method} stdout_bytes={} stderr_bytes={}",
+                output.stdout.len(),
+                output.stderr.len()
+            );
+        }
+        "Scholion's local Python service returned an invalid response".to_string()
+    })
 }
 
 async fn request_module(module: &'static str, request: Value) -> Result<Value, String> {
