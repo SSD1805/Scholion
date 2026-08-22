@@ -23,6 +23,9 @@ interface ProcessingCenterProps {
   onThemeChange: (theme: Theme) => void;
 }
 
+const READINESS_TIMEOUT_MS = 15_000;
+const SECONDARY_REFRESH_TIMEOUT_MS = 15_000;
+
 const PROFILE_COPY: Record<
   ProcessingProfile,
   { label: string; detail: string }
@@ -91,6 +94,28 @@ function deviceLabel(device: string): string {
   return device.toUpperCase();
 }
 
+function errorMessage(caught: unknown, fallback: string): string {
+  if (caught instanceof Error && caught.message.trim()) return caught.message;
+  if (typeof caught === "string" && caught.trim()) return caught;
+  return fallback;
+}
+
+async function withTimeout<T>(
+  operation: Promise<T>,
+  timeoutMs: number,
+  message: string,
+): Promise<T> {
+  let timeoutId: number | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = window.setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+  try {
+    return await Promise.race([operation, timeout]);
+  } finally {
+    if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+  }
+}
+
 function defaultExecutionOptions(): ExecutionOptions {
   return {
     diarize: false,
@@ -130,18 +155,31 @@ export function ProcessingCenter({
   const [error, setError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
-    const [nextReadiness, nextJobs] = await Promise.all([
+    const nextReadiness = await withTimeout(
       processing.readiness(profile),
-      processing.jobs(),
-    ]);
+      READINESS_TIMEOUT_MS,
+      "Scholion's local processing service did not answer the machine check within 15 seconds.",
+    );
     setReadiness(nextReadiness);
-    setJobs(nextJobs);
-    try {
-      const discovered = await client.discoverRecordings();
-      setRecordings(discovered.recordings);
-    } catch {
-      setRecordings([]);
-    }
+
+    void withTimeout(
+      processing.jobs(),
+      SECONDARY_REFRESH_TIMEOUT_MS,
+      "Previous transcription jobs did not load within 15 seconds.",
+    )
+      .then(setJobs)
+      .catch((caught) => {
+        setJobs([]);
+        setError(errorMessage(caught, "Scholion could not load previous transcription jobs."));
+      });
+
+    void withTimeout(
+      client.discoverRecordings(),
+      SECONDARY_REFRESH_TIMEOUT_MS,
+      "Remembered recording locations did not finish checking within 15 seconds.",
+    )
+      .then((discovered) => setRecordings(discovered.recordings))
+      .catch(() => setRecordings([]));
   }, [client, processing, profile]);
 
   useEffect(() => {
@@ -149,10 +187,12 @@ export function ProcessingCenter({
     setError(null);
     void refresh()
       .catch((caught) => {
+        setReadiness(null);
         setError(
-          caught instanceof Error
-            ? caught.message
-            : "Scholion could not check this computer for local transcription.",
+          errorMessage(
+            caught,
+            "Scholion could not check this computer for local transcription.",
+          ),
         );
       })
       .finally(() => setBusy(false));
