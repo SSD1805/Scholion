@@ -5,11 +5,13 @@ import subprocess
 import sys
 from pathlib import Path
 
-UV_VERSION = "0.12.5"
+UV_VERSION = "0.11.33"
 
 
 def run(*args: str, cwd: Path | None = None) -> None:
-    subprocess.run(args, cwd=cwd, check=True)
+    # Every executable/argument is constructed from repository-controlled paths and
+    # fixed literals; no shell is involved and no user-provided command is executed.
+    subprocess.run(args, cwd=cwd, check=True)  # noqa: S603
 
 
 def main() -> int:
