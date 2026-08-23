@@ -76,7 +76,8 @@ class ModelManager:
             raise
         except Exception as exc:
             raise ModelManagementError(
-                "The selected model could not be downloaded and verified", cause=exc
+                "The selected model could not be downloaded and locally validated",
+                cause=exc,
             ) from exc
         manifest = ManagedModelManifest(
             schema_version=1,
@@ -122,7 +123,7 @@ class ModelManager:
         return self.resolved_revision(model_id) is not None
 
     def resolved_revision(self, model_id: str) -> str | None:
-        """Return the verified managed revision without network access or writes."""
+        """Return the locally revalidated managed revision without network access or writes."""
         self.catalog.require(model_id)
         manifest = self._manifest(model_id)
         return None if manifest is None else manifest.resolved_revision
