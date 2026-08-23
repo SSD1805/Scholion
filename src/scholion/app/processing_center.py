@@ -15,6 +15,7 @@ from scholion.runner.topology import (
     HardwareTopologyInspector,
     NvidiaSmiAcceleratorProbe,
 )
+from scholion.transcription.diarization_status import diarization_runtime_status
 from scholion.transcription.models import TranscriptionJobPlan
 from scholion.transcription.planner import TranscriptionJobPlanner
 from scholion.workspace.lifecycle import (
@@ -208,6 +209,7 @@ class ProcessingCenterService:
             None,
         )
         inventory = self.model_manager.inventory()
+        speaker_labeling = diarization_runtime_status()
         recommended_model: str | None = None
         recommended_installed = False
         if recommended is not None:
@@ -230,6 +232,9 @@ class ProcessingCenterService:
                     }
                     for check in health.checks
                 ],
+            },
+            "capabilities": {
+                "speaker_labeling": speaker_labeling.to_dict(),
             },
             "resources": {
                 "platform": resources.platform,
