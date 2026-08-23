@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import json
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -83,7 +84,7 @@ def _parse_utc_timestamp(value: str, field: str) -> datetime:
 def _decode_base64(value: str, field: str) -> bytes:
     try:
         return base64.b64decode(value, validate=True)
-    except (ValueError, base64.binascii.Error) as exc:
+    except (ValueError, binascii.Error) as exc:
         raise UpdateTrustError(f"{field} must be valid base64") from exc
 
 
@@ -241,6 +242,8 @@ def verify_signed_update_manifest(
         raise UpdateTrustError("update manifest signature verification failed")
 
     payload = UpdateManifestPayload.from_bytes(envelope.payload)
+    if now.tzinfo is None:
+        raise UpdateTrustError("current time must include a timezone")
     resolved_now = now.astimezone(timezone.utc)
     if payload.expires_at <= resolved_now:
         raise UpdateTrustError("update metadata has expired")
