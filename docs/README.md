@@ -12,7 +12,7 @@ You do **not** need to understand CUDA, DuckDB, SQLite, BM25, model revisions, o
 
 | You want to… | Scholion currently… |
 |---|---|
-| Transcribe privately | runs faster-whisper locally from a verified managed model |
+| Transcribe privately | runs faster-whisper locally from a model you explicitly install and Scholion revalidates locally before use |
 | Avoid melting a smaller laptop | inspects effective CPU/RAM and compatible acceleration before choosing a strategy |
 | Process from the desktop | provides readiness, model state, preflight, supervised start/cancel, progress, resume versus retry, and private-state discard |
 | Survive interruption | checkpoints completed work and validates the original contract on resume |
@@ -38,6 +38,14 @@ You do **not** need to understand CUDA, DuckDB, SQLite, BM25, model revisions, o
 | Understand an unfamiliar screen | keeps re-openable, keyboard/touch-accessible contextual help in the app instead of relying on hover-only tips |
 | Change appearance | offers Archive, Midnight, Paper, Moss, Plum, Ember, Pride, and Monochrome through one accessible Theme picker |
 
+### Model trust in plain language
+
+Today, model installation is explicit. Scholion records the immutable provider revision it received, keeps that managed state local, and revalidates the expected local snapshot structure before using the model. That is **not yet the same thing** as Scholion policy approving an exact upstream revision and every byte by cryptographic hash.
+
+The stronger supply-chain contract tracked in issue #110 adds that policy layer: a signed Scholion release carries the curated model policy, installs request the exact approved upstream revision, and the downloaded file set, sizes, and SHA-256 values must match before the model can be called policy-trusted. Hugging Face remains transport, not the trust authority.
+
+Ordinary product copy should explain consequences such as “downloads only when you choose,” “stays on this computer,” and “works offline after installation.” Repository/source/revision/hash details belong under technical details or the security documentation rather than in the main workflow.
+
 ## Pick your doorway
 
 - **[Getting started](getting-started.md)** for the source-build path, desktop path, and first transcript.
@@ -54,6 +62,7 @@ You do **not** need to understand CUDA, DuckDB, SQLite, BM25, model revisions, o
 - **[Transcript time without calculator gymnastics](time-navigation.md)** for timeline and source-relative coordinates.
 - **[Give the anonymous speakers names](speaker-names.md)** for human-authored display labels and generation semantics.
 - **[Semantic search, without the mystery box](semantic-search.md)** for local semantic/hybrid retrieval.
+- **[Signed update and model trust channel](security/update-model-trust.md)** for the concrete update/model supply-chain contract and its privacy boundary.
 - **[Desktop themes and accessibility](development/desktop-accessibility.md)** for the eight-skin semantic token system and contrast qualification.
 - **[Frontend testing strategy](development/frontend-testing.md)** for frontend/backend test ownership and mutation policy.
 - **[Architecture and redundancy audit](architecture/redundancy-audit.md)** for the completed architecture/redundancy consolidation and intentional remaining boundaries.
@@ -144,10 +153,10 @@ The architecture/redundancy audit is closed. Capability-blind Python/frontend tr
 
 The Scholion identity migration is complete. The next critical path is:
 
-1. packaging, first run, signed updates, and evidence-safe uninstall;
+1. finish the #110 signed-update and policy-trusted-model integration, then package first-run/update/uninstall behavior; public Linux packaging remains gated by #135 until the supported Tauri stack leaves the affected GTK3/GLib graph;
 2. backup/restore and selected research portability;
 3. packaged semantic custody; and
-4. representative-device qualification.
+4. representative-device qualification, including the remaining native CPU-only/accelerator task-transport evidence from #114.
 
 A future freeform notebook/memo capability belongs in later Research work as a second durable research-object class, not as evidence notes with optional/missing provenance.
 
