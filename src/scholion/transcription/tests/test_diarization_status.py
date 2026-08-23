@@ -12,12 +12,14 @@ def _versions(values: dict[str, str]):
     return read
 
 
-def test_status_reports_missing_optional_dependencies_without_importing_runtime() -> None:
+def test_status_reports_missing_dependencies_without_importing_runtime() -> None:
     status = diarization_runtime_status(_versions({}))
 
     assert status.available is False
     assert status.reason_code == "dependencies_missing"
-    assert status.message == "Speaker labeling is not installed in this local environment."
+    assert (
+        status.message == "Speaker labeling is not installed in this local environment."
+    )
 
 
 def test_status_fails_closed_for_unverifiable_or_security_held_lightning() -> None:
