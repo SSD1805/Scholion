@@ -8,6 +8,8 @@ use tauri::State;
 
 const MAX_TASK_BYTES: usize = 64 * 1024;
 const MAX_TASK_RESULT_BYTES: usize = 8 * 1024;
+const MAX_PUBLIC_ERROR_CODE_BYTES: usize = 128;
+const MAX_PUBLIC_ERROR_MESSAGE_BYTES: usize = 1024;
 const WORKER_PROTOCOL_VERSION: u8 = 1;
 
 #[derive(Debug, Deserialize)]
@@ -83,13 +85,16 @@ impl ProcessEntry {
     fn finish(&mut self, status: ExitStatus) {
         let outcome = self.child.as_mut().and_then(read_worker_outcome);
         self.exit_code = status.code();
-        self.state = if status.success() && outcome.as_ref().is_none_or(|item| item.ok) {
+        self.state = if worker_completed(status.success(), outcome.as_ref()) {
             "completed"
         } else {
             "failed"
         };
         if self.state == "failed" {
-            if let Some(error) = outcome.and_then(|item| item.error) {
+            if let Some(error) = outcome
+                .filter(|item| !item.ok)
+                .and_then(|item| item.error)
+            {
                 self.error_code = Some(error.code);
                 self.error_message = Some(error.message);
             } else {
@@ -111,19 +116,42 @@ impl ProcessEntry {
     }
 }
 
+fn worker_completed(process_succeeded: bool, outcome: Option<&WorkerOutcome>) -> bool {
+    process_succeeded && matches!(outcome, Some(item) if item.ok)
+}
+
+fn valid_worker_error(error: &WorkerError) -> bool {
+    !error.code.is_empty()
+        && error.code.len() <= MAX_PUBLIC_ERROR_CODE_BYTES
+        && error
+            .code
+            .bytes()
+            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || byte == b'_')
+        && !error.message.trim().is_empty()
+        && error.message.len() <= MAX_PUBLIC_ERROR_MESSAGE_BYTES
+}
+
+fn parse_worker_outcome(bytes: &[u8]) -> Option<WorkerOutcome> {
+    if bytes.is_empty() || bytes.len() > MAX_TASK_RESULT_BYTES {
+        return None;
+    }
+    let outcome: WorkerOutcome = serde_json::from_slice(bytes).ok()?;
+    if outcome.protocol_version != WORKER_PROTOCOL_VERSION {
+        return None;
+    }
+    match (&outcome.ok, &outcome.error) {
+        (true, None) => Some(outcome),
+        (false, Some(error)) if valid_worker_error(error) => Some(outcome),
+        _ => None,
+    }
+}
+
 fn read_worker_outcome(child: &mut Child) -> Option<WorkerOutcome> {
     let stdout = child.stdout.take()?;
     let mut bounded = stdout.take((MAX_TASK_RESULT_BYTES + 1) as u64);
     let mut bytes = Vec::new();
     bounded.read_to_end(&mut bytes).ok()?;
-    if bytes.len() > MAX_TASK_RESULT_BYTES {
-        return None;
-    }
-    let outcome: WorkerOutcome = serde_json::from_slice(&bytes).ok()?;
-    if outcome.protocol_version != WORKER_PROTOCOL_VERSION {
-        return None;
-    }
-    Some(outcome)
+    parse_worker_outcome(&bytes)
 }
 
 #[derive(Default)]
@@ -270,4 +298,56 @@ pub async fn processing_cancel_task(
         entry.child = None;
     }
     Ok(entry.status(&task_id))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn worker_outcome_requires_a_valid_versioned_shape() {
+        let success = br#"{"protocol_version":1,"ok":true,"error":null}"#;
+        let failure = br#"{"protocol_version":1,"ok":false,"error":{"code":"transcription_failed","message":"Local transcription did not complete"}}"#;
+        let wrong_version = br#"{"protocol_version":2,"ok":true,"error":null}"#;
+        let success_with_error = br#"{"protocol_version":1,"ok":true,"error":{"code":"bad","message":"should not exist"}}"#;
+        let failure_without_error = br#"{"protocol_version":1,"ok":false,"error":null}"#;
+
+        assert!(parse_worker_outcome(success).is_some());
+        assert!(parse_worker_outcome(failure).is_some());
+        assert!(parse_worker_outcome(wrong_version).is_none());
+        assert!(parse_worker_outcome(success_with_error).is_none());
+        assert!(parse_worker_outcome(failure_without_error).is_none());
+        assert!(parse_worker_outcome(&[]).is_none());
+    }
+
+    #[test]
+    fn malformed_or_missing_outcome_never_counts_as_completed() {
+        let success = parse_worker_outcome(
+            br#"{"protocol_version":1,"ok":true,"error":null}"#,
+        );
+
+        assert!(worker_completed(true, success.as_ref()));
+        assert!(!worker_completed(true, None));
+        assert!(!worker_completed(false, success.as_ref()));
+    }
+
+    #[test]
+    fn worker_error_fields_are_bounded_and_structured() {
+        let valid = WorkerError {
+            code: "resource_admission_failed".to_string(),
+            message: "Current resources are below the safe requirement".to_string(),
+        };
+        let invalid_code = WorkerError {
+            code: "../../private".to_string(),
+            message: "No".to_string(),
+        };
+        let oversized_message = WorkerError {
+            code: "internal_error".to_string(),
+            message: "x".repeat(MAX_PUBLIC_ERROR_MESSAGE_BYTES + 1),
+        };
+
+        assert!(valid_worker_error(&valid));
+        assert!(!valid_worker_error(&invalid_code));
+        assert!(!valid_worker_error(&oversized_message));
+    }
 }
