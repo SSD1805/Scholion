@@ -151,6 +151,19 @@ fn read_worker_outcome(child: &mut Child) -> Option<WorkerOutcome> {
     parse_worker_outcome(&bytes)
 }
 
+fn ensure_no_running_task(entries: &mut HashMap<String, ProcessEntry>) -> Result<(), String> {
+    for entry in entries.values_mut() {
+        entry.refresh()?;
+    }
+    if entries.values().any(|entry| entry.state == "running") {
+        return Err(
+            "Another local processing task is already running. Wait for it to finish or stop it first."
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
 #[derive(Default)]
 pub struct ProcessingProcesses {
     entries: Mutex<HashMap<String, ProcessEntry>>,
@@ -220,6 +233,7 @@ pub async fn processing_start_task(
     if entries.contains_key(&envelope.task_id) {
         return Err("Processing task identifier is already in use".to_string());
     }
+    ensure_no_running_task(&mut entries)?;
 
     let mut child = Command::new(crate::backend::configured_python())
         .args(["-m", "scholion.desktop.processing_worker"])
@@ -301,6 +315,16 @@ pub async fn processing_cancel_task(
 mod tests {
     use super::*;
 
+    fn completed_entry(state: &'static str) -> ProcessEntry {
+        ProcessEntry {
+            child: None,
+            state,
+            exit_code: None,
+            error_code: None,
+            error_message: None,
+        }
+    }
+
     #[test]
     fn worker_outcome_requires_a_valid_versioned_shape() {
         let success = br#"{"protocol_version":1,"ok":true,"error":null}"#;
@@ -344,5 +368,16 @@ mod tests {
         assert!(valid_worker_error(&valid));
         assert!(!valid_worker_error(&invalid_code));
         assert!(!valid_worker_error(&oversized_message));
+    }
+
+    #[test]
+    fn only_one_long_running_processing_task_can_be_active() {
+        let mut entries = HashMap::from([("active".to_string(), completed_entry("running"))]);
+
+        let error = ensure_no_running_task(&mut entries).expect_err("running task must block");
+        assert!(error.contains("already running"));
+
+        entries.get_mut("active").expect("entry exists").state = "completed";
+        assert!(ensure_no_running_task(&mut entries).is_ok());
     }
 }
