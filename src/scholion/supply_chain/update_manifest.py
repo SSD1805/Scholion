@@ -4,7 +4,7 @@ import base64
 import binascii
 import json
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any, Protocol
 from urllib.parse import urlparse
 
@@ -78,7 +78,7 @@ def _parse_utc_timestamp(value: str, field: str) -> datetime:
         raise UpdateTrustError(f"{field} must be an ISO-8601 timestamp") from exc
     if parsed.tzinfo is None:
         raise UpdateTrustError(f"{field} must include a timezone")
-    return parsed.astimezone(timezone.utc)
+    return parsed.astimezone(UTC)
 
 
 def _decode_base64(value: str, field: str) -> bytes:
@@ -244,7 +244,7 @@ def verify_signed_update_manifest(
     payload = UpdateManifestPayload.from_bytes(envelope.payload)
     if now.tzinfo is None:
         raise UpdateTrustError("current time must include a timezone")
-    resolved_now = now.astimezone(timezone.utc)
+    resolved_now = now.astimezone(UTC)
     if payload.expires_at <= resolved_now:
         raise UpdateTrustError("update metadata has expired")
     if payload.published_at > resolved_now:
