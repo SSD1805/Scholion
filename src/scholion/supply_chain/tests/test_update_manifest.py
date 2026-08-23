@@ -1,6 +1,6 @@
 import base64
 import json
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -35,7 +35,7 @@ class FixtureVerifier:
 
 
 def _payload(*, sequence: int = 7, expires_delta: timedelta = timedelta(days=7)) -> bytes:
-    now = datetime(2026, 8, 23, 15, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 23, 15, 0, tzinfo=UTC)
     document = {
         "schema_version": 1,
         "sequence": sequence,
@@ -79,7 +79,7 @@ def test_signature_is_verified_before_payload_can_authorize_release() -> None:
     manifest = verify_signed_update_manifest(
         _envelope(payload, signature=signature),
         verifier=verifier,
-        now=datetime(2026, 8, 24, tzinfo=timezone.utc),
+        now=datetime(2026, 8, 24, tzinfo=UTC),
         highest_seen_sequence=7,
     )
 
@@ -102,7 +102,7 @@ def test_modified_payload_fails_existing_signature() -> None:
         verify_signed_update_manifest(
             _envelope(tampered, signature=signature),
             verifier=verifier,
-            now=datetime(2026, 8, 24, tzinfo=timezone.utc),
+            now=datetime(2026, 8, 24, tzinfo=UTC),
         )
 
 
@@ -119,7 +119,7 @@ def test_unknown_signing_key_fails_closed() -> None:
         verify_signed_update_manifest(
             _envelope(payload, key_id="unknown-key", signature=signature),
             verifier=verifier,
-            now=datetime(2026, 8, 24, tzinfo=timezone.utc),
+            now=datetime(2026, 8, 24, tzinfo=UTC),
         )
 
 
@@ -136,7 +136,7 @@ def test_rollback_sequence_is_rejected_after_signature_verification() -> None:
         verify_signed_update_manifest(
             _envelope(payload, signature=signature),
             verifier=verifier,
-            now=datetime(2026, 8, 24, tzinfo=timezone.utc),
+            now=datetime(2026, 8, 24, tzinfo=UTC),
             highest_seen_sequence=7,
         )
 
@@ -156,7 +156,7 @@ def test_expired_metadata_is_rejected() -> None:
         verify_signed_update_manifest(
             _envelope(payload, signature=signature),
             verifier=verifier,
-            now=datetime(2026, 8, 24, tzinfo=timezone.utc),
+            now=datetime(2026, 8, 24, tzinfo=UTC),
         )
 
 
@@ -175,7 +175,7 @@ def test_artifact_transport_must_be_https_and_typed() -> None:
         verify_signed_update_manifest(
             _envelope(payload, signature=signature),
             verifier=verifier,
-            now=datetime(2026, 8, 24, tzinfo=timezone.utc),
+            now=datetime(2026, 8, 24, tzinfo=UTC),
         )
 
 
@@ -193,5 +193,5 @@ def test_envelope_rejects_unmodeled_remote_configuration() -> None:
         verify_signed_update_manifest(
             envelope,
             verifier=verifier,
-            now=datetime(2026, 8, 24, tzinfo=timezone.utc),
+            now=datetime(2026, 8, 24, tzinfo=UTC),
         )
