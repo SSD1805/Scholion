@@ -214,7 +214,7 @@ def test_install_refuses_snapshot_outside_cache(tmp_path: Path) -> None:
     manager, store, provider = _manager(tmp_path)
     provider.snapshot_path = tmp_path / "escaped" / "resolved-abc"
 
-    with pytest.raises(ModelManagementError, match="downloaded and verified"):
+    with pytest.raises(ModelManagementError, match="downloaded and locally validated"):
         manager.install("small")
 
     assert manager._manifest_path("small") not in store.files
