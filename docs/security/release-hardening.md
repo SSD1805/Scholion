@@ -4,17 +4,21 @@ This document turns the remaining security ideas into an ordered release-hardeni
 
 ## Release gate A: supply-chain trust
 
-### Cryptographic signatures for manifests
+### Cryptographic signatures for release metadata
 
-Application/model manifests must be signed with an offline-controlled signing identity. Verification happens before a manifest can authorize an application update, model revision, or hash set. Signature failure, unknown key ID, malformed metadata, rollback, and expired metadata fail closed.
+Application update metadata must be signed with an offline-controlled signing identity. Verification happens before release metadata can authorize an application update or artifact hash set. Signature failure, unknown key ID, malformed metadata, rollback, and expired metadata fail closed.
+
+The curated model-trust catalog is bundled inside the signed Scholion release rather than fetched as independently mutable policy. Its bytes therefore inherit the release artifact's authenticated custody. If Scholion ever distributes model-trust policy independently of an application release, that channel must gain its own separately pinned signature/key role before it can authorize a model revision or hash set.
 
 Acceptance evidence:
 
-- signed manifest fixture verifies;
-- modified bytes fail verification;
+- signed release-manifest fixture verifies;
+- modified signed payload bytes fail verification;
 - unknown/revoked key fails;
-- rollback to an older trusted version is rejected according to explicit policy;
-- verification is independent of transport security.
+- rollback to an older trusted release sequence is rejected according to explicit policy;
+- verification is independent of transport security;
+- a curated model entry cannot trust a moving revision, undeclared file, size mismatch, hash mismatch, or cache/path escape; and
+- an independently fetched model-policy channel, if one is ever introduced, cannot become authoritative without a separately reviewed signature boundary.
 
 ### Secure update framework
 
@@ -22,11 +26,15 @@ Application updates need a signed metadata framework with rollback/freeze protec
 
 Do not ship an auto-updater that trusts only HTTPS or a mutable release URL.
 
-### Model-signing trust root
+### Curated model trust root
 
-The curated model catalog must resolve to a trusted manifest containing repository/source identity, immutable revision, required files, sizes, hashes, license/source metadata, and a Scholion-trusted signature. Hugging Face or another transport host is a distribution mechanism, not the trust root.
+The curated model catalog must resolve to repository/source identity, immutable revision, exact allowed files, sizes, hashes, and license/source metadata. Hugging Face or another transport host is a distribution mechanism, not the trust root.
 
-Application update signing and model signing may share verification primitives, but should use separable signing roles/keys so compromise of one authority does not automatically authorize the other.
+For the first-release design, that catalog ships inside the signed Scholion application release. Updating model trust therefore requires a reviewed Scholion release and cannot happen because an upstream repository changes `main` or `HEAD`.
+
+If future product requirements demand model-policy updates between application releases, introduce a separate signed model-policy envelope and separable key role before enabling that behavior. Do not silently turn the current static catalog into remotely mutable configuration.
+
+See **[Signed update and model trust channel](update-model-trust.md)** for the concrete #110 schemas, threat model, and verification rules.
 
 ## Release gate B: hostile-input containment
 
@@ -84,9 +92,9 @@ Do not encrypt rebuildable projections in a way that creates new irreplaceable k
 
 Recommended sequence:
 
-1. define trust-root/key-rotation policy;
-2. signed application/model manifests;
-3. secure update framework + model-signing trust root;
+1. define application update trust-root/key-rotation policy;
+2. signed application release metadata + bundled curated model trust;
+3. secure update framework + pinned model installation/verification;
 4. parser sandbox and process-capability reduction;
 5. native end-to-end qualification across supported OSes;
 6. keychain abstraction and recovery design;
