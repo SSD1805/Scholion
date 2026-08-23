@@ -105,6 +105,10 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Declare known Linux release-blocking Rust debt
+        run: >-
+          echo "::warning title=Known Tauri 2 Linux RustSec debt::RUSTSEC-2024-0429 remains in the current Tauri 2 GTK3 graph. Public Linux packaging is blocked by Scholion issue #135 until the affected graph is removed."
+
       # These exact advisories are known transitive debt in the stable Tauri 2
       # Linux stack and are owned by Scholion release blocker #135. This is not
       # a claim that they are fixed. RUSTSEC-2024-0429 is real glib unsoundness
