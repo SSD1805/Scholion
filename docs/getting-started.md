@@ -10,9 +10,11 @@ Scholion is still pre-production. There is no polished signed installer yet, so 
 
 | Goal | First command after cloning | You do not need yet |
 |---|---|---|
-| inspect/click the frontend with fake local data | `cd frontend && npm ci && npm run dev:mock` | Python, uv, Rust, FFmpeg, model |
-| run the native desktop window | follow desktop prerequisites, then `npm run tauri dev` | transcription model until processing media |
-| use the Python CLI / process recordings | `uv sync --locked --extra transcription` | frontend tooling unless you want the GUI |
+| inspect/click the frontend with fake local data | `cd frontend && npm ci && npm run dev:mock` | Python backend, Rust, FFmpeg, model |
+| run the native desktop window | bootstrap the repository Python environment, then follow desktop prerequisites and run `npm run tauri dev` | transcription model until processing media |
+| use the Python CLI / process recordings | `python3.12 scripts/bootstrap_python.py` | frontend tooling unless you want the GUI |
+
+The repository bootstrap installs Scholion's pinned `uv` into `.tools/uv` and uses it to create/synchronize `.venv`. A system-wide `uv` installation is not required. See **[Project-local developer toolchain](development/project-local-toolchain.md)** for Linux/macOS, Windows, stale-environment recovery, and why `.tools/uv` deliberately lives outside `.venv`.
 
 If a source build behaves strangely, use **[Desktop source-build troubleshooting](development/troubleshooting.md)**.
 
@@ -30,18 +32,20 @@ npm run dev:mock
 
 ## Native desktop path
 
-Read **[Desktop development prerequisites](development/desktop-development.md)** before the first native build. On a prepared machine:
+Read **[Desktop development prerequisites](development/desktop-development.md)** before the first native build. On a prepared Linux/macOS machine:
 
 ```bash
 cd Scholion
-uv sync --locked --extra transcription
+python3.12 scripts/bootstrap_python.py
 cd frontend
 npm ci
 npm run doctor:desktop
 npm run tauri dev
 ```
 
-The debug Tauri host prefers the repository `.venv` for local backend calls.
+On Windows, use `py -3.12 scripts\bootstrap_python.py`; the project-local toolchain guide includes the PowerShell variants.
+
+The debug Tauri host prefers the repository `.venv` for local backend calls. Normally you should not set `SCHOLION_PYTHON` yourself. If you do need an override, preserve the `.venv` launcher path; do not dereference it with `realpath` or `readlink -f`.
 
 ## Help is built into the desktop
 
@@ -74,6 +78,8 @@ Choose **Processing**. The current control loop includes:
 - checkpoint resume versus fresh retry; and
 - private execution-state discard that does not delete source media, canonical transcript evidence, or research.
 
+Transcription models download only when you choose. After installation they stay on this computer in Scholion's private app storage, so transcription can run offline. Today Scholion records the immutable provider revision it received and revalidates the managed local snapshot before use; the stronger policy-trust layer that checks an approved revision and exact file hashes is tracked under issue #110 and is not yet claimed as complete.
+
 For a normal single-track recording, there is no track choice to make. If preflight finds several embedded audio tracks, Processing Center shows the available tracks and bounded source-declared metadata such as title, language, codec, sample rate, channel count, and container-default status. **Start local transcription** remains disabled until you choose one. Scholion then sends that exact index back to Python and re-runs preflight before enabling Start.
 
 Those labels are clues from the source file, not Scholion recommendations. A container can call something `Lav microphone` or mark it default without proving that the label is correct.
@@ -84,21 +90,24 @@ See **[Processing Center](architecture/processing-center.md)** and **[Audio trac
 
 ## 3. Process from the CLI when useful
 
+Bootstrap once (and again after relevant lockfile changes), then activate the repository environment:
+
 ```bash
-uv sync --locked --extra transcription
-uv run scholion init
-uv run scholion doctor
-uv run scholion models recommend
-uv run scholion models install small
-uv run scholion transcribe interview.m4a --dry-run
-uv run scholion transcribe interview.m4a
+python3.12 scripts/bootstrap_python.py
+source .venv/bin/activate
+scholion init
+scholion doctor
+scholion models recommend
+scholion models install small
+scholion transcribe interview.m4a --dry-run
+scholion transcribe interview.m4a
 ```
 
 For a file with several embedded audio tracks, bind an exact FFmpeg stream index explicitly:
 
 ```bash
-uv run scholion transcribe meeting.mkv --audio-stream 3 --dry-run
-uv run scholion transcribe meeting.mkv --audio-stream 3
+scholion transcribe meeting.mkv --audio-stream 3 --dry-run
+scholion transcribe meeting.mkv --audio-stream 3
 ```
 
 An unavailable or non-audio index fails instead of silently falling back. The selected stream is preserved in canonical source provenance and restored on checkpoint resume.
@@ -106,13 +115,13 @@ An unavailable or non-audio index fails instead of silently falling back. The se
 Publication views can be requested with:
 
 ```bash
-uv run scholion transcribe interview.m4a --export txt --export srt --export vtt
+scholion transcribe interview.m4a --export txt --export srt --export vtt
 ```
 
 Resume a validated interrupted job with:
 
 ```bash
-uv run scholion transcribe interview.m4a --resume JOB_ID
+scholion transcribe interview.m4a --resume JOB_ID
 ```
 
 Resume rechecks source identity and current resource admission rather than silently changing the original execution contract.
@@ -120,10 +129,10 @@ Resume rechecks source identity and current resource admission rather than silen
 ## 4. Search the Library
 
 ```bash
-uv run scholion library rebuild
-uv run scholion library refresh
-uv run scholion library search "housing insecurity"
-uv run scholion library find "housing affordability" --context-segments 1
+scholion library rebuild
+scholion library refresh
+scholion library search "housing insecurity"
+scholion library find "housing affordability" --context-segments 1
 ```
 
 In the desktop **Library**, search transcripts, notes, tags, and collections. A transcript result can open either:
@@ -166,9 +175,9 @@ See **[Transcript and speaker tools](transcript-tools.md)** and **[Give the anon
 CLI speaker tools remain available:
 
 ```bash
-uv run scholion library speakers list JOB_ID
-uv run scholion library speakers name JOB_ID speaker-02 "Dr. Chen"
-uv run scholion library speakers transcript JOB_ID
+scholion library speakers list JOB_ID
+scholion library speakers name JOB_ID speaker-02 "Dr. Chen"
+scholion library speakers transcript JOB_ID
 ```
 
 ## 7. Keep durable research
@@ -176,7 +185,7 @@ uv run scholion library speakers transcript JOB_ID
 Notes, tags, collections, anchors, and saved searches are authoritative local user state.
 
 ```bash
-uv run scholion library notes add JOB_ID segment-000042 \
+scholion library notes add JOB_ID segment-000042 \
   --body "Compare this with the 2024 survey." \
   --tag methodology \
   --collection "Chapter 3"
@@ -225,7 +234,9 @@ Multi-track preflight follows the same rule. Python discovers streams and decide
 
 The in-app help layer is static local presentation copy. It has no extra filesystem, process, database, model, media, or network capability.
 
-See **[frontend/SECURITY.md](../frontend/SECURITY.md)** and the completed **[architecture/redundancy audit](architecture/redundancy-audit.md)**.
+A future **Check for updates** action is intentionally manual by default. Its design permits only a small signed release-metadata request and forbids sending recordings, transcripts, research state, hardware inventory, model inventory, behavioral telemetry, or an installation ID. Like any network request, the hosting/CDN layer can still observe ordinary connection metadata such as IP address and request time. Existing local work must continue to function when update checking is disabled, offline, or unavailable.
+
+See **[frontend/SECURITY.md](../frontend/SECURITY.md)**, **[Signed update and model trust channel](security/update-model-trust.md)**, and the completed **[architecture/redundancy audit](architecture/redundancy-audit.md)**.
 
 ## 11. Optional semantic/hybrid search
 
@@ -241,12 +252,11 @@ Original media and canonical JSON are evidence. Notes/tags/collections, saved se
 
 ## What comes next?
 
-Research/search, Processing, desktop comprehension/themes, transcript/speaker tools, explicit embedded-track transcription, verified native playback, contextual guidance, lifecycle/retention Storage, and the pre-identity architecture/redundancy audit are foundation. Next:
+Research/search, Processing, desktop comprehension/themes, transcript/speaker tools, explicit embedded-track transcription, verified native playback, contextual guidance, lifecycle/retention Storage, architecture/redundancy consolidation, and the Scholion product-identity migration are complete first-release foundation. Next:
 
-1. product identity decision and deliberate migration;
-2. packaging/first run/update/uninstall;
-3. backup/restore and research portability;
-4. packaged semantic custody; and
-5. representative-device qualification.
+1. finish the signed-update and policy-trusted-model integration tracked by #110, then package first-run/update/uninstall behavior; public Linux packaging remains blocked by #135 until the supported Tauri stack leaves the affected GTK3/GLib graph;
+2. backup/restore and research portability;
+3. packaged semantic custody; and
+4. representative-device qualification, including the remaining native task-transport evidence tracked by #114.
 
 For the detailed first-release sequence, see **[ROADMAP.md](../ROADMAP.md)**.
