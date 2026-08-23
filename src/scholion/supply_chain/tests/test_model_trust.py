@@ -129,6 +129,22 @@ def test_snapshot_verification_checks_exact_file_set_hash_and_size(
         )
 
 
+def test_snapshot_verification_rejects_size_mismatch(tmp_path: Path) -> None:
+    cache_root = tmp_path / "cache"
+    snapshot = cache_root / "snapshots" / ("a" * 40)
+    snapshot.mkdir(parents=True)
+    model = b"model"
+    (snapshot / "model.bin").write_bytes(model)
+    spec = _spec((_trusted_file("model.bin", model),))
+
+    (snapshot / "model.bin").write_bytes(b"model-expanded")
+
+    with pytest.raises(ValueError, match="size mismatch"):
+        verify_trusted_model_snapshot(
+            spec, snapshot_root=snapshot, cache_root=cache_root
+        )
+
+
 def test_snapshot_verification_rejects_undeclared_file(tmp_path: Path) -> None:
     cache_root = tmp_path / "cache"
     snapshot = cache_root / "snapshots" / ("a" * 40)
