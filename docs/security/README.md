@@ -12,7 +12,9 @@ See **[Pre-release security hardening roadmap](release-hardening.md)** for the o
 - sandboxing native parsers;
 - tighter process isolation;
 - a secure update framework; and
-- a model-signing trust root.
+- curated model trust rooted in signed Scholion releases.
+
+See **[Signed update and model trust channel](update-model-trust.md)** for the concrete #110 contract: exact-byte signed update envelopes, anti-rollback/expiry semantics, privacy-preserving update behavior, and project-owned pinned model metadata with full file-set/size/SHA-256 verification.
 
 The roadmap groups these into supply-chain trust, hostile-input containment, and data-at-rest/key custody. It also records native React → Tauri → Rust → Python qualification as a release gate after real-device testing exposed a gap that browser mocks cannot cover.
 
