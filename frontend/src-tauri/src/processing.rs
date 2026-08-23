@@ -121,7 +121,7 @@ fn validate_envelope(task: &Value) -> Result<TaskEnvelope, String> {
 
 fn python_unavailable_message() -> String {
     if cfg!(debug_assertions) {
-        "Scholion's local Python worker is unavailable. From the repository root run `uv sync --locked --extra transcription`, or set SCHOLION_PYTHON to a compatible interpreter."
+        "Scholion's local Python worker is unavailable. From the repository root run `python3.12 scripts/bootstrap_python.py`, or set SCHOLION_PYTHON to a compatible repository virtual-environment interpreter."
             .to_string()
     } else {
         "Scholion's local Python worker is unavailable".to_string()

@@ -3,8 +3,16 @@ use std::env;
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
+use std::sync::Mutex;
 
 const MAX_REQUEST_BYTES: usize = 128 * 1024;
+
+// Each one-shot Python bridge process composes application services that may open the
+// same DuckDB-backed projections. DuckDB does not support overlapping writer processes
+// against one database file, so native bridge calls must cross that boundary serially.
+// Long-running Processing workers use a separate command path and are not held behind
+// this lock.
+static BRIDGE_PROCESS_LOCK: Mutex<()> = Mutex::new(());
 
 pub(crate) fn configured_python() -> PathBuf {
     if let Ok(value) = env::var("SCHOLION_PYTHON") {
@@ -54,6 +62,10 @@ fn request_method(request: &Value) -> &str {
 }
 
 fn run_python_request(module: &'static str, request: Value) -> Result<Value, String> {
+    let _bridge_guard = BRIDGE_PROCESS_LOCK
+        .lock()
+        .map_err(|_| "Scholion's local desktop bridge is unavailable".to_string())?;
+
     let method = request_method(&request).to_string();
     let encoded =
         serde_json::to_vec(&request).map_err(|_| "Could not encode desktop request".to_string())?;
