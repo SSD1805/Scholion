@@ -91,10 +91,7 @@ impl ProcessEntry {
             "failed"
         };
         if self.state == "failed" {
-            if let Some(error) = outcome
-                .filter(|item| !item.ok)
-                .and_then(|item| item.error)
-            {
+            if let Some(error) = outcome.filter(|item| !item.ok).and_then(|item| item.error) {
                 self.error_code = Some(error.code);
                 self.error_message = Some(error.message);
             } else {
@@ -322,9 +319,7 @@ mod tests {
 
     #[test]
     fn malformed_or_missing_outcome_never_counts_as_completed() {
-        let success = parse_worker_outcome(
-            br#"{"protocol_version":1,"ok":true,"error":null}"#,
-        );
+        let success = parse_worker_outcome(br#"{"protocol_version":1,"ok":true,"error":null}"#);
 
         assert!(worker_completed(true, success.as_ref()));
         assert!(!worker_completed(true, None));
