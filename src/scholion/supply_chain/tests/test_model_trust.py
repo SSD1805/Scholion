@@ -65,7 +65,7 @@ def test_catalog_requires_exact_trust_metadata() -> None:
 
 def test_catalog_rejects_moving_or_ambiguous_revision() -> None:
     with pytest.raises(ValueError, match="model revision"):
-        _spec((_trusted_file("model.bin", b"model"),)).__class__(
+        TrustedModelSpec(
             model_id="tiny",
             engine="faster-whisper",
             repository_id="example/faster-whisper-tiny",
@@ -86,7 +86,18 @@ def test_trusted_file_rejects_path_escape() -> None:
         )
 
 
-def test_snapshot_verification_checks_exact_file_set_hash_and_size(tmp_path: Path) -> None:
+def test_trusted_file_rejects_snapshot_root_as_file_path() -> None:
+    with pytest.raises(ValueError, match="inside the snapshot"):
+        TrustedModelFile(
+            path=".",
+            size_bytes=1,
+            sha256_hex="0" * 64,
+        )
+
+
+def test_snapshot_verification_checks_exact_file_set_hash_and_size(
+    tmp_path: Path,
+) -> None:
     cache_root = tmp_path / "cache"
     snapshot = cache_root / "snapshots" / ("a" * 40)
     snapshot.mkdir(parents=True)
@@ -113,7 +124,9 @@ def test_snapshot_verification_checks_exact_file_set_hash_and_size(tmp_path: Pat
 
     (snapshot / "model.bin").write_bytes(b"tampered!!!!")
     with pytest.raises(ValueError, match="hash mismatch"):
-        verify_trusted_model_snapshot(spec, snapshot_root=snapshot, cache_root=cache_root)
+        verify_trusted_model_snapshot(
+            spec, snapshot_root=snapshot, cache_root=cache_root
+        )
 
 
 def test_snapshot_verification_rejects_undeclared_file(tmp_path: Path) -> None:
@@ -126,7 +139,9 @@ def test_snapshot_verification_rejects_undeclared_file(tmp_path: Path) -> None:
     spec = _spec((_trusted_file("model.bin", model),))
 
     with pytest.raises(ValueError, match="undeclared=surprise.json"):
-        verify_trusted_model_snapshot(spec, snapshot_root=snapshot, cache_root=cache_root)
+        verify_trusted_model_snapshot(
+            spec, snapshot_root=snapshot, cache_root=cache_root
+        )
 
 
 def test_snapshot_verification_rejects_snapshot_outside_cache(tmp_path: Path) -> None:
@@ -139,4 +154,6 @@ def test_snapshot_verification_rejects_snapshot_outside_cache(tmp_path: Path) ->
     spec = _spec((_trusted_file("model.bin", model),))
 
     with pytest.raises(ValueError, match="inside the model cache"):
-        verify_trusted_model_snapshot(spec, snapshot_root=snapshot, cache_root=cache_root)
+        verify_trusted_model_snapshot(
+            spec, snapshot_root=snapshot, cache_root=cache_root
+        )
