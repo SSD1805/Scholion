@@ -122,7 +122,7 @@ def test_snapshot_verification_checks_exact_file_set_hash_and_size(
     assert evidence.verified_files == 2
     assert evidence.total_bytes == len(model) + len(config)
 
-    (snapshot / "model.bin").write_bytes(b"tampered!!!!")
+    (snapshot / "model.bin").write_bytes(b"other-bytes")
     with pytest.raises(ValueError, match="hash mismatch"):
         verify_trusted_model_snapshot(
             spec, snapshot_root=snapshot, cache_root=cache_root
