@@ -26,7 +26,9 @@ def _ensure_project_uv(repo_root: Path) -> Path:
 
     bootstrap = repo_root / "scripts" / "bootstrap_python.py"
     if not bootstrap.is_file():
-        raise SystemExit("Scholion checkout is incomplete; missing: bootstrap_python.py")
+        raise SystemExit(
+            "Scholion checkout is incomplete; missing: bootstrap_python.py"
+        )
 
     if sys.version_info[:2] != (3, 12):
         raise SystemExit(
@@ -37,7 +39,9 @@ def _ensure_project_uv(repo_root: Path) -> Path:
     print("Project-local uv is missing; bootstrapping it inside .tools/uv")
     _run(sys.executable, str(bootstrap), cwd=repo_root)
     if not uv.is_file():
-        raise SystemExit("Project-local uv bootstrap completed without creating .tools/uv")
+        raise SystemExit(
+            "Project-local uv bootstrap completed without creating .tools/uv"
+        )
     return uv
 
 
