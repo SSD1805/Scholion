@@ -47,7 +47,9 @@ def _require_https_url(value: str, field: str) -> None:
 
 
 def _require_lower_hex(value: str, *, length: int, field: str) -> None:
-    if len(value) != length or any(character not in "0123456789abcdef" for character in value):
+    if len(value) != length or any(
+        character not in "0123456789abcdef" for character in value
+    ):
         raise ValueError(f"{field} must be {length} lowercase hexadecimal characters")
 
 
@@ -61,7 +63,11 @@ class TrustedModelFile:
         if not self.path or "\\" in self.path:
             raise ValueError("trusted model file path must use non-empty POSIX syntax")
         pure = PurePosixPath(self.path)
-        if pure.is_absolute() or any(part in {"", ".", ".."} for part in pure.parts):
+        if (
+            not pure.parts
+            or pure.is_absolute()
+            or any(part in {"", ".", ".."} for part in pure.parts)
+        ):
             raise ValueError("trusted model file path must stay inside the snapshot")
         if self.size_bytes < 1:
             raise ValueError("trusted model file size must be positive")
@@ -129,7 +135,9 @@ class TrustedModelSpec:
             },
         )
         raw_files = document.get("files")
-        if not isinstance(raw_files, list) or any(not isinstance(item, dict) for item in raw_files):
+        if not isinstance(raw_files, list) or any(
+            not isinstance(item, dict) for item in raw_files
+        ):
             raise ValueError("files must be a list of objects")
         return cls(
             model_id=_require_str(document, "model_id"),
@@ -173,7 +181,9 @@ class ModelTrustCatalog:
     def from_dict(cls, document: dict[str, Any]) -> ModelTrustCatalog:
         _require_exact_keys(document, {"schema_version", "models"})
         raw_models = document.get("models")
-        if not isinstance(raw_models, list) or any(not isinstance(item, dict) for item in raw_models):
+        if not isinstance(raw_models, list) or any(
+            not isinstance(item, dict) for item in raw_models
+        ):
             raise ValueError("models must be a list of objects")
         return cls(
             schema_version=_require_int(document, "schema_version"),
@@ -219,8 +229,12 @@ def verify_trusted_model_snapshot(
 ) -> ModelTrustEvidence:
     resolved_snapshot = snapshot_root.expanduser().resolve(strict=True)
     resolved_cache = cache_root.expanduser().resolve(strict=True)
-    if not resolved_snapshot.is_dir() or not resolved_snapshot.is_relative_to(resolved_cache):
-        raise ValueError("trusted model snapshot must be a directory inside the model cache")
+    if not resolved_snapshot.is_dir() or not resolved_snapshot.is_relative_to(
+        resolved_cache
+    ):
+        raise ValueError(
+            "trusted model snapshot must be a directory inside the model cache"
+        )
 
     declared_paths = {item.path for item in spec.files}
     observed_paths = {
@@ -236,7 +250,10 @@ def verify_trusted_model_snapshot(
             details.append("missing=" + ",".join(missing))
         if extra:
             details.append("undeclared=" + ",".join(extra))
-        raise ValueError("model snapshot file set does not match trusted policy: " + "; ".join(details))
+        raise ValueError(
+            "model snapshot file set does not match trusted policy: "
+            + "; ".join(details)
+        )
 
     total_bytes = 0
     for trusted_file in spec.files:
