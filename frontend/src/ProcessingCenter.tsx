@@ -586,7 +586,7 @@ export function ProcessingCenter({
                         </small>
                       </dd>
                     </div>
-                  ))}
+                  ))
                 ) : (
                   <div><dt>Graphics</dt><dd>No supported accelerator detected</dd></div>
                 )}
