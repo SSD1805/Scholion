@@ -53,22 +53,32 @@ def _require_int(document: dict[str, Any], key: str) -> int:
 
 def _require_identifier(value: str, field: str) -> None:
     if len(value) > 64 or any(
-        character not in "abcdefghijklmnopqrstuvwxyz0123456789._-" for character in value
+        character not in "abcdefghijklmnopqrstuvwxyz0123456789._-"
+        for character in value
     ):
         raise UpdateTrustError(f"{field} contains unsupported characters")
 
 
 def _require_https_url(value: str, field: str) -> None:
     parsed = urlparse(value)
-    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
-        raise UpdateTrustError(f"{field} must be an HTTPS URL without embedded credentials")
+    if (
+        parsed.scheme != "https"
+        or not parsed.netloc
+        or parsed.username
+        or parsed.password
+    ):
+        raise UpdateTrustError(
+            f"{field} must be an HTTPS URL without embedded credentials"
+        )
 
 
 def _require_sha256(value: str) -> None:
     if len(value) != _SHA256_HEX_LENGTH or any(
         character not in "0123456789abcdef" for character in value
     ):
-        raise UpdateTrustError("artifact sha256 must be 64 lowercase hexadecimal characters")
+        raise UpdateTrustError(
+            "artifact sha256 must be 64 lowercase hexadecimal characters"
+        )
 
 
 def _parse_utc_timestamp(value: str, field: str) -> datetime:
@@ -146,7 +156,9 @@ class UpdateManifestPayload:
         try:
             document = json.loads(payload.decode("utf-8"))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-            raise UpdateTrustError("signed update payload is not valid UTF-8 JSON") from exc
+            raise UpdateTrustError(
+                "signed update payload is not valid UTF-8 JSON"
+            ) from exc
         if not isinstance(document, dict):
             raise UpdateTrustError("signed update payload must be a JSON object")
         _require_exact_keys(
@@ -183,9 +195,13 @@ class UpdateManifestPayload:
         )
 
     def artifact_for(self, platform: str) -> ReleaseArtifact:
-        match = next((item for item in self.artifacts if item.platform == platform), None)
+        match = next(
+            (item for item in self.artifacts if item.platform == platform), None
+        )
         if match is None:
-            raise UpdateTrustError(f"release does not contain an artifact for {platform}")
+            raise UpdateTrustError(
+                f"release does not contain an artifact for {platform}"
+            )
         return match
 
 
@@ -212,13 +228,21 @@ class SignedUpdateEnvelope:
     def from_dict(cls, document: dict[str, Any]) -> SignedUpdateEnvelope:
         _require_exact_keys(
             document,
-            {"schema_version", "key_id", "algorithm", "payload_base64", "signature_base64"},
+            {
+                "schema_version",
+                "key_id",
+                "algorithm",
+                "payload_base64",
+                "signature_base64",
+            },
         )
         return cls(
             schema_version=_require_int(document, "schema_version"),
             key_id=_require_str(document, "key_id"),
             algorithm=_require_str(document, "algorithm"),
-            payload=_decode_base64(_require_str(document, "payload_base64"), "payload_base64"),
+            payload=_decode_base64(
+                _require_str(document, "payload_base64"), "payload_base64"
+            ),
             signature=_decode_base64(
                 _require_str(document, "signature_base64"), "signature_base64"
             ),
@@ -250,5 +274,7 @@ def verify_signed_update_manifest(
     if payload.published_at > resolved_now:
         raise UpdateTrustError("update metadata publication time is in the future")
     if highest_seen_sequence is not None and payload.sequence < highest_seen_sequence:
-        raise UpdateTrustError("update metadata is older than a previously trusted sequence")
+        raise UpdateTrustError(
+            "update metadata is older than a previously trusted sequence"
+        )
     return payload
