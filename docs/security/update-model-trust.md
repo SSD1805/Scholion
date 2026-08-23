@@ -31,7 +31,7 @@ A distribution service such as Hugging Face transports bytes. It does not decide
 
 The provider must eventually request the exact curated revision and verify the downloaded snapshot against the bundled trust entry before writing a local managed-model manifest or reporting the model as trusted/ready. Snapshot verification rejects path escape, cache escape, missing files, undeclared files, size mismatch, and hash mismatch.
 
-Integrity and policy trust are separate states. A snapshot can be internally well-formed or match its repository identity without being trusted by Scholion policy. Consumer UI and documentation must not collapse those states into one word such as “verified.”
+Integrity/local revalidation and policy trust are separate states. A snapshot can match expected repository/revision/layout rules without being trusted by Scholion policy. Consumer UI and documentation must not collapse those states into one word such as “verified.”
 
 ## Update manifest v1
 
@@ -124,7 +124,9 @@ Changing a trusted model revision is a security-sensitive repository change. The
 | Signing key compromise | Key IDs permit explicit rotation/revocation policy; release and model-signing roles should remain separable | Concrete key custody, rotation, and revocation implementation is still release work |
 | Local model cache is tampered with | File set, size, hash, path, and cache containment are rechecked before trust | Local machine compromise outside Scholion's threat boundary can also alter the application binary or pinned keys |
 
-## User-visible update behavior
+## User-visible behavior
+
+### Update checks
 
 The default first-release behavior is manual: **Check for updates** is an explicit user action. Periodic checks, if added, are separately opt-in and must be easy to disable.
 
@@ -136,6 +138,26 @@ A manual check should communicate four states without implying telemetry-free ne
 4. a trusted newer release is available, with version/release notes and an explicit install/download action.
 
 Network failure, offline mode, signature failure, expiry, rollback, or unsupported platform must never block opening Scholion or using existing local recordings, transcripts, models, or research.
+
+### Model downloads
+
+Ordinary product copy should explain the consequences a user actually needs to know:
+
+> **Models download only when you choose. After download, they stay on this computer in Scholion's private app storage, so transcription can run offline.**
+
+Do not make the primary workflow explain repository cache layouts, digest algorithms, trust-root rotation, or signed-manifest internals. Those are legitimate details, but they are not the job the person is trying to complete.
+
+Until #110's production integration is complete, ordinary UI also must not say or imply that the current managed snapshot is “policy-trusted” or “cryptographically verified.” Today the managed-model path provides explicit installation, immutable resolved-revision custody, containment, and structural/provider revalidation. The stronger curated byte-for-byte trust check is a separate unfinished layer.
+
+### Three presentation layers
+
+Use one consistent layering rule across Processing, Settings, help, and documentation:
+
+1. **Ordinary UI: consequence.** Say whether a network request happens, what stays local, what is optional, whether something works offline, and whether an action changes evidence or only app-managed state.
+2. **Technical details: provenance.** Show repository/source identity, exact revision, local revalidation state, policy-trust state, license/source metadata, update version/channel, and signature/trust status when those fields are useful to a technically curious user.
+3. **Security/developer docs: mechanism.** Explain exact signed payload bytes, key IDs, signature implementation, sequence/expiry rules, hashes, cache containment, threat model, and release process.
+
+This keeps Scholion transparent without turning normal use into an architecture lecture. The UI should never hide a material consequence merely because the underlying mechanism is technical, and it should never inflate a weaker backend guarantee into a stronger consumer-facing trust claim.
 
 ## What this foundation implements
 
@@ -161,7 +183,7 @@ This foundation deliberately does **not** claim #110 is complete. Before closing
 - implement explicit update UI and separately opt-in periodic checks;
 - review real upstream faster-whisper revisions and generate the production curated model catalog;
 - wire `ModelManager`/`HuggingFaceModelProvider` to request only the curated revision and require trust verification before registration;
-- record trusted policy identity in the local model manifest and expose “integrity checked” versus “trusted by Scholion policy” accurately; and
+- record trusted policy identity in the local model manifest and expose local-revalidation versus “trusted by Scholion policy” accurately; and
 - add native/offline regression qualification across supported platforms.
 
 Until those steps land, current local/offline workflows remain unchanged and no update service is required for Scholion to run.
