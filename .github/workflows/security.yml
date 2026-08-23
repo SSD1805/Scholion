@@ -105,11 +105,24 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Declare known Linux release-blocking Rust debt
+        run: >-
+          echo "::warning title=Known Tauri 2 Linux RustSec debt::RUSTSEC-2024-0429 remains in the current Tauri 2 GTK3 graph. Public Linux packaging is blocked by Scholion issue #135 until the affected graph is removed."
+
+      # These exact advisories are known transitive debt in the stable Tauri 2
+      # Linux stack and are owned by Scholion release blocker #135. This is not
+      # a claim that they are fixed. RUSTSEC-2024-0429 is real glib unsoundness
+      # and blocks a public Linux package until the upstream GTK4 migration (or
+      # another reviewed supported remediation) removes the affected graph.
+      # Keep this list explicit: any new RustSec advisory remains unignored and
+      # therefore continues to fail/alert normally. Remove IDs as the graph is
+      # remediated rather than carrying stale exceptions forward.
       - name: Audit locked Rust dependency graph
         uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # v2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           working-directory: frontend/src-tauri
+          ignore: RUSTSEC-2024-0370,RUSTSEC-2024-0411,RUSTSEC-2024-0412,RUSTSEC-2024-0413,RUSTSEC-2024-0414,RUSTSEC-2024-0415,RUSTSEC-2024-0416,RUSTSEC-2024-0417,RUSTSEC-2024-0418,RUSTSEC-2024-0419,RUSTSEC-2024-0420,RUSTSEC-2024-0429,RUSTSEC-2025-0075,RUSTSEC-2025-0080,RUSTSEC-2025-0081,RUSTSEC-2025-0098,RUSTSEC-2025-0100
 
   osv-cross-ecosystem-audit:
     runs-on: ubuntu-latest

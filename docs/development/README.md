@@ -12,6 +12,7 @@ This area explains how Scholion turns architecture claims into failing tests ins
 | [Desktop development prerequisites](desktop-development.md) | browser mock, native Tauri, real processing, Node/Rust/Python/native prerequisites |
 | [Desktop source-build troubleshooting](troubleshooting.md) | symptom-first recovery for Tauri/Python/WebKitGTK/Wayland/port failures and safe cleanup |
 | [Pre-release security hardening](../security/release-hardening.md) | signed manifests/updates/models, parser/process isolation, keychain, and application-layer encryption sequencing |
+| [Rust dependency advisory policy](rust-advisory-policy.md) | RustSec triage, the temporary Tauri 2 advisory allowlist, and the Linux release gate for GTK3/GLib debt |
 | [Desktop themes and accessibility](desktop-accessibility.md) | semantic theme contract, eight skins, contrast/native-control rules, adding a skin safely |
 | [Frontend testing strategy](frontend-testing.md) | frontend/backend test ownership, Processing/Library/Research/transcript-tools coverage, and why Stryker is not currently a routine tool |
 | [Testing and regression bisection](testing-and-bisect.md) | repository-wide test strategy, colocation, mutation anticipation, deterministic bisect oracles |
