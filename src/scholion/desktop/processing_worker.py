@@ -9,18 +9,21 @@ from __future__ import annotations
 
 import json
 import sys
+from contextlib import redirect_stdout
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
 from scholion.app.app_container import AppContainer
 from scholion.app.job_runner import TranscriptionJobRunner
+from scholion.core.errors import ScholionError
 from scholion.runner.models import ProcessingProfile
 from scholion.transcription.export import TranscriptExportFormat
 from scholion.transcription.speaker_models import SpeakerDiarizationRequest
 from scholion.workspace.models import JobId
 
 _MAX_TASK_BYTES = 64 * 1024
+_WORKER_PROTOCOL_VERSION = 1
 
 
 class _TaskKind(BaseModel):
@@ -248,19 +251,70 @@ def run_task(payload: object, container: AppContainer) -> None:
     _run_model_remove(_ModelRemove.model_validate(payload), container)
 
 
+def _write_outcome(
+    *,
+    ok: bool,
+    error_code: str | None = None,
+    error_message: str | None = None,
+) -> None:
+    error: dict[str, str] | None = None
+    if error_code is not None and error_message is not None:
+        error = {"code": error_code, "message": error_message}
+    sys.stdout.write(
+        json.dumps(
+            {
+                "protocol_version": _WORKER_PROTOCOL_VERSION,
+                "ok": ok,
+                "error": error,
+            },
+            sort_keys=True,
+        )
+    )
+    sys.stdout.write("\n")
+
+
 def main() -> int:
     raw = sys.stdin.buffer.read(_MAX_TASK_BYTES + 1)
     if len(raw) > _MAX_TASK_BYTES:
+        _write_outcome(
+            ok=False,
+            error_code="invalid_task",
+            error_message="The local processing task exceeded the safe size limit",
+        )
         return 2
     try:
         payload = json.loads(raw)
-        run_task(payload, AppContainer())
+        with redirect_stdout(sys.stderr):
+            run_task(payload, AppContainer())
     except (UnicodeDecodeError, json.JSONDecodeError, ValidationError, ValueError):
+        _write_outcome(
+            ok=False,
+            error_code="invalid_task",
+            error_message="The local processing task was invalid or incompatible",
+        )
         return 2
+    except ScholionError as exc:
+        _write_outcome(
+            ok=False,
+            error_code=exc.code.value,
+            error_message=exc.public_message,
+        )
+        return exc.exit_code
     except KeyboardInterrupt:
+        _write_outcome(
+            ok=False,
+            error_code="cancelled",
+            error_message="Local processing was interrupted",
+        )
         return 130
     except BaseException:
+        _write_outcome(
+            ok=False,
+            error_code="internal_error",
+            error_message="Local processing did not complete successfully",
+        )
         return 1
+    _write_outcome(ok=True)
     return 0
 
 

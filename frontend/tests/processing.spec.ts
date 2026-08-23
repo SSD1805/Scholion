@@ -85,6 +85,32 @@ test("starting work uses the local-task path", async ({ page }) => {
   await expect(page.getByText(/Transcribing interview-01\.m4a/)).toBeVisible();
 });
 
+test("model downloads show an explicit in-place running state", async ({ page }) => {
+  await openProcessing(page);
+
+  const tinyModel = page.locator("article.model-row").filter({ hasText: "tiny" });
+  await tinyModel.getByRole("button", { name: "Download model" }).click();
+
+  await expect(tinyModel.getByRole("button", { name: "Downloading…" })).toBeDisabled();
+  await expect(tinyModel.getByRole("progressbar", { name: "Downloading tiny model" })).toBeVisible();
+});
+
+test("speaker labeling is disabled when the backend places the capability on security hold", async ({ page }) => {
+  await openProcessing(page, "&speaker-labeling-held=1");
+  await page.getByRole("button", { name: "Choose recording" }).click();
+  await page.getByRole("button", { name: "Check recording" }).click();
+  await page.getByText("Advanced options").click();
+
+  const speakerLabeling = page.getByLabel("Label speakers automatically");
+  await expect(speakerLabeling).toBeDisabled();
+  await expect(
+    page.getByText(/temporarily unavailable because a local dependency does not meet Scholion's security requirement/),
+  ).toBeVisible();
+
+  const accessibility = await new AxeBuilder({ page }).analyze();
+  expect(accessibility.violations).toEqual([]);
+});
+
 test("interrupted work offers resume and a fresh retry as distinct actions", async ({ page }) => {
   await openProcessing(page);
 

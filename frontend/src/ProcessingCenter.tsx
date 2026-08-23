@@ -79,6 +79,7 @@ function taskLabel(task: ProcessingTaskStatus | null): string {
   if (task.state === "running") return "Running on this computer.";
   if (task.state === "completed") return "Completed.";
   if (task.state === "cancelled") return "Cancelled. Resumable progress was kept when possible.";
+  if (task.error_message?.trim()) return task.error_message;
   return "Stopped before completion. Refresh to see whether it can be resumed.";
 }
 
@@ -146,6 +147,8 @@ export function ProcessingCenter({
   const [execution, setExecution] = useState<ExecutionOptions>(defaultExecutionOptions);
   const [task, setTask] = useState<ProcessingTaskStatus | null>(null);
   const [taskDescription, setTaskDescription] = useState<string | null>(null);
+  const [taskModelId, setTaskModelId] = useState<string | null>(null);
+  const [taskModelAction, setTaskModelAction] = useState<"install" | "remove" | null>(null);
   const [pendingRemove, setPendingRemove] = useState<ProcessingModel | null>(null);
   const [pendingDiscard, setPendingDiscard] = useState<ProcessingJob | null>(null);
   const [busy, setBusy] = useState(false);
@@ -153,8 +156,10 @@ export function ProcessingCenter({
     "Checking this computer so Scholion can choose transcription settings that will run safely.",
   );
   const [error, setError] = useState<string | null>(null);
+  const [refreshError, setRefreshError] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    setRefreshError(null);
     const nextReadiness = await withTimeout(
       processing.readiness(profile),
       READINESS_TIMEOUT_MS,
@@ -170,7 +175,7 @@ export function ProcessingCenter({
       .then(setJobs)
       .catch((caught) => {
         setJobs([]);
-        setError(errorMessage(caught, "Scholion could not load previous transcription jobs."));
+        setRefreshError(errorMessage(caught, "Scholion could not load previous transcription jobs."));
       });
 
     void withTimeout(
@@ -184,11 +189,11 @@ export function ProcessingCenter({
 
   useEffect(() => {
     setBusy(true);
-    setError(null);
+    setRefreshError(null);
     void refresh()
       .catch((caught) => {
         setReadiness(null);
-        setError(
+        setRefreshError(
           errorMessage(
             caught,
             "Scholion could not check this computer for local transcription.",
@@ -199,15 +204,46 @@ export function ProcessingCenter({
   }, [refresh]);
 
   useEffect(() => {
+    if (readiness?.capabilities.speaker_labeling.available !== false) return;
+    setExecution((current) => {
+      if (
+        !current.diarize &&
+        !current.allowDiarizationModelDownload &&
+        current.speakers === null &&
+        current.minSpeakers === null &&
+        current.maxSpeakers === null
+      ) {
+        return current;
+      }
+      return {
+        ...current,
+        diarize: false,
+        allowDiarizationModelDownload: false,
+        speakers: null,
+        minSpeakers: null,
+        maxSpeakers: null,
+      };
+    });
+  }, [readiness]);
+
+  useEffect(() => {
     if (!task || task.state !== "running") return undefined;
     const timer = window.setInterval(() => {
       void processing
         .taskStatus(task.task_id)
         .then(async (next) => {
           setTask(next);
-          if (next.state !== "running") await refresh();
+          if (next.state === "failed") {
+            setError(next.error_message ?? "Local processing stopped before completion.");
+            setStatus("Local processing stopped before completion.");
+          }
+          if (next.state !== "running") {
+            await refresh();
+          }
         })
-        .catch(() => undefined);
+        .catch((caught) => {
+          setError(errorMessage(caught, "Scholion could not check the current local task."));
+        });
     }, 1500);
     return () => window.clearInterval(timer);
   }, [processing, refresh, task]);
@@ -227,6 +263,7 @@ export function ProcessingCenter({
     () => readiness?.strategies.filter((strategy) => strategy.feasible) ?? [],
     [readiness],
   );
+  const speakerLabeling = readiness?.capabilities.speaker_labeling ?? null;
 
   const preflightOptions: PreflightOptions = {
     profile,
@@ -360,6 +397,8 @@ export function ProcessingCenter({
             execution,
           );
       setTask(started);
+      setTaskModelId(null);
+      setTaskModelAction(null);
       setTaskDescription(`Transcribing ${preflight.recording_name}`);
       setStatus("Transcription started on this computer.");
       await refresh();
@@ -376,6 +415,8 @@ export function ProcessingCenter({
     try {
       const started = await processing.resumeTranscription(job, execution);
       setTask(started);
+      setTaskModelId(null);
+      setTaskModelAction(null);
       setTaskDescription(`Resuming ${job.recording_name}`);
       setStatus(`Resuming ${job.recording_name} from saved progress.`);
       await refresh();
@@ -392,6 +433,8 @@ export function ProcessingCenter({
     try {
       const started = await processing.installModel(model.model_id);
       setTask(started);
+      setTaskModelId(model.model_id);
+      setTaskModelAction("install");
       setTaskDescription(`Downloading ${model.model_id} transcription model`);
       setStatus(`Downloading the ${model.model_id} transcription model to this device. Scholion will check it before using it.`);
     } catch (caught) {
@@ -407,6 +450,8 @@ export function ProcessingCenter({
     try {
       const started = await processing.removeModel(model);
       setTask(started);
+      setTaskModelId(model.model_id);
+      setTaskModelAction("remove");
       setTaskDescription(`Removing ${model.model_id} transcription model`);
       setPendingRemove(null);
       setStatus(`Removing the ${model.model_id} transcription model from this device.`);
@@ -496,6 +541,7 @@ export function ProcessingCenter({
 
       <div className="processing-status" aria-live="polite">
         <p role="status">{status}</p>
+        {refreshError && <p className="error-banner" role="alert">{refreshError}</p>}
         {error && <p className="error-banner" role="alert">{error}</p>}
       </div>
 
@@ -603,24 +649,32 @@ export function ProcessingCenter({
         </div>
         <p>Models are downloaded only when you choose. Once installed, transcription can run without an internet connection.</p>
         <div className="model-list">
-          {readiness?.models.map((model) => (
-            <article key={model.model_id} className="model-row">
-              <div>
-                <strong>{model.model_id}</strong>
-                <span>{model.installed ? `Installed · ${formatBytes(model.installed_size_bytes ?? model.estimated_cache_bytes)}` : `Download size about ${formatBytes(model.estimated_cache_bytes)}`}</span>
-              </div>
-              <div className="model-actions">
-                {model.installed ? (
-                  <>
-                    <button type="button" onClick={() => void verifyModel(model)} disabled={busy}>Check files</button>
-                    <button type="button" className="danger-link" onClick={() => setPendingRemove(model)} disabled={busy}>Remove</button>
-                  </>
-                ) : (
-                  <button type="button" className="secondary-action" onClick={() => void installModel(model)} disabled={busy}>Download model</button>
-                )}
-              </div>
-            </article>
-          ))}
+          {readiness?.models.map((model) => {
+            const modelTaskActive = task?.state === "running" && taskModelId === model.model_id;
+            const downloading = modelTaskActive && taskModelAction === "install";
+            const removing = modelTaskActive && taskModelAction === "remove";
+            return (
+              <article key={model.model_id} className="model-row">
+                <div>
+                  <strong>{model.model_id}</strong>
+                  <span>{model.installed ? `Installed · ${formatBytes(model.installed_size_bytes ?? model.estimated_cache_bytes)}` : `Download size about ${formatBytes(model.estimated_cache_bytes)}`}</span>
+                  {modelTaskActive && (
+                    <progress aria-label={`${downloading ? "Downloading" : "Removing"} ${model.model_id} model`} />
+                  )}
+                </div>
+                <div className="model-actions">
+                  {model.installed ? (
+                    <>
+                      <button type="button" onClick={() => void verifyModel(model)} disabled={busy || modelTaskActive}>Check files</button>
+                      <button type="button" className="danger-link" onClick={() => setPendingRemove(model)} disabled={busy || modelTaskActive}>{removing ? "Removing…" : "Remove"}</button>
+                    </>
+                  ) : (
+                    <button type="button" className="secondary-action" onClick={() => void installModel(model)} disabled={busy || modelTaskActive}>{downloading ? "Downloading…" : "Download model"}</button>
+                  )}
+                </div>
+              </article>
+            );
+          })}
         </div>
         {pendingRemove && (
           <div className="confirmation-panel" aria-label={`Remove ${pendingRemove.model_id} confirmation`}>
@@ -733,12 +787,20 @@ export function ProcessingCenter({
               <label className="checkbox-row">
                 <input
                   type="checkbox"
-                  checked={execution.diarize}
+                  checked={execution.diarize && speakerLabeling?.available === true}
+                  disabled={busy || speakerLabeling?.available !== true}
                   onChange={(event) => setExecution((current) => ({ ...current, diarize: event.target.checked, allowDiarizationModelDownload: event.target.checked ? current.allowDiarizationModelDownload : false }))}
                 />
-                <span><strong>Label speakers automatically</strong><small>Adds recording-specific labels such as Speaker 1 and Speaker 2 after transcription.</small></span>
+                <span>
+                  <strong>Label speakers automatically</strong>
+                  <small>
+                    {speakerLabeling?.available
+                      ? "Adds recording-specific labels such as Speaker 1 and Speaker 2 after transcription."
+                      : speakerLabeling?.message ?? "Checking whether local speaker labeling is available."}
+                  </small>
+                </span>
               </label>
-              {execution.diarize && (
+              {execution.diarize && speakerLabeling?.available === true && (
                 <label className="checkbox-row">
                   <input
                     type="checkbox"
