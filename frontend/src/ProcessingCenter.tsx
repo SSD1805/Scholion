@@ -586,7 +586,7 @@ export function ProcessingCenter({
                         </small>
                       </dd>
                     </div>
-                  ))
+                  ))}
                 ) : (
                   <div><dt>Graphics</dt><dd>No supported accelerator detected</dd></div>
                 )}
@@ -647,7 +647,7 @@ export function ProcessingCenter({
             </span>
           )}
         </div>
-        <p>Models are downloaded only when you choose. Once installed, transcription can run without an internet connection.</p>
+        <p>Models are downloaded only when you choose. Once installed, transcription can run without an internet connection. Scholion keeps installed models in its private model cache.</p>
         <div className="model-list">
           {readiness?.models.map((model) => {
             const modelTaskActive = task?.state === "running" && taskModelId === model.model_id;
