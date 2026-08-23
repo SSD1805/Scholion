@@ -29,7 +29,7 @@ Scholion is pre-production, but the backend and desktop cover a coherent path fr
 | Languages | multilingual decoding plus conservative local text-language attribution |
 | Speakers | optional anonymous recording-scoped diarization, word-level handoffs, generation-bound display labels, honest overlap/mixed presentation |
 | Difficult audio | optional deterministic FFmpeg noise suppression with provenance/timeline checks |
-| Model custody | explicit inventory, recommendation, install, revalidation, immutable revision pinning/removal |
+| Model custody | explicit inventory, recommendation, install, local revalidation, immutable revision pinning/removal; stronger project-owned policy trust is being integrated under #110 |
 | Transcript output | canonical JSON plus deterministic TXT, SRT, WebVTT publication views |
 | Search | private BM25 lexical retrieval, optional semantic retrieval, hybrid reciprocal-rank fusion |
 | Evidence navigation | canonical-hash verification, aligned highlights, bounded context, speaker presentation, source seek coordinates |
@@ -46,6 +46,8 @@ Scholion is pre-production, but the backend and desktop cover a coherent path fr
 | Accessibility | keyboard/semantic-role tests, axe, non-hover contextual help, explicit light/dark browser schemes, and an eight-skin contrast matrix |
 | Architecture hygiene | architecture/redundancy audit complete: shared capability-blind transport, centralized application composition, one typed saved-question surface, one Research evidence presentation contract |
 | Quality | Linux/macOS/Windows CI, strict typing, lint/format/security, complexity/dead-code, branch coverage, dependency audit, Playwright/axe, native Rust tests, package verification, targeted mutation qualification |
+
+Model trust has two deliberately separate levels today. Scholion already manages the local model receipt, immutable provider revision, cache containment, and expected local structure. The #110 supply-chain work adds a stronger project-owned policy that approves the exact upstream revision and full file set by size/SHA-256 before calling a model policy-trusted. See **[Signed update and model trust channel](docs/security/update-model-trust.md)**.
 
 ## From recording to useful evidence
 
@@ -136,44 +138,45 @@ Read **[Desktop themes and accessibility](docs/development/desktop-accessibility
 
 ## Install the current source build
 
-The supported development/source path uses Python 3.12 and `uv`:
+The supported development/source path uses Python 3.12 and Scholion's repository-local bootstrap. A system-wide `uv` installation is not required:
 
 ```bash
 git clone https://github.com/SSD1805/Scholion.git
 cd Scholion
-uv sync --locked --extra transcription
-uv run scholion init
-uv run scholion doctor
+python3.12 scripts/bootstrap_python.py
+source .venv/bin/activate
+scholion init
+scholion doctor
 ```
 
-For the native desktop, follow **[Desktop development prerequisites](docs/development/desktop-development.md)**.
+On Windows, use `py -3.12 scripts\bootstrap_python.py`; activation is optional if you invoke `.venv\Scripts\python.exe` explicitly. See **[Project-local developer toolchain](docs/development/project-local-toolchain.md)** for the complete cross-platform contract and **[Desktop development prerequisites](docs/development/desktop-development.md)** for the native desktop.
 
 ## Plan, transcribe, and resume from the CLI
 
 ```bash
-uv run scholion models recommend
-uv run scholion models install small
-uv run scholion transcribe interview.m4a --dry-run
-uv run scholion transcribe interview.m4a
+scholion models recommend
+scholion models install small
+scholion transcribe interview.m4a --dry-run
+scholion transcribe interview.m4a
 ```
 
 For a source with several embedded audio tracks, bind the exact FFmpeg stream index:
 
 ```bash
-uv run scholion transcribe meeting.mkv --audio-stream 3 --dry-run
-uv run scholion transcribe meeting.mkv --audio-stream 3
+scholion transcribe meeting.mkv --audio-stream 3 --dry-run
+scholion transcribe meeting.mkv --audio-stream 3
 ```
 
 Add derived publication formats when useful:
 
 ```bash
-uv run scholion transcribe interview.m4a --export txt --export srt --export vtt
+scholion transcribe interview.m4a --export txt --export srt --export vtt
 ```
 
 Resume a validated interrupted job:
 
 ```bash
-uv run scholion transcribe interview.m4a --resume JOB_ID
+scholion transcribe interview.m4a --resume JOB_ID
 ```
 
 Model acquisition is explicit and network-bearing. Resume rechecks source identity and current resource admission rather than silently changing the execution contract, including its selected audio stream.
@@ -181,12 +184,12 @@ Model acquisition is explicit and network-bearing. Resume rechecks source identi
 ## Search, annotate, and name speakers
 
 ```bash
-uv run scholion library rebuild
-uv run scholion library search "housing insecurity"
-uv run scholion library find "housing insecurity" --context-segments 1
-uv run scholion library speakers list JOB_ID
-uv run scholion library speakers name JOB_ID speaker-02 "Dr. Chen"
-uv run scholion library speakers transcript JOB_ID
+scholion library rebuild
+scholion library search "housing insecurity"
+scholion library find "housing insecurity" --context-segments 1
+scholion library speakers list JOB_ID
+scholion library speakers name JOB_ID speaker-02 "Dr. Chen"
+scholion library speakers transcript JOB_ID
 ```
 
 Speaker names are durable user-authored state. `speaker-02` remains anonymous machine-produced evidence; the human label is separate and generation-bound.
@@ -198,7 +201,7 @@ Research metadata can constrain retrieval, and saved searches persist the questi
 Deletion remains dry-run first from the CLI:
 
 ```bash
-uv run scholion library delete JOB_ID --scope library-view
+scholion library delete JOB_ID --scope library-view
 ```
 
 The plan prints actions and a confirmation token. Nothing changes until the same request is repeated with that token. `canonical-transcript` does **not** imply `research-notes`, `saved-searches`, or `source-recording`.
@@ -208,7 +211,7 @@ The native desktop exposes the same contract under **Storage**: select explicit 
 Age-based retention is narrower:
 
 ```bash
-uv run scholion library retention --execution-days 30
+scholion library retention --execution-days 30
 ```
 
 The Storage workspace can preview the same private-state cleanup and marks interrupted/failed candidates whose resume capability would be lost. Retention preserves canonical transcripts, human research, source media, and lightweight lifecycle manifests.
@@ -234,7 +237,7 @@ A database is allowed to make evidence useful. It is not allowed to become the o
 
 ## For maintainers
 
-Start with **[docs/architecture/README.md](docs/architecture/README.md)**, **[Architecture and redundancy audit](docs/architecture/redundancy-audit.md)**, **[Processing Center](docs/architecture/processing-center.md)**, **[Audio tracks](docs/audio-tracks.md)**, **[Transcript and speaker tools](docs/transcript-tools.md)**, **[Verified native playback](docs/native-playback.md)**, **[Storage and lifecycle controls](docs/storage-lifecycle.md)**, **[In-app guidance](docs/in-app-guidance.md)**, **[Safe deletion and retention](docs/architecture/safe-deletion-retention.md)**, and **[frontend/SECURITY.md](frontend/SECURITY.md)**.
+Start with **[docs/architecture/README.md](docs/architecture/README.md)**, **[Architecture and redundancy audit](docs/architecture/redundancy-audit.md)**, **[Processing Center](docs/architecture/processing-center.md)**, **[Audio tracks](docs/audio-tracks.md)**, **[Local model management](docs/architecture/model-management.md)**, **[Signed update and model trust channel](docs/security/update-model-trust.md)**, **[Transcript and speaker tools](docs/transcript-tools.md)**, **[Verified native playback](docs/native-playback.md)**, **[Storage and lifecycle controls](docs/storage-lifecycle.md)**, **[In-app guidance](docs/in-app-guidance.md)**, **[Safe deletion and retention](docs/architecture/safe-deletion-retention.md)**, and **[frontend/SECURITY.md](frontend/SECURITY.md)**.
 
 Normal qualification includes Ruff, strict mypy, Vulture, Radon, branch coverage, dependency audit, package verification, TypeScript/build/audit gates, native Cargo compilation/tests, Playwright/axe, the eight-theme contrast matrix, targeted Poodle mutation workflows, and Linux/macOS/Windows CI. See **[Frontend testing strategy](docs/development/frontend-testing.md)** for frontend/backend test ownership.
 
@@ -242,10 +245,10 @@ Normal qualification includes Ruff, strict mypy, Vulture, Radon, branch coverage
 
 Research/search, Processing, explicit embedded-track transcription, desktop comprehension/themes, transcript/speaker tools, verified native playback, contextual guidance, desktop lifecycle/retention controls, architecture/redundancy consolidation, and the Scholion identity migration are complete first-release foundation. The next first-release sequence is:
 
-1. packaging, first-run storage setup, signed updates, and evidence-safe uninstall;
+1. finish the #110 signed-update and policy-trusted-model integration, then package first-run storage setup, updates, and evidence-safe uninstall; public Linux packaging remains blocked by #135 until the supported Tauri stack leaves the affected GTK3/GLib graph;
 2. backup/restore plus selected research portability;
 3. packaged semantic-model/dependency custody; and
-4. representative-device qualification across ordinary consumer hardware and hostile path, disk, interruption, upgrade, and accessibility cases.
+4. representative-device qualification across ordinary consumer hardware and hostile path, disk, interruption, upgrade, and accessibility cases, including the remaining #114 native CPU-only/accelerator task-transport evidence.
 
 Freeform research notebook pages are a useful later research-native feature, but they are intentionally separate from evidence-anchored notes and are not on the first-release critical path.
 
