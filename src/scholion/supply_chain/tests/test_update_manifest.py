@@ -11,7 +11,9 @@ from scholion.supply_chain.update_manifest import (
 
 
 class FixtureVerifier:
-    def __init__(self, *, accepted_key: str, accepted_payload: bytes, accepted_signature: bytes) -> None:
+    def __init__(
+        self, *, accepted_key: str, accepted_payload: bytes, accepted_signature: bytes
+    ) -> None:
         self.accepted_key = accepted_key
         self.accepted_payload = accepted_payload
         self.accepted_signature = accepted_signature
@@ -34,7 +36,9 @@ class FixtureVerifier:
         )
 
 
-def _payload(*, sequence: int = 7, expires_delta: timedelta = timedelta(days=7)) -> bytes:
+def _payload(
+    *, sequence: int = 7, expires_delta: timedelta = timedelta(days=7)
+) -> bytes:
     now = datetime(2026, 8, 23, 15, 0, tzinfo=UTC)
     document = {
         "schema_version": 1,
@@ -56,7 +60,9 @@ def _payload(*, sequence: int = 7, expires_delta: timedelta = timedelta(days=7))
     return json.dumps(document, sort_keys=True, separators=(",", ":")).encode("utf-8")
 
 
-def _envelope(payload: bytes, *, key_id: str = "release-2026", signature: bytes | None = None) -> dict[str, object]:
+def _envelope(
+    payload: bytes, *, key_id: str = "release-2026", signature: bytes | None = None
+) -> dict[str, object]:
     resolved_signature = signature if signature is not None else b"s" * 64
     return {
         "schema_version": 1,
@@ -132,7 +138,9 @@ def test_rollback_sequence_is_rejected_after_signature_verification() -> None:
         accepted_signature=signature,
     )
 
-    with pytest.raises(UpdateTrustError, match="older than a previously trusted sequence"):
+    with pytest.raises(
+        UpdateTrustError, match="older than a previously trusted sequence"
+    ):
         verify_signed_update_manifest(
             _envelope(payload, signature=signature),
             verifier=verifier,
@@ -163,7 +171,9 @@ def test_expired_metadata_is_rejected() -> None:
 def test_artifact_transport_must_be_https_and_typed() -> None:
     payload_document = json.loads(_payload().decode("utf-8"))
     payload_document["artifacts"][0]["url"] = "http://updates.example.invalid/app"
-    payload = json.dumps(payload_document, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    payload = json.dumps(
+        payload_document, sort_keys=True, separators=(",", ":")
+    ).encode("utf-8")
     signature = b"s" * 64
     verifier = FixtureVerifier(
         accepted_key="release-2026",
