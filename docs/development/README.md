@@ -18,14 +18,14 @@ This area explains how Scholion turns architecture claims into failing tests ins
 | [Testing and regression bisection](testing-and-bisect.md) | repository-wide test strategy, colocation, mutation anticipation, deterministic bisect oracles |
 | [Semantic retrieval qualification](semantic-retrieval-testing.md) | property, negative, boundary, integration, and mutation coverage for lexical/semantic/hybrid retrieval |
 | [Empirical benchmarking and calibration](benchmarking.md) | measuring real execution without turning hosted CI timing into folklore |
-| [Documentation style](../documentation-style.md) | current-truth rules, Mermaid portability/accessibility, editorial voice |
+| [Documentation style](../documentation-style.md) | current-truth rules, generated Mermaid SVG custody/accessibility, editorial voice |
 
 ## Current PR quality gate
 
 Cheap checks stop expensive jobs where possible. Normal pull-request qualification includes:
 
 - locked Python dependency verification and runtime dependency audit;
-- Mermaid documentation portability verification;
+- deterministic Mermaid source/SVG regeneration, byte comparison, and docs-tool dependency audit;
 - Ruff lint/format/security;
 - strict mypy;
 - Vulture dead-code checks;
@@ -112,6 +112,8 @@ Representative 8/16 GB consumer machines, Apple Silicon, dGPU laptops, and large
 
 ## Documentation regressions
 
-Mermaid source remains directly visible and a static SVG may exist only as a secondary fallback. Do not hide Mermaid behind a fallback or strip the established palette. `scripts/verify_mermaid_docs.py` protects the portable source/fallback contract.
+Mermaid `.mmd` files are authoritative diagram source. The checked-in SVGs are generated, rebuildable documentation assets produced by the pinned official Mermaid CLI. Markdown displays those SVGs and links their source; inline Mermaid fences are rejected so GitHub's embedded renderer is not a second presentation path.
+
+After editing a Mermaid source, run `npm --prefix tools/mermaid run render` and commit the source and generated SVG together. CI independently renders every registered source into a temporary directory and byte-compares it with the committed output. A stale, missing, hand-edited, or unregistered diagram fails the `mermaid-docs` quality job. See [Documentation style](../documentation-style.md) for the complete contract.
 
 Development docs should explain enough of the rule that a new contributor understands why a test exists before reading the mutant it is meant to kill.
