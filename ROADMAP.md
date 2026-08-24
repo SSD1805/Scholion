@@ -1,31 +1,25 @@
 # Scholion roadmap 🗺️✨
 
-Scholion is becoming a **private local workspace for recorded evidence**. Its job is not to out-engine every speech-recognition runtime. Its job is to make local transcription dependable, resumable, inspectable, searchable, navigable, annotatable, portable, and safe on ordinary computers while keeping source evidence and human-authored knowledge under clear custody.
+Scholion is a **private, local-first workspace for recorded evidence**. Its job is not merely to transcribe audio. It turns local recordings into reproducible canonical transcript evidence, keeps provenance and user-authored research durable, makes private corpora searchable, and lets every useful result navigate back to exact verified evidence.
 
-Modern Scholion restarted on August 2, 2026. The project has moved from “can we transcribe a file?” through a substantial backend foundation into a native desktop that can import, process, make an explicit embedded-audio-track choice, search, verify, annotate, inspect speakers/provenance, publish derived transcript views, play exact verified source evidence, and review/apply custody-aware storage changes. This roadmap is a productization map, not a class inventory.
+Modern Scholion restarted on August 2, 2026. The MVP product foundation is now substantially built: import, local processing, explicit embedded-audio-track choice, canonical evidence, lexical/semantic/hybrid retrieval, verified navigation, durable notes/tags/collections/saved searches, transcript and speaker tools, native source playback, lifecycle/retention controls, contextual guidance, accessibility themes, and signed update/model-trust mechanics all exist in repository code.
+
+The project is now in **pre-packaging release readiness**. Packaging itself is deliberately the next milestone after issue #145, not part of the current branch.
 
 ```mermaid
 flowchart LR
     A[Local media] --> B[Reliable local transcription]
     B --> C[Canonical evidence]
-    C --> D[Lexical semantic hybrid retrieval]
+    C --> D[Private retrieval]
     D --> E[Verified evidence navigation]
     E --> F[Durable research authority]
-    D --> G[Unified discovery]
-    F --> G
-    G --> H[Saved searches]
-    H --> I[Safe lifecycle]
-    I --> J[Incremental refresh]
-    J --> K[Durable library locations]
-    K --> L[Tauri React desktop]
-    L --> M[Import and Library UI]
-    M --> N[Verified evidence reader]
-    N --> O[Research evidence loop]
-    O --> P[Processing center]
-    P --> Q[Local media playback]
-    Q --> R[Trust + desktop packaging]
-    R --> S[Backup restore portability]
-    S --> T[Release qualification]
+    F --> G[Native desktop workflows]
+    G --> H[Lifecycle and playback]
+    H --> I[Signed update and model trust mechanics]
+    I --> J[Pre-packaging readiness]
+    J --> K[Windows and macOS packaging]
+    K --> L[Representative release qualification]
+    L --> M[MVP release]
 
     classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
     classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
@@ -34,11 +28,9 @@ flowchart LR
     classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
 
     class A source
-    class B process
+    class B,D,G,H,I,J,K,L process
     class C,E,F evidence
-    class D,G,H,I,J,K view
-    class L,M,N inspect
-    class O,P,Q,R,S,T process
+    class M view
 ```
 
 <details>
@@ -48,63 +40,41 @@ flowchart LR
 
 </details>
 
-Text fallback: Scholion already spans local media, reliable transcription, explicit embedded-track selection, canonical evidence, lexical/semantic/hybrid retrieval, verified navigation, durable research, lifecycle contracts and desktop controls, incremental refresh, remembered locations, native import, Processing, Library, Research, transcript/speaker tools, verified native playback, an accessible multi-theme shell, architecture/redundancy consolidation, and the Scholion identity migration. The next first-release work is finishing supply-chain trust, packaging/first-run/update/uninstall, portability, packaged semantic custody, and representative-device qualification.
+Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, and signed update/model-trust mechanics. The current milestone is pre-packaging release readiness, followed by Windows/macOS packaging and representative release qualification. Official Linux binary distribution remains separately blocked by issue #135.
 
-# First-release foundation now
+# MVP foundation now
 
-“Foundation” means the authority exists in code and is protected by tests. It does not mean installers and representative-device qualification are finished.
+“Implemented” means the application authority exists in code and is protected by automated tests. It does not mean a production installer, production signing key, reviewed model catalog, or representative-device release evidence already exists.
 
-## Local processing, audio tracks, and model custody
+## Local processing and model custody
 
 Scholion inspects effective CPU/memory and accelerator topology before admitting a local strategy. FFprobe owns bounded media inspection; `AudioStreamSelector` owns deterministic exact-stream selection; FFmpeg owns canonical normalization and optional deterministic enhancement. Managed model installation is explicit, records the immutable provider revision actually installed, and locally revalidates repository/revision/layout expectations before transcription.
 
-Do not collapse that current local custody contract into the stronger word “trusted.” The #110 foundation now defines project-owned policy trust for an exact upstream revision plus the complete allowed file set, byte sizes, SHA-256 values, source/license metadata, and fail-closed verification. Production faster-whisper acquisition still needs to be wired to those curated entries before the desktop may call a model policy-trusted.
+Project-owned model policy trust is now implemented. When a reviewed `model-trust.json` is bundled, `ModelManager` pins the exact approved upstream revision, verifies the complete file set/size/SHA-256 before registration and admission, records policy evidence separately from provider-local validation, and re-verifies current trust later. Legacy locally valid models remain visible/removable but cannot authorize new transcription under enforcement until a trusted reinstall succeeds.
+
+The repository intentionally still contains **no guessed production faster-whisper trust entries**. Issue #145 owns the review procedure; the real immutable revisions, licenses, regression evidence, and measured entries remain deliberate release inputs.
 
 The Processing Center presents readiness, model state, preflight, supervised start/cancel, durable job status, checkpoint resume, fresh retry, private execution-state discard, bounded public task failures, in-place model task activity, and speaker-labeling capability gating. Python remains authoritative for planning, admission, model custody, stream-selection validation, resume compatibility, and transcript correctness. Tauri owns allowlisted long-running child-process lifetime. React submits intent and presents state.
 
-A single-audio-stream source requires no choice. If preflight discovers several embedded audio streams and no explicit index was supplied, Python marks the plan as requiring stream confirmation. The desktop promotes a semantic track chooser into the ordinary preflight surface, shows only bounded source-declared title/language/default plus basic media facts, and keeps Start disabled. Choosing a track sends its exact integer index back to Python, which re-runs preflight before the choice is considered confirmed.
+See **[Audio tracks](docs/audio-tracks.md)**, **[Processing Center](docs/architecture/processing-center.md)**, **[Local model management](docs/architecture/model-management.md)**, **[Signed update and model trust channel](docs/security/update-model-trust.md)**, and **[Production trust inputs](docs/security/production-trust-inputs.md)**.
 
-The source labels are clues, not recommendations or identity. Canonical provenance records the exact audio-stream index that entered transcription, and checkpoint resume restores it. This capability covers several embedded streams inside one source file; synchronized separate recording files remain a different evidence-model problem.
-
-See **[Audio tracks](docs/audio-tracks.md)**, **[Processing Center](docs/architecture/processing-center.md)**, **[Local model management](docs/architecture/model-management.md)**, and **[Signed update and model trust channel](docs/security/update-model-trust.md)**.
-
-## Canonical evidence and transcript tools
+## Canonical evidence and research
 
 Canonical JSON is authoritative transcript evidence. It retains source/execution provenance, source-relative segment and word timing, language evidence, optional anonymous speaker evidence, and enhancement provenance. TXT, SRT, and WebVTT are deterministic publications, not transcript authority.
 
-The desktop transcript-tools tranche is implemented. Library results can open generation-bound tools for transcript/source availability and provenance, selected stream inspection, human display-name editing, explicit overlap/mixed/unattributed speaker presentation, and post-hoc TXT/SRT/WebVTT publication.
+Authoritative SQLite owns evidence notes, tags, collections, anchor history, and saved-search intent. DuckDB retrieval/research state is rebuildable. Search ranking never becomes source truth: evidence navigation verifies the canonical generation before presenting precise context, playback coordinates, or accepting a durable research anchor.
 
-Every transcript-tool operation carries `(document_id, canonical_sha256)`. Python refuses stale generations rather than letting a long-lived UI silently mutate newer speaker numbering. React never parses canonical JSON or receives canonical/source paths.
+The first-release Research circuit is coherent: find evidence → verify → annotate → organize → save/replay a question → return to exact evidence → deliberately maintain an anchor when necessary.
 
-See **[Transcript and speaker tools](docs/transcript-tools.md)** and **[Speaker display names](docs/speaker-names.md)**.
+## Transcript tools, playback, lifecycle, and locations
 
-## Verified native playback
+Transcript tools are generation-bound. Library results can inspect provenance, selected stream identity, speaker presentation, human display names, and deterministic transcript publications without giving React canonical/source paths.
 
-The desktop can play original local audio/video from the same verified source-relative cursor used by evidence navigation.
+Verified playback uses the same evidence discipline. Python re-verifies canonical generation, source identity, source bytes, coordinate bounds, and audio-stream identity. Rust owns the opened file handle and opaque media-session lifetime. Multi-track transcription is supported; multi-track playback fails closed until the native layer can prove the rendered stream matches canonical provenance.
 
-Playback is generation-bound rather than path-driven. Python verifies canonical bytes, source identity, current source SHA-256/size, duration bounds, and audio-stream identity. Rust opens only the approved source, narrows the verification/open race with metadata checks, stores the opened file behind an opaque session ID, and serves bounded byte ranges through the dedicated `scholion-media` protocol.
+Deletion is preview-first and plan-bound. Source-recording deletion requires its own scope, second UI guard, and provenance verification. Retention is intentionally narrower and never ages away canonical transcripts, source media, published transcripts, human research, or lightweight lifecycle manifests.
 
-Multi-track transcription is explicitly supported. Multi-track playback fails closed until the native layer can prove the rendered stream matches canonical provenance.
-
-See **[Verified native playback](docs/native-playback.md)**.
-
-## Retrieval and durable research
-
-The library has a database-neutral retrieval contract, DuckDB lexical projection, BM25-style ranking, optional semantic chunks/embeddings, hybrid reciprocal-rank fusion, and exact-generation evidence identity.
-
-Search ranking and evidence navigation remain separate. A ranked passage becomes precise evidence only after Scholion verifies canonical generation and resolves exact segment/word coordinates.
-
-Authoritative SQLite owns evidence notes, tags, collections, anchor history, and saved-search intent. DuckDB research/search state is rebuildable. The desktop supports note create/edit/delete, tag/collection navigation, one typed saved-question lifecycle, typed Research search, exact-generation return, and explicit stale-anchor review/re-anchor.
-
-Today's `ResearchNote` always has an exact evidence anchor. A future freeform notebook/memo should be a separate authoritative research-document class with optional explicit evidence references rather than weakening that invariant with nullable provenance.
-
-## Safe lifecycle and locations
-
-Deletion is preview-first and plan-bound. The native Storage workspace presents backend-computed requested/effective scopes, concrete action descriptions, preserved-note counts, affected saved-search counts, and exact reviewed confirmation. Source-recording deletion requires its own scope, a second UI guard, and provenance verification.
-
-Retention is intentionally narrower. Storage can preview old private processing workspaces, identify interrupted/failed candidates whose resume capability would be lost, and apply the exact plan. It does not age-delete canonical transcripts, source media, published transcripts, human research, or lightweight lifecycle manifests.
-
-Remembered recording/transcript locations are durable permissions. Recording discovery itself does not hash, probe, copy, or transcribe candidate media. Automatic processing remains a separate explicit policy.
+Remembered recording/transcript locations are durable permissions. Discovery itself does not hash, probe, copy, or transcribe candidate media. Automatic processing remains a separate explicit policy.
 
 ## Desktop presentation and accessibility
 
@@ -117,132 +87,145 @@ Scholion Desktop
 └── Python Scholion               application and evidence rules
 ```
 
-The shell has eight skins: **Archive, Midnight, Paper, Moss, Plum, Ember, Pride, and Monochrome**. All use one semantic token contract for surfaces, text, controls, focus, errors, selection, and accent foregrounds. Theme preference is local presentation state and never evidence/research state.
+The shell has eight skins: **Archive, Midnight, Paper, Moss, Plum, Ember, Pride, and Monochrome**. They share one semantic token contract for surfaces, text, controls, focus, errors, selection, and accent foregrounds. Theme preference is local presentation state and never evidence/research state.
+
+The desktop now also has an explicit **Updates** workspace. Manual checks use one fixed GitHub-hosted metadata location, expose honest network/privacy copy, and remain completely off in source/development builds that lack a production verification key.
 
 # Capability → desktop audit
 
-| Capability | Authority | Desktop status | Remaining first-release work |
+| Capability | Authority | Desktop status | Remaining MVP/release work |
 |---|---|---|---|
 | Machine/resource policy | Python runner/admission | implemented | representative-device calibration |
-| Model custody | managed revision + local revalidation; policy-trust primitives exist | implemented current custody, trust foundation implemented | #110 real curated entries + production install/revalidation/admission gate |
-| Import/locations | durable permissions/discovery | implemented | settings/forget polish |
+| Model custody | managed revision + project policy verification | implemented mechanics | deliberate real catalog review/provisioning under #145 |
+| Import/locations | durable permissions/discovery | implemented | optional settings polish |
 | Processing | plan, execute, checkpoint, resume/retry | implemented | representative native task qualification under #114 |
-| Embedded audio tracks | Python probe/selector/planner + FFmpeg exact map | implemented explicit desktop confirmation | future proven multi-track playback; separate-file sync remains out of scope |
-| Enhancement/diarization intent | Python plan/execution | implemented with capability gating | result polish continues through transcript view |
-| Canonical JSON | authoritative evidence | implemented consumer views | packaging/backup |
-| Speaker labels | generation-bound human state | implemented desktop management | optional organization polish |
-| Speaker transcript | backend derived presentation | implemented | playback-linked reading available through evidence view |
+| Embedded audio tracks | Python probe/selector/planner + FFmpeg exact map | implemented | future proven multi-track playback; separate-file sync remains out of scope |
+| Canonical JSON | authoritative evidence | implemented consumer views | package/qualification only |
+| Speaker labels | generation-bound human state | implemented | optional organization polish |
 | Provenance/details | canonical verified inspection | implemented | richer troubleshooting optional |
-| TXT/SRT/WebVTT | deterministic derived publication | implemented post-hoc desktop flow | optional export organization |
-| Lexical/semantic/hybrid search | private retrieval | implemented | packaged semantic custody |
+| TXT/SRT/WebVTT | deterministic publication | implemented | optional export organization |
+| Lexical/semantic/hybrid search | private retrieval | implemented | current source dependency path is adequate for MVP; packaged semantic custody is post-MVP |
 | Verified evidence navigation | exact generation + timing/seek | implemented | representative-device playback qualification |
-| Notes/tags/collections | SQLite authority | implemented | optional management polish; freeform memos later as separate object type |
+| Notes/tags/collections | SQLite authority | implemented | optional organization polish; freeform memos later |
 | Saved searches | durable typed intent | implemented | optional organization polish |
-| Safe deletion/retention | typed plan-bound Python custody | implemented desktop Storage plan/apply | representative-device/path qualification |
-| Native source playback | generation/source authorization + Rust session | implemented | decoder/device qualification; future proven multi-track selection |
+| Safe deletion/retention | typed plan-bound Python custody | implemented | representative-device/path qualification |
+| Native source playback | Python authorization + Rust session | implemented | decoder/device qualification |
 | Themes/accessibility | semantic palette + browser/native controls | 8 skins qualified | representative OS/forced-colors checks |
-| Architecture/redundancy | capability-blind transport + centralized composition + one Research contract | complete | release/API migration only where compatibility is intentionally broken |
-| Frontend tests | strict TS/build + Playwright/axe | primary surfaces + playback + multitrack + lifecycle covered | grow with features, avoid duplicated backend policy |
-| Update trust | exact-byte signed manifest + rollback/expiry/model-policy primitives | foundation implemented | #110 native verifier/key, fixed endpoint, staged artifact checks, product UI |
-| Packaging | Python wheel + source Tauri | development only | managed runtime/installers/update/uninstall; Linux public package blocked by #135 |
-| Backup/restore | authority boundaries known | none | manifest/reconcile/restore UI |
-| Representative hardware | policy contracts + platform CI | partial | real 8/16 GB, Apple/dGPU/high-DPI; #114 CPU-only + accelerator task transport |
+| Architecture/redundancy | capability-blind transport + app-layer composition + one Research contract | re-audited after #144 | no known duplicate authority remains in current milestone |
+| Frontend tests | strict TS/build + Playwright/axe | primary surfaces including Updates covered | grow with features, avoid duplicated backend policy |
+| Update trust | exact-byte signed manifest + fixed endpoint + rollback/expiry/equivocation + staging + UI | implemented mechanics | production public key/native verifier wiring and OS activation during packaging |
+| Packaging | Python wheel + source Tauri | development only | managed runtime/installers/update activation/uninstall; Linux public package blocked by #135 |
+| Backup/restore | authority boundaries known | not implemented | **post-MVP** portability/data-safety feature |
+| Representative hardware | platform CI + policy contracts | partial | real devices; #114 owns current task-transport evidence |
 
-# Product critical path
+# MVP critical path
 
-## 1. Research/search complete
+## 1. Core product workflows complete
 
-The first-release Research circuit is coherent: find evidence → verify → annotate → organize → save/replay a question → return to exact evidence → deliberately maintain an anchor when necessary.
+Research/search, Processing, explicit embedded-track transcription, transcript/speaker tools, verified playback, lifecycle/retention, contextual guidance, themes/accessibility, architecture consolidation, and product identity are complete implementation foundations.
 
-## 2. Processing Center complete
+## 2. Signed update and model-trust mechanics complete
 
-The first Processing control loop exists over readiness, model state, durable jobs, preflight, explicit embedded-track confirmation, launch, native supervision, cancel, resume versus retry, private-state discard, bounded task outcomes, model task feedback, and speaker-labeling capability gating.
+Merged PR #144 completed the application-side trust mechanics:
 
-The ordinary control loop is implemented. Issue #114 remains open only for representative **native** CPU-only and accelerator-capable task-transport qualification; browser mocks cannot satisfy that evidence requirement.
+- fixed-endpoint manual **Check for updates**;
+- no background update request in source builds without production verification material;
+- exact-byte signed manifest verification seam;
+- publication/expiry checks;
+- monotonic sequence rollback protection;
+- same-sequence equivocation rejection;
+- stable-channel and platform enforcement;
+- private local trust state without an installation ID;
+- streamed artifact staging with exact signed byte count and SHA-256;
+- explicit Off / Never checked / Checking / Up to date / Trusted update available / Staging / Staged / Failure UI states;
+- project-owned model-trust catalog/enforcement mechanics; and
+- deterministic release/model metadata generation tooling.
 
-## 3. Desktop comprehension + theme system complete
+A staged update is deliberately **not** called installed. Native activation plus OS package signing/notarization remains a later packaging boundary.
 
-Ordinary users see human search language rather than Python/database vocabulary. The theme system has one registry, semantic tokens, local persistence, explicit browser schemes, native-control theming, and eight-skin contrast/a11y qualification.
+## 3. Pre-packaging release readiness ← current milestone (#145)
 
-## 4. Transcript and speaker tools complete
+Before turning Tauri bundling on, finish the narrow cleanup that should be frozen before installer/update compatibility becomes real:
 
-Generation-bound backend services own speaker names, overlap-aware presentation, provenance/details, and deterministic post-hoc publication. React submits intent and never becomes canonical authority.
+- complete the post-#144 redundancy re-audit;
+- keep application-service construction out of desktop adapters;
+- centralize capability-blind supply-chain helpers where authority is genuinely identical;
+- freeze the production verifier/key-rotation decision without committing private signing material;
+- define the human review procedure for real faster-whisper trust entries;
+- reject invalid signing inputs before offline signing;
+- truth-sync roadmap/README/security/release documentation and trackers; and
+- replace the placeholder native icon with the final Scholion product mark/master asset.
 
-## 5. Native playback complete
+The verifier decision is documented in **[Production trust inputs](docs/security/production-trust-inputs.md)**: packaging will exact-pin reviewed `ed25519-dalek` 3.0.0 at the native boundary and bundle approved public verification material. The actual Cargo lockfile change belongs to packaging, where Cargo can generate and audit the dependency graph correctly.
 
-Verified source-relative evidence coordinates drive local audio/video without giving React arbitrary path authority. Python owns generation/source/stream authorization. Rust owns the opened file handle, opaque session lifetime, and bounded local-media transport.
+## 4. Packaging and first-run/update/uninstall ← next milestone, deliberately waiting
 
-## 6. Lifecycle + retention UI complete
+After #145, package the real application rather than extending feature scope:
 
-The Storage workspace productizes existing custody contracts without creating a second deletion policy. Source recording removal has a second guard and backend provenance verification. Retention exposes age policy, completed-only defaults, optional failed/interrupted inclusion, explicit resume-loss warnings, preview, and plan-bound application.
+- managed Python runtime/sidecar;
+- FFmpeg/native dependencies;
+- Windows and macOS installers/bundles;
+- storage onboarding/repair;
+- bundled reviewed public update key set;
+- bundled reviewed faster-whisper model-trust catalog;
+- native Ed25519 verification and platform-safe update activation;
+- OS code signing/notarization;
+- release checksums and reproducible provenance/SBOM material; and
+- evidence-safe uninstall semantics.
 
-## 7. Architecture/redundancy audit complete
+Packaging must not silently move/delete user evidence. Uninstall should remove application/runtime/cache state only according to explicit rules while preserving original recordings, canonical transcript evidence, and authoritative research unless the user separately requests destruction.
 
-The architecture/redundancy audit is closed. It consolidated capability-blind Python stdin/stdout mechanics, moved application-service construction into `AppContainer`, migrated bounded frontend desktop/Processing calls onto one fixed-command protocol helper, collapsed duplicate Research saved-question ingress, centralized Research evidence serialization/label invariants, and retained separate playback/custody/long-task boundaries where authority actually differs.
+Public **Linux** binary packaging remains blocked by issue #135 while the supported Tauri Linux graph contains the tracked GTK3/GLib security debt. Windows/macOS packaging should proceed independently. Do not force unsupported GTK/GLib overrides or maintain a Scholion-specific Tauri fork merely to make the advisory disappear.
 
-The audit deliberately does **not** create a generic bridge, arbitrary Python-module selector, dynamic Tauri command dispatcher, frontend policy framework, or universal Pydantic hierarchy. Similar-looking code remains only where security visibility, lifecycle semantics, readability, or compatibility justify it.
+## 5. Representative release qualification
 
-A pre-package follow-up retired the deprecated runner `ModelTier` and `recommended_model_tier` wire field before they could become a released compatibility contract. Runner policy now describes only processing intent and resource/admission limits; concrete transcription strategy ranking remains the sole model-selection authority. No canonical evidence, authoritative research, or checkpoint format depended on the removed marker.
+Once real packages exist, qualify what users will actually run:
 
-See **[Architecture and redundancy audit](docs/architecture/redundancy-audit.md)**.
+- Windows 8 GB CPU-only;
+- ordinary 16 GB systems;
+- Apple Silicon;
+- accelerator-capable NVIDIA hardware;
+- larger 32/64 GB systems;
+- Unicode/long paths and external disks;
+- low-disk and interrupted operations;
+- offline update/model/transcription behavior;
+- upgrades/reinstall;
+- scaling/native controls/media codecs;
+- keyboard/forced-colors/accessibility behavior; and
+- package signature/notarization plus release-metadata byte identity.
 
-## 8. Product identity checkpoint complete
+Issue #114 specifically remains qualification-only until real CPU-only and accelerator-capable React → Tauri → Rust → Python task-transport evidence is recorded. Browser mocks and hosted CI are not a substitute for that evidence.
 
-The first-release product identity is **Scholion**. The Python package/CLI, environment prefix, desktop package, Tauri product/window identity, bundle identifier, playback protocol, frontend copy, tests, tooling, and documentation now use the Scholion identity before installer/update compatibility is frozen.
+# Security hardening boundary
 
-A rename affects more than the GitHub repository label. Audit and intentionally migrate:
+Current FFmpeg/FFprobe controls include no-shell invocation, file-only media protocols, explicit timeouts, bounded metadata, source mutation checks, and private planned output. These materially reduce risk but are **not an OS sandbox**.
 
-- product/CLI/module/package/display names;
-- Tauri bundle identifiers and executable names;
-- app-data/cache/model/output directory names;
-- installer/update-channel/signing identities;
-- documentation/examples and generated artifacts;
-- environment variables and integration points; and
-- migration/compatibility behavior for existing local Scholion workspaces.
+OS-level parser capability reduction remains worthwhile before describing Scholion as highly hardened against malicious media. It is not being converted into an endless blocker for source builds or an early packaged preview. Keychain/application-layer encryption likewise remains threat-model-driven and must not precede recovery/portability design merely because secure-sounding software often has encryption.
 
-The identity surface is documented in **[Product identity](docs/product-identity.md)**. Future changes must be explicit migrations and must never silently move, delete, or invalidate authoritative user evidence.
+# Post-MVP / future state
 
-## 9. Supply-chain trust + packaging + first run/update/uninstall ← next
+The following remain valuable but are intentionally **not prerequisites for the MVP packaging milestone**.
 
-Finish issue #110 before calling the update/model channel production-ready:
+## Backup/restore + research portability
 
-- choose and pin a reviewed native signature verifier and production public key(s);
-- implement the fixed-endpoint manual **Check for updates** action;
-- persist highest trusted sequence locally without transmitting an identifier;
-- stage artifacts and enforce signed size/SHA-256 before platform-safe activation;
-- keep periodic checks separately opt-in;
-- review real faster-whisper upstream revisions and generate the production curated trust catalog;
-- require the exact curated revision and full file-set/size/SHA-256 match before model registration/admission; and
-- expose integrity/revalidation versus Scholion policy trust accurately under technical details.
+Back up canonical evidence and authoritative research, rebuild projections on restore, reconcile machine-local paths, and export selected research with stable evidence identity. The backup manifest should describe stable authority and relationships, not turn derived views into source truth.
 
-Then ship a managed Python runtime/sidecar, FFmpeg/native dependencies, Windows/macOS/Linux delivery, storage onboarding/repair, signed updates, and evidence-safe uninstall semantics.
+This is important data-safety work, especially before any future application-layer encryption, but it is a post-MVP product feature rather than a reason to withhold the first useful packaged Scholion build.
 
-Public **Linux** packaging remains blocked by issue #135 while the supported Tauri Linux graph still contains the GTK3-era `glib 0.18.5` unsoundness. Do not “fix” that by forcing unsupported GTK/GLib overrides underneath Tauri. Adopt a stable/reviewed upstream-supported runtime when available, remove the temporary RustSec allowlist, and requalify Linux Wayland/X11/native flows.
+## Packaged semantic custody
 
-Packaging must not silently move/delete user evidence. Uninstall should remove application/runtime/cache state according to explicit rules while preserving original recordings, canonical transcript evidence, and authoritative research unless the user separately requests destruction.
+The current optional semantic retrieval path is sufficient for source/MVP operation. A later productization tranche can lock/qualify embedding dependencies, immutable embedding-model acquisition, private cache/offline behavior, corpus compatibility, and upgrade semantics.
 
-## 10. Backup/restore + research portability
+## Research-native expansion
 
-Back up canonical evidence and authoritative research, rebuild projections on restore, reconcile machine-local paths, and export selected research with stable evidence identity.
+Freeform research memos/notebook pages, snapshots/diffs, REFI-QDA interoperability, evidence packets, comparison workspaces, evidence-linked writing/script boards, portable research bundles, and live provisional capture remain intentionally separate from the MVP.
 
-Design the authority manifest so a later freeform `ResearchDocument`/memo class can be added without pretending current evidence notes are unanchored. Export formats are derived views; the backup manifest is about stable authority and relationships.
+A future notebook page should live in authoritative SQLite as its own research-document type with optional explicit references to evidence notes/anchors. It should not weaken the current `ResearchNote` invariant by making evidence provenance nullable.
 
-## 11. Packaged semantic custody
+# Sequencing rule
 
-Lock/qualify embedding dependencies, immutable model acquisition, private cache/offline behavior, corpus compatibility, and upgrade semantics as an ordinary product feature.
+The rule is now intentionally boring:
 
-## 12. Representative-device qualification
+**finish #145 → package Windows/macOS → qualify real packages → release the MVP.**
 
-Qualify 8 GB Windows, 16 GB commodity systems, Apple Silicon, dGPU laptops, 32/64 GB systems, Unicode/long paths, external disks, low disk, crashes, interrupted downloads, offline use, upgrades/reinstall, scaling, native controls, media codecs, keyboard use, forced colors, and accessibility.
-
-Issue #114 specifically remains open until the real worker/task transport is recorded on representative CPU-only and accelerator-capable machines. Browser Playwright is presentation evidence, not a substitute for React → Tauri → Rust → Python qualification.
-
-This is where “my friend can put a random video in and it works” becomes an evidence-backed claim rather than an architectural expectation.
-
-# Later research-native work
-
-Freeform research memos/notebook pages, snapshots/diffs, REFI-QDA interoperability, evidence packets, comparison workspaces, evidence-linked writing/script boards, portable research bundles, and live provisional capture remain intentionally separate from the first-release path.
-
-A future notebook page should live in authoritative SQLite as its own research-document type with optional explicit references to evidence notes/anchors. It should not weaken the current `ResearchNote` invariant by making its evidence anchor optional. DuckDB can later project memo text/relationships for search, and Markdown/plain-text/HTML/research-bundle exports can remain derived views.
-
-The sequencing rule remains simple: do not build a larger research superstructure while the ordinary desktop still needs supply-chain completion, packaging, portability, and real-device qualification.
+Do not reopen completed product tranches merely because later research or portability features are interesting. Do not call production secrets, real upstream trust decisions, OS signing, or representative-device evidence “implemented” until they actually exist.

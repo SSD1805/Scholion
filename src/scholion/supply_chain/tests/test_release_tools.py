@@ -1,6 +1,6 @@
 import base64
 import json
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
@@ -79,6 +79,75 @@ def test_payload_rejects_duplicate_platforms_through_runtime_schema(
             expires_at=_NOW + timedelta(days=1),
             release_notes_url="https://example.test/release",
             artifacts=(first, second),
+        )
+
+
+def test_payload_builder_refuses_non_stable_channel_before_signing(
+    tmp_path: Path,
+) -> None:
+    artifact = _artifact(tmp_path, "windows-x86_64", "app.bin", b"artifact")
+
+    with pytest.raises(ValueError, match="only emits the stable channel"):
+        build_update_payload_bytes(
+            sequence=1,
+            channel="beta",
+            version="1.0.0",
+            published_at=_NOW,
+            expires_at=_NOW + timedelta(days=1),
+            release_notes_url="https://example.test/release",
+            artifacts=(artifact,),
+        )
+
+
+def test_payload_builder_refuses_non_semver_version_before_signing(
+    tmp_path: Path,
+) -> None:
+    artifact = _artifact(tmp_path, "windows-x86_64", "app.bin", b"artifact")
+
+    with pytest.raises(ValueError, match="semantic version"):
+        build_update_payload_bytes(
+            sequence=1,
+            channel="stable",
+            version="latest",
+            published_at=_NOW,
+            expires_at=_NOW + timedelta(days=1),
+            release_notes_url="https://example.test/release",
+            artifacts=(artifact,),
+        )
+
+
+@pytest.mark.parametrize(
+    ("published_at", "expires_at", "field"),
+    [
+        (
+            datetime(2026, 8, 24, 1, 0),
+            _NOW + timedelta(days=1),
+            "published_at",
+        ),
+        (
+            _NOW,
+            datetime(2026, 8, 25, 2, 0, tzinfo=timezone(timedelta(hours=1))),
+            "expires_at",
+        ),
+    ],
+)
+def test_payload_builder_requires_explicit_utc_before_signing(
+    tmp_path: Path,
+    published_at: datetime,
+    expires_at: datetime,
+    field: str,
+) -> None:
+    artifact = _artifact(tmp_path, "windows-x86_64", "app.bin", b"artifact")
+
+    with pytest.raises(ValueError, match=field):
+        build_update_payload_bytes(
+            sequence=1,
+            channel="stable",
+            version="1.0.0",
+            published_at=published_at,
+            expires_at=expires_at,
+            release_notes_url="https://example.test/release",
+            artifacts=(artifact,),
         )
 
 

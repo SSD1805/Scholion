@@ -2,9 +2,9 @@
 
 Scholion is a **private, local-first workspace for recorded evidence**.
 
-It can inspect a recording, choose a safe way to run on the computer you actually have, transcribe locally, survive interruptions, preserve provenance, search a private corpus, navigate results back to verified canonical evidence, keep research notes attached to that evidence, save reusable research questions, manage generation-bound speaker labels, inspect transcript provenance, publish derived transcript views, play verified local source evidence, and manage storage through reviewed custody plans in a native desktop shell.
+It can inspect a recording, choose a safe way to run on the computer you actually have, transcribe locally, survive interruptions, preserve provenance, search a private corpus, navigate results back to verified canonical evidence, keep research notes attached to that evidence, save reusable research questions, manage generation-bound speaker labels, inspect transcript provenance, publish derived transcript views, play verified local source evidence, manage storage through reviewed custody plans, and perform explicit privacy-preserving application update checks in a native desktop shell.
 
-You do **not** need to understand CUDA, DuckDB, SQLite, BM25, model revisions, or desktop IPC to use the product. Those are implementation details. The desktop should speak in recordings, transcripts, searches, notes, processing, speakers, playback, storage, and evidence. Persistent in-app guidance explains the unusual concepts at the point of use instead of assuming this documentation is open beside the app.
+You do **not** need to understand CUDA, DuckDB, SQLite, BM25, model revisions, signatures, or desktop IPC to use the product. Those are implementation details. The desktop should speak in recordings, transcripts, searches, notes, processing, speakers, playback, storage, updates, and evidence. Persistent in-app guidance explains unusual concepts at the point of use instead of assuming this documentation is open beside the app.
 
 > **The short version:** your recording stays yours, canonical JSON remains inspectable evidence, your notes/speaker names/saved searches remain your knowledge, and most machinery built around those things can be thrown away and rebuilt.
 
@@ -12,7 +12,7 @@ You do **not** need to understand CUDA, DuckDB, SQLite, BM25, model revisions, o
 
 | You want to… | Scholion currently… |
 |---|---|
-| Transcribe privately | runs faster-whisper locally from a model you explicitly install and Scholion revalidates locally before use |
+| Transcribe privately | runs faster-whisper locally from a model you explicitly install and Scholion revalidates before use |
 | Avoid melting a smaller laptop | inspects effective CPU/RAM and compatible acceleration before choosing a strategy |
 | Process from the desktop | provides readiness, model state, preflight, supervised start/cancel, progress, resume versus retry, and private-state discard |
 | Survive interruption | checkpoints completed work and validates the original contract on resume |
@@ -35,22 +35,33 @@ You do **not** need to understand CUDA, DuckDB, SQLite, BM25, model revisions, o
 | Refresh an evolving corpus | incrementally reconciles changed canonical generations and can verify tracked evidence |
 | Remove something safely | previews backend-calculated custody scopes/actions, requires an exact plan-bound confirmation, and gives source media its own second guard |
 | Clean old processing state | previews eligible private workspaces and marks resumable interrupted/failed jobs before cleanup |
+| Check for application updates | performs one explicit signed-metadata request to a fixed GitHub-hosted location; source builds without production verification material remain Updates off and make no request |
 | Understand an unfamiliar screen | keeps re-openable, keyboard/touch-accessible contextual help in the app instead of relying on hover-only tips |
 | Change appearance | offers Archive, Midnight, Paper, Moss, Plum, Ember, Pride, and Monochrome through one accessible Theme picker |
 
 ### Model trust in plain language
 
-Today, model installation is explicit. Scholion records the immutable provider revision it received, keeps that managed state local, and revalidates the expected local snapshot structure before using the model. That is **not yet the same thing** as Scholion policy approving an exact upstream revision and every byte by cryptographic hash.
+Model installation is explicit. Scholion records the immutable provider revision it received, keeps that managed state local, and revalidates the snapshot before using it.
 
-The stronger supply-chain contract tracked in issue #110 adds that policy layer: a signed Scholion release carries the curated model policy, installs request the exact approved upstream revision, and the downloaded file set, sizes, and SHA-256 values must match before the model can be called policy-trusted. Hugging Face remains transport, not the trust authority.
+The stronger project-policy layer is also implemented now. When a reviewed model-trust catalog ships inside a Scholion release, installation requests the exact approved upstream revision and the complete downloaded file set, sizes, and SHA-256 values must match before that model can be called **trusted by this Scholion build**. Legacy locally valid models can remain visible/removable without being admitted for new transcription under enforcement.
 
-Ordinary product copy should explain consequences such as “downloads only when you choose,” “stays on this computer,” and “works offline after installation.” Repository/source/revision/hash details belong under technical details or the security documentation rather than in the main workflow.
+What does **not** exist yet is a guessed production catalog. Real faster-whisper revisions, licenses, file sets, and regression behavior must be reviewed deliberately before generated trust entries are bundled. Hugging Face remains transport, not the trust authority.
+
+See **[Signed update and model trust channel](security/update-model-trust.md)** and **[Production trust inputs](security/production-trust-inputs.md)**.
+
+### Update trust in plain language
+
+Scholion's update UI is manual. It distinguishes Off, Never checked, Checking, Up to date, Trusted update available, Staging/Staged, and bounded failure. Signed metadata must pass key/signature, publication/expiry, stable-channel, platform, anti-rollback, and equivocation checks before it can authorize an artifact. A downloaded artifact must then match the signed byte count and SHA-256 exactly.
+
+A staged package is **not installed**. Native activation plus Windows/macOS signing/notarization belongs to the later packaging milestone.
+
+An update check is network activity, but it is not behavioral telemetry. GitHub/CDN can observe ordinary connection metadata such as IP address and request time. Scholion does not send an installation ID, corpus/research content, hardware/model inventory, or product-behavior data.
 
 ## Pick your doorway
 
 - **[Getting started](getting-started.md)** for the source-build path, desktop path, and first transcript.
 - **[Audio tracks](audio-tracks.md)** for single-track behavior, explicit multi-track selection, source-declared track labels, canonical stream provenance, and the current playback limitation.
-- **[In-app guidance](in-app-guidance.md)** for the persistent help controls and why they describe rather than duplicate backend policy.
+- **[In-app guidance](in-app-guidance.md)** for persistent help controls and why they describe rather than duplicate backend policy.
 - **[Processing Center](architecture/processing-center.md)** for the desktop processing authority split.
 - **[Transcript and speaker tools](transcript-tools.md)** for generation-bound details, speaker management, overlap presentation, and post-hoc publication.
 - **[Verified native playback](native-playback.md)** for source re-verification, opaque media sessions, exact seek coordinates, and the multi-audio fail-closed rule.
@@ -62,13 +73,15 @@ Ordinary product copy should explain consequences such as “downloads only when
 - **[Transcript time without calculator gymnastics](time-navigation.md)** for timeline and source-relative coordinates.
 - **[Give the anonymous speakers names](speaker-names.md)** for human-authored display labels and generation semantics.
 - **[Semantic search, without the mystery box](semantic-search.md)** for local semantic/hybrid retrieval.
-- **[Signed update and model trust channel](security/update-model-trust.md)** for the concrete update/model supply-chain contract and its privacy boundary.
+- **[Signed update and model trust channel](security/update-model-trust.md)** for implemented supply-chain mechanics and privacy boundaries.
+- **[Production trust inputs](security/production-trust-inputs.md)** for the frozen native verifier/key-rotation decision and real-model review procedure.
+- **[Pre-release security hardening](security/release-hardening.md)** for what still qualifies as a release gate versus post-MVP hardening.
 - **[Desktop themes and accessibility](development/desktop-accessibility.md)** for the eight-skin semantic token system and contrast qualification.
 - **[Frontend testing strategy](development/frontend-testing.md)** for frontend/backend test ownership and mutation policy.
-- **[Architecture and redundancy audit](architecture/redundancy-audit.md)** for the completed architecture/redundancy consolidation and intentional remaining boundaries.
+- **[Architecture and redundancy audit](architecture/redundancy-audit.md)** for the completed architecture consolidation, post-update re-audit, and intentional remaining boundaries.
 - **[Safe deletion and retention](architecture/safe-deletion-retention.md)** for the underlying custody contract.
 - **[Post-MVP research roadmap](post-mvp-roadmap.md)** for later research-native workflows.
-- **[SECURITY.md](../SECURITY.md)** for the repository security boundary.
+- **[SECURITY.md](../SECURITY.md)** for repository security reporting.
 - **[Architecture](architecture/README.md)** and **[Development docs](development/)** for maintainers.
 
 ## The Scholion family portrait
@@ -91,6 +104,7 @@ flowchart LR
     J --> K[Desktop Library]
     E --> K
     F --> L[Desktop Research]
+    K --> M[Updates and release trust]
 
     classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
     classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
@@ -100,7 +114,7 @@ flowchart LR
     classDef stop fill:#FFD6D6,stroke:#9E3434,stroke-width:2px,color:#351616
 
     class A source
-    class B process
+    class B,M process
     class C,E,F evidence
     class D,G,H,J view
     class I stop
@@ -115,7 +129,7 @@ flowchart LR
 
 </details>
 
-Text fallback: canonical evidence feeds rebuildable search; search resolves back to verified evidence; durable notes/tags/collections, speaker labels, and saved searches remain authoritative human knowledge; lifecycle and refresh reuse those identities; the desktop Processing, Library, transcript-tools, playback, Research, and Storage surfaces consume the same application authorities.
+Text fallback: canonical evidence feeds rebuildable search; search resolves back to verified evidence; durable notes/tags/collections, speaker labels, and saved searches remain authoritative human knowledge; lifecycle and refresh reuse those identities; the desktop Processing, Library, transcript-tools, playback, Research, Storage, and Updates surfaces consume the same application authorities.
 
 ## What belongs to you, and what can the raccoon rebuild? 🦝
 
@@ -137,29 +151,23 @@ If deleting a search projection destroys unique human-authored information, some
 
 ## The desktop today
 
-Research/search, the Processing Center, desktop comprehension/themes, transcript/speaker tools, verified native playback, re-openable contextual guidance, and custody-aware Storage are now coherent first-release slices.
+Research/search, Processing, desktop comprehension/themes, transcript/speaker tools, verified native playback, re-openable contextual guidance, custody-aware Storage, and manual trusted-update presentation are coherent MVP slices.
 
-Research uses ordinary product language by default. Processing presents backend planning/admission rather than duplicating it. If a source contains several embedded audio tracks, Python tells the desktop that explicit selection is required; React presents bounded track facts and submits the chosen stream index, then Python replans before Start is enabled. Transcript tools pass exact generation identity into Python for details, speaker mutation, and publication. Playback does the same for source authorization, then Rust owns an opaque opened-file session.
+Research uses ordinary product language by default. Processing presents backend planning/admission rather than duplicating it. Multi-track selection is backend-required and backend-replanned. Transcript tools pass exact generation identity into Python for details, speaker mutation, and publication. Playback does the same for source authorization, then Rust owns an opaque opened-file session.
 
-Storage follows the same rule. React sends only typed lifecycle intent and renders a plan calculated by `LibraryCustodyService`. A dedicated Tauri command invokes only the fixed custody bridge. Action paths and private workspace paths are removed before responses reach the webview. Applying a plan sends the exact reviewed token back to Python, which recalculates and refuses stale state.
+Storage follows the same rule: React sends typed lifecycle intent and renders a plan calculated by application authority; Python recalculates at apply time and refuses stale confirmation. Updates likewise exposes only status/check/stage intent while application code owns endpoint, platform, trust state, and artifact selection.
 
-The sidebar keeps **How this screen works** and **How Scholion works** available after first use. Evidence, playback, transcript tools, multi-track preflight, and Storage add local explanation at the point where their semantics become unusual. The help registry and inline copy are presentation only; they never substitute for Python application policy.
-
-Appearance remains one compact picker. All eight skins share the same semantic text/control/focus contract and the same registry-driven contrast/a11y matrix.
-
-The architecture/redundancy audit is closed. Capability-blind Python/frontend transport is shared, application composition belongs to `AppContainer`, the duplicate Research saved-question ingress is gone, and remaining similar-looking Rust/adapter code has an explicit authority, lifecycle, readability, security, or compatibility reason to remain separate.
+The architecture/redundancy audit remains closed after a post-#144 re-audit. The only new duplicate authority found was update-service construction inside the adapter, now moved back to application-layer composition. Duplicate supply-chain file hashing was also consolidated. The update bridge itself remains separate because network/trust/staging authority is not the same capability as ordinary desktop, playback, custody, or supervised Processing work.
 
 ## What comes next
 
-The Scholion identity migration is complete. The next critical path is:
+The Scholion identity migration and application-side update/model-trust mechanics are complete. The current milestone is issue #145:
 
-1. finish the #110 signed-update and policy-trusted-model integration, then package first-run/update/uninstall behavior; public Linux packaging remains gated by #135 until the supported Tauri stack leaves the affected GTK3/GLib graph;
-2. backup/restore and selected research portability;
-3. packaged semantic custody; and
-4. representative-device qualification, including the remaining native CPU-only/accelerator task-transport evidence from #114.
+1. finish the pre-packaging redundancy/trust-input/documentation cleanup and final product icon;
+2. **then** package Windows/macOS with the managed runtime/native dependencies, real public verification keys, reviewed model catalog, OS signing/notarization, update activation, first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;
+3. qualify the real packages on representative devices, including #114's remaining CPU-only/accelerator task-transport evidence; and
+4. release the MVP.
 
-A future freeform notebook/memo capability belongs in later Research work as a second durable research-object class, not as evidence notes with optional/missing provenance.
-
-Only after the first desktop product is coherent do the deliberately separate **[post-MVP research features](post-mvp-roadmap.md)** become normal roadmap work.
+Backup/restore + selected research portability, packaged semantic custody, and broader research-native features are useful **post-MVP** work. They are not reasons to hold the first packaged Scholion build hostage.
 
 See **[ROADMAP.md](../ROADMAP.md)** for the capability audit and detailed sequencing. Editorial/Mermaid rules live in **[documentation-style.md](documentation-style.md)**.

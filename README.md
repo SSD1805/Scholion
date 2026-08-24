@@ -18,7 +18,7 @@ Start with **[docs/README.md](docs/README.md)** for human-facing documentation o
 
 ## What can it do right now?
 
-Scholion is pre-production, but the backend and desktop cover a coherent path from importing a recording through local processing, evidence search, durable research, transcript/speaker management, verified local playback, and custody-aware storage management.
+Scholion is pre-production, but the backend and desktop cover a coherent path from importing a recording through local processing, evidence search, durable research, transcript/speaker management, verified local playback, custody-aware storage management, and explicit privacy-preserving update checks.
 
 | Area | Current foundation |
 |---|---|
@@ -29,7 +29,7 @@ Scholion is pre-production, but the backend and desktop cover a coherent path fr
 | Languages | multilingual decoding plus conservative local text-language attribution |
 | Speakers | optional anonymous recording-scoped diarization, word-level handoffs, generation-bound display labels, honest overlap/mixed presentation |
 | Difficult audio | optional deterministic FFmpeg noise suppression with provenance/timeline checks |
-| Model custody | explicit inventory, recommendation, install, local revalidation, immutable revision pinning/removal; stronger project-owned policy trust is being integrated under #110 |
+| Model custody | explicit inventory, install/revalidation and immutable revision receipts plus project-owned exact revision/file-set/size/SHA-256 policy enforcement when a reviewed catalog is bundled |
 | Transcript output | canonical JSON plus deterministic TXT, SRT, WebVTT publication views |
 | Search | private BM25 lexical retrieval, optional semantic retrieval, hybrid reciprocal-rank fusion |
 | Evidence navigation | canonical-hash verification, aligned highlights, bounded context, speaker presentation, source seek coordinates |
@@ -37,17 +37,18 @@ Scholion is pre-production, but the backend and desktop cover a coherent path fr
 | Research workspace | authoritative SQLite notes/tags/collections, rebuildable DuckDB projection, desktop browse/create/edit/delete/filter/anchor maintenance |
 | Unified discovery | grouped transcript/note/tag/collection query without fabricated cross-type scores |
 | Saved searches | durable typed query intent that re-resolves current evidence instead of freezing result snapshots |
-| Safe lifecycle | typed plan-bound deletion scopes plus private execution-state retention, now exposed through a native Storage workspace with plan review, source second guard, and resume-loss warnings |
+| Safe lifecycle | typed plan-bound deletion scopes plus private execution-state retention, exposed through a native Storage workspace with plan review, source second guard, and resume-loss warnings |
 | Incremental library | cheap refresh/reconciliation plus durable transcript and recording locations |
 | Processing Center | readiness, machine/model state, preflight, explicit multi-track stream confirmation, supervised start/cancel, resume versus retry, job-state discard, diarization/enhancement/publication intent |
 | Transcript tools | generation-bound transcript/provenance inspection, speaker naming/removal, overlap-aware transcript view, post-hoc TXT/SRT/VTT publication |
-| Desktop guidance | persistent screen/overview help plus contextual Evidence, Playback, Transcript, multi-track preflight, and Storage explanations without duplicating backend policy |
-| Desktop presentation | Tauri + React Intake, Processing, Library, verified evidence reader/playback, Research, Storage, transcript tools, and eight semantic-token themes |
+| Updates | fixed-endpoint manual signed-metadata checks, expiry/rollback/equivocation/channel/platform verification, exact size/SHA-256 staging, explicit offline/failure states, no background request in source builds without a production verifier |
+| Desktop guidance | persistent screen/overview help plus contextual Evidence, Playback, Transcript, multi-track preflight, Storage, and Updates explanations without duplicating backend policy |
+| Desktop presentation | Tauri + React Intake, Processing, Library, verified evidence reader/playback, Research, Storage, Updates, transcript tools, and eight semantic-token themes |
 | Accessibility | keyboard/semantic-role tests, axe, non-hover contextual help, explicit light/dark browser schemes, and an eight-skin contrast matrix |
-| Architecture hygiene | architecture/redundancy audit complete: shared capability-blind transport, centralized application composition, one typed saved-question surface, one Research evidence presentation contract |
+| Architecture hygiene | capability-blind transport, app-layer service composition, one typed saved-question surface, one Research evidence presentation contract; re-audited after the update-channel tranche |
 | Quality | Linux/macOS/Windows CI, strict typing, lint/format/security, complexity/dead-code, branch coverage, dependency audit, Playwright/axe, native Rust tests, package verification, targeted mutation qualification |
 
-Model trust has two deliberately separate levels today. Scholion already manages the local model receipt, immutable provider revision, cache containment, and expected local structure. The #110 supply-chain work adds a stronger project-owned policy that approves the exact upstream revision and full file set by size/SHA-256 before calling a model policy-trusted. See **[Signed update and model trust channel](docs/security/update-model-trust.md)**.
+Model trust has two deliberately separate concepts. Provider/local custody proves what Scholion downloaded and currently observes. Project policy trust proves that the exact repository revision and complete file set match a catalog deliberately approved by the Scholion release. The policy machinery is implemented; the repository intentionally contains no guessed production faster-whisper entries. See **[Signed update and model trust channel](docs/security/update-model-trust.md)** and **[Production trust inputs](docs/security/production-trust-inputs.md)**.
 
 ## From recording to useful evidence
 
@@ -110,11 +111,12 @@ The Tauri + React desktop currently provides:
 - Research note create/edit/delete, tag/collection navigation, saved-search lifecycle, typed retrieval controls, exact-generation evidence return, and explicit anchor review;
 - transcript details/provenance, generation-safe speaker-name management, explicit speaker-overlap presentation, and post-hoc derived publication;
 - a Storage workspace for backend-planned transcript custody changes, explicit source protection, and previewed old-processing cleanup;
-- persistent **How this screen works** and **How Scholion works** guidance plus local Evidence/Playback/Transcript/multi-track/Storage explanations;
+- an Updates workspace with explicit Off / Never checked / Checking / Up to date / Trusted update available / Staging / Staged / Failure states;
+- persistent **How this screen works** and **How Scholion works** guidance plus contextual Evidence/Playback/Transcript/multi-track/Storage/Updates explanations;
 - eight accessible presentation skins through one compact theme picker; and
 - persisted presentation preference without mixing theme state into evidence or research.
 
-The browser/webview does **not** receive canonical/source filesystem paths for evidence navigation, transcript tools, playback, or lifecycle plans. Rust owns native desktop capability and opened media sessions; Python owns application/evidence/custody/media-selection rules; React owns presentation and explicit user intent.
+The browser/webview does **not** receive canonical/source filesystem paths for evidence navigation, transcript tools, playback, or lifecycle plans. It also does not choose update URLs, headers, artifacts, installer commands, or trust keys. Rust owns native desktop capability and opened media sessions; Python owns application/evidence/custody/media-selection/update policy; React owns presentation and explicit user intent.
 
 When a file contains several embedded audio streams, Python reports that explicit confirmation is required. The desktop shows bounded source-declared title/language/default metadata when available, accepts the user's stream choice, and sends only that exact index back to Python for a fresh preflight. Start remains disabled until the backend returns a plan bound to that stream. Canonical provenance records the exact stream index and resume restores it. See **[Audio tracks](docs/audio-tracks.md)**.
 
@@ -124,9 +126,11 @@ Playback follows the same evidence discipline. Python re-verifies the exact cano
 
 Storage follows the same authority split. React requests a plan and renders the backend's effective scopes/actions; a separate fixed Tauri command can invoke only the custody bridge; Python recalculates the plan at execution and refuses stale confirmation tokens. Source and canonical paths are stripped before the response reaches React. See **[Storage and lifecycle controls](docs/storage-lifecycle.md)**.
 
-In-app guidance is deliberately re-openable and non-hover-only where popovers are used, with inline help for required multi-track selection and storage/custody review. It explains those contracts where users encounter them but carries no filesystem/database/process authority and does not recreate application policy in React. See **[In-app guidance](docs/in-app-guidance.md)**.
+Updates follow a similarly narrow boundary. React can request only status, check, or stage. The update endpoint and platform artifact remain application policy. Source/development builds without production verification material report **Update checking is off** and make no request. A manual check is network activity, not behavioral telemetry: GitHub/CDN can observe ordinary connection metadata such as IP address/time, but Scholion sends no installation ID, corpus/research content, hardware/model inventory, or product-behavior data. A staged artifact is not called installed until the later native packaging/signing boundary can activate it safely.
 
-There are still no end-user installers or Releases. The supported path remains a source build while packaging and first-run behavior are qualified.
+In-app guidance is deliberately re-openable and non-hover-only where popovers are used. It explains contracts where users encounter them but carries no filesystem/database/process authority and does not recreate application policy in React. See **[In-app guidance](docs/in-app-guidance.md)**.
+
+There are still no end-user installers or Releases. The supported path remains a source build while pre-packaging cleanup and the later packaging/first-run milestone are completed.
 
 ## Themes and accessibility
 
@@ -237,19 +241,21 @@ A database is allowed to make evidence useful. It is not allowed to become the o
 
 ## For maintainers
 
-Start with **[docs/architecture/README.md](docs/architecture/README.md)**, **[Architecture and redundancy audit](docs/architecture/redundancy-audit.md)**, **[Processing Center](docs/architecture/processing-center.md)**, **[Audio tracks](docs/audio-tracks.md)**, **[Local model management](docs/architecture/model-management.md)**, **[Signed update and model trust channel](docs/security/update-model-trust.md)**, **[Transcript and speaker tools](docs/transcript-tools.md)**, **[Verified native playback](docs/native-playback.md)**, **[Storage and lifecycle controls](docs/storage-lifecycle.md)**, **[In-app guidance](docs/in-app-guidance.md)**, **[Safe deletion and retention](docs/architecture/safe-deletion-retention.md)**, and **[frontend/SECURITY.md](frontend/SECURITY.md)**.
+Start with **[docs/architecture/README.md](docs/architecture/README.md)**, **[Architecture and redundancy audit](docs/architecture/redundancy-audit.md)**, **[Processing Center](docs/architecture/processing-center.md)**, **[Audio tracks](docs/audio-tracks.md)**, **[Local model management](docs/architecture/model-management.md)**, **[Signed update and model trust channel](docs/security/update-model-trust.md)**, **[Production trust inputs](docs/security/production-trust-inputs.md)**, **[Transcript and speaker tools](docs/transcript-tools.md)**, **[Verified native playback](docs/native-playback.md)**, **[Storage and lifecycle controls](docs/storage-lifecycle.md)**, **[In-app guidance](docs/in-app-guidance.md)**, **[Safe deletion and retention](docs/architecture/safe-deletion-retention.md)**, and **[frontend/SECURITY.md](frontend/SECURITY.md)**.
 
 Normal qualification includes Ruff, strict mypy, Vulture, Radon, branch coverage, dependency audit, package verification, TypeScript/build/audit gates, native Cargo compilation/tests, Playwright/axe, the eight-theme contrast matrix, targeted Poodle mutation workflows, and Linux/macOS/Windows CI. See **[Frontend testing strategy](docs/development/frontend-testing.md)** for frontend/backend test ownership.
 
 ## Where the project goes next
 
-Research/search, Processing, explicit embedded-track transcription, desktop comprehension/themes, transcript/speaker tools, verified native playback, contextual guidance, desktop lifecycle/retention controls, architecture/redundancy consolidation, and the Scholion identity migration are complete first-release foundation. The next first-release sequence is:
+Research/search, Processing, explicit embedded-track transcription, desktop comprehension/themes, transcript/speaker tools, verified native playback, contextual guidance, desktop lifecycle/retention controls, architecture consolidation, product identity, and the application-side update/model-trust mechanics are complete MVP foundations.
 
-1. finish the #110 signed-update and policy-trusted-model integration, then package first-run storage setup, updates, and evidence-safe uninstall; public Linux packaging remains blocked by #135 until the supported Tauri stack leaves the affected GTK3/GLib graph;
-2. backup/restore plus selected research portability;
-3. packaged semantic-model/dependency custody; and
-4. representative-device qualification across ordinary consumer hardware and hostile path, disk, interruption, upgrade, and accessibility cases, including the remaining #114 native CPU-only/accelerator task-transport evidence.
+The current sequence is intentionally narrow:
 
-Freeform research notebook pages are a useful later research-native feature, but they are intentionally separate from evidence-anchored notes and are not on the first-release critical path.
+1. **#145 pre-packaging release readiness:** final redundancy pass, production trust-input decisions, documentation truth-sync, and final Scholion icon/brand master;
+2. **packaging:** managed runtime/native dependencies, Windows/macOS installers, real public update keys/model catalog, OS signing/notarization, update activation, first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;
+3. **representative release qualification:** real packaged CPU-only/accelerator/Apple/Windows behavior, including #114's remaining native task-transport evidence; and
+4. **MVP release.**
+
+Backup/restore + research portability, packaged semantic-model custody, and freeform research notebook/memo features remain valuable **post-MVP** work. They are no longer being treated as reasons to postpone the first useful packaged Scholion build.
 
 See **[ROADMAP.md](ROADMAP.md)** for the capability audit and sequencing.

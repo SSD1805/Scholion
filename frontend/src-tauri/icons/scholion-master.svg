@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">Scholion application icon</title>
+  <desc id="desc">A warm evidence page with a marginal annotation brace, restrained recorded-time waveform, and an ivory S-shaped annotation stroke on a dark field.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101A2A"/>
+      <stop offset="1" stop-color="#09111D"/>
+    </linearGradient>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFF5E4"/>
+      <stop offset="1" stop-color="#EAD1AB"/>
+    </linearGradient>
+    <linearGradient id="wave" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#2A6EAE"/>
+      <stop offset="0.55" stop-color="#4FB5E8"/>
+      <stop offset="1" stop-color="#1B5D9D"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="24" flood-color="#000000" flood-opacity="0.34"/>
+    </filter>
+  </defs>
+
+  <rect x="32" y="32" width="960" height="960" rx="208" fill="url(#bg)"/>
+
+  <g filter="url(#shadow)">
+    <path d="M388 260h256l92 92v412H388z" fill="url(#paper)"/>
+    <path d="M644 260v86c0 18 14 32 32 32h60z" fill="#F8E8CE"/>
+
+    <g fill="#A89B8C" opacity="0.78">
+      <rect x="442" y="338" width="152" height="18" rx="9"/>
+      <rect x="442" y="390" width="220" height="18" rx="9"/>
+      <rect x="442" y="442" width="188" height="18" rx="9"/>
+      <rect x="442" y="494" width="214" height="18" rx="9"/>
+      <rect x="442" y="598" width="190" height="18" rx="9"/>
+      <rect x="442" y="650" width="222" height="18" rx="9"/>
+      <rect x="442" y="702" width="166" height="18" rx="9"/>
+    </g>
+
+    <rect x="442" y="546" width="150" height="22" rx="11" fill="#D8A240"/>
+
+    <path d="M422 402h-24c-17 0-30 13-30 30v76c0 19-10 30-28 34 18 4 28 15 28 34v76c0 17 13 30 30 30h24" fill="none" stroke="#C38A30" stroke-width="20" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <g fill="url(#wave)">
+      <rect x="665" y="500" width="18" height="48" rx="9"/>
+      <rect x="699" y="474" width="18" height="100" rx="9"/>
+      <rect x="733" y="442" width="18" height="164" rx="9"/>
+      <rect x="767" y="462" width="18" height="124" rx="9"/>
+      <rect x="801" y="424" width="18" height="200" rx="9"/>
+      <rect x="835" y="456" width="18" height="136" rx="9"/>
+      <rect x="869" y="478" width="18" height="92" rx="9"/>
+      <rect x="903" y="500" width="18" height="48" rx="9"/>
+    </g>
+  </g>
+
+  <path d="M352 278c-86 3-140 45-140 112 0 56 38 87 115 127 89 46 120 81 120 143 0 70-55 116-142 120-66 3-119-17-157-55l43-67c32 35 70 53 111 51 41-2 67-21 67-51 0-29-18-49-76-80-104-55-159-104-159-188 0-108 90-177 218-177 51 0 95 10 130 31l-40 72c-28-15-58-21-90-18z" fill="#FFF2DD"/>
+
+  <path d="M205 742c40 46 104 79 178 91 97 16 194 2 278-39 70-35 122-84 150-143" fill="none" stroke="#FFF2DD" stroke-width="38" stroke-linecap="round"/>
+</svg>
