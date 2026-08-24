@@ -79,8 +79,11 @@ export interface ProcessingReadiness {
   };
   strategies: ProcessingStrategy[];
   models: ProcessingModel[];
+  model_policy_enforced: boolean;
+  model_policy_trust: Record<string, boolean>;
   recommended_model: string | null;
   recommended_model_installed: boolean;
+  recommended_model_ready: boolean;
 }
 
 export interface ProcessingJob {
@@ -356,6 +359,7 @@ class MockProcessingClient implements ProcessingClient {
   private taskCounter = 0;
   private modelMutation = 0;
   private tasks = new Map<string, ProcessingTaskStatus>();
+  private policyTrustedModels = new Set<string>();
   private models: ProcessingModel[] = [
     {
       model_id: "tiny",
@@ -420,9 +424,30 @@ class MockProcessingClient implements ProcessingClient {
     },
   ];
 
+  constructor() {
+    const params = new URLSearchParams(window.location.search);
+    if (
+      params.get("model-policy") === "1" &&
+      params.get("model-policy-untrusted") !== "1"
+    ) {
+      this.policyTrustedModels.add("small");
+    }
+  }
+
   async readiness(profile: ProcessingProfile): Promise<ProcessingReadiness> {
     const recommendedModel = profile === "screening" ? "tiny" : profile === "accuracy" ? "medium" : "small";
-    const speakerLabelingHeld = new URLSearchParams(window.location.search).get("speaker-labeling-held") === "1";
+    const params = new URLSearchParams(window.location.search);
+    const speakerLabelingHeld = params.get("speaker-labeling-held") === "1";
+    const modelPolicyEnforced = params.get("model-policy") === "1";
+    const modelPolicyTrust = Object.fromEntries(
+      this.models.map((model) => [
+        model.model_id,
+        modelPolicyEnforced && this.policyTrustedModels.has(model.model_id),
+      ]),
+    );
+    const recommendedModelInstalled = this.models.some(
+      (model) => model.model_id === recommendedModel && model.installed,
+    );
     return {
       health: {
         status: "healthy",
@@ -475,8 +500,13 @@ class MockProcessingClient implements ProcessingClient {
         { strategy_id: "medium-cpu-int8", model: "medium", device: "cpu", compute_type: "int8", estimated_peak_memory_bytes: 4_563_402_752, estimated_peak_device_memory_bytes: 0, model_cache_bytes: 2_621_440_000, feasible: true, rejection_reasons: [], recommended: recommendedModel === "medium" },
       ],
       models: this.models.map((model) => ({ ...model })),
+      model_policy_enforced: modelPolicyEnforced,
+      model_policy_trust: modelPolicyTrust,
       recommended_model: recommendedModel,
-      recommended_model_installed: this.models.some((model) => model.model_id === recommendedModel && model.installed),
+      recommended_model_installed: recommendedModelInstalled,
+      recommended_model_ready:
+        recommendedModelInstalled &&
+        (!modelPolicyEnforced || modelPolicyTrust[recommendedModel] === true),
     };
   }
 
@@ -556,6 +586,9 @@ class MockProcessingClient implements ProcessingClient {
     model.resolved_revision = `mock-${modelId}-revision-${this.modelMutation}`;
     model.installed_size_bytes = model.estimated_cache_bytes;
     model.verification = "huggingface_snapshot_required_files_v1";
+    if (new URLSearchParams(window.location.search).get("model-policy") === "1") {
+      this.policyTrustedModels.add(modelId);
+    }
     return this.newTask();
   }
 
@@ -568,6 +601,7 @@ class MockProcessingClient implements ProcessingClient {
     current.resolved_revision = null;
     current.installed_size_bytes = null;
     current.verification = null;
+    this.policyTrustedModels.delete(model.model_id);
     return this.newTask();
   }
 

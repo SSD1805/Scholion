@@ -64,9 +64,10 @@ class ModelManager:
         self.enforce_policy_trust = enforce_policy_trust
 
     def inventory(self) -> tuple[ModelInventoryItem, ...]:
+        """Report local custody even when a legacy install is not execution-admissible."""
         inventory: list[ModelInventoryItem] = []
         for spec in self.catalog.specs:
-            manifest = self._manifest(spec.model_id)
+            manifest = self._manifest(spec.model_id, require_policy_trust=False)
             inventory.append(
                 ModelInventoryItem(
                     spec=spec,
@@ -82,7 +83,9 @@ class ModelManager:
         spec = self.catalog.require(model_id)
         if revision is not None and not revision.strip():
             raise ValueError("revision cannot be empty")
-        trusted_spec = self._trusted_spec_for(spec)
+        trusted_spec = self._trusted_spec_for(
+            spec, require_policy_trust=self.enforce_policy_trust
+        )
         requested_revision = revision
         if trusted_spec is not None:
             if revision is not None and revision != trusted_spec.revision:
@@ -136,7 +139,7 @@ class ModelManager:
 
     def remove(self, model_id: str) -> ManagedModelManifest:
         spec = self.catalog.require(model_id)
-        manifest = self._manifest(spec.model_id)
+        manifest = self._manifest(spec.model_id, require_policy_trust=False)
         if manifest is None:
             raise ValueError(f"model is not managed by Scholion: {model_id}")
         snapshot = InstalledSnapshot(
@@ -162,13 +165,16 @@ class ModelManager:
     def is_policy_trusted(self, model_id: str) -> bool:
         """Return whether current bundled policy revalidates the managed snapshot."""
         spec = self.catalog.require(model_id)
-        manifest = self._manifest(model_id)
+        manifest = self._manifest(model_id, require_policy_trust=False)
         return self._has_current_policy_trust(spec, manifest)
 
     def resolved_revision(self, model_id: str) -> str | None:
-        """Return the locally revalidated managed revision without network access or writes."""
+        """Return the execution-admissible managed revision without network access or writes."""
         self.catalog.require(model_id)
-        manifest = self._manifest(model_id)
+        manifest = self._manifest(
+            model_id,
+            require_policy_trust=self.enforce_policy_trust,
+        )
         return None if manifest is None else manifest.resolved_revision
 
     def _prepare_roots(self) -> None:
@@ -176,7 +182,12 @@ class ModelManager:
         self.file_store.ensure_directory_exists(self.cache_root, private=True)
         self.file_store.ensure_directory_exists(self.registry_root, private=True)
 
-    def _manifest(self, model_id: str) -> ManagedModelManifest | None:
+    def _manifest(
+        self,
+        model_id: str,
+        *,
+        require_policy_trust: bool | None = None,
+    ) -> ManagedModelManifest | None:
         path = self._manifest_path(model_id)
         if not self.file_store.file_exists(path):
             return None
@@ -185,14 +196,29 @@ class ModelManager:
             if not isinstance(document, dict):
                 raise ValueError("model manifest must be an object")
             manifest = ManagedModelManifest.from_dict(document)
-            self._validate_manifest(model_id, manifest)
+            self._validate_manifest(
+                model_id,
+                manifest,
+                require_policy_trust=require_policy_trust,
+            )
             return manifest
         except (UnicodeDecodeError, json.JSONDecodeError, ValueError) as exc:
             raise ModelManagementError(
                 "The local model registry is invalid", cause=exc
             ) from exc
 
-    def _validate_manifest(self, model_id: str, manifest: ManagedModelManifest) -> None:
+    def _validate_manifest(
+        self,
+        model_id: str,
+        manifest: ManagedModelManifest,
+        *,
+        require_policy_trust: bool | None = None,
+    ) -> None:
+        policy_required = (
+            self.enforce_policy_trust
+            if require_policy_trust is None
+            else require_policy_trust
+        )
         spec = self.catalog.require(model_id)
         if (
             manifest.model_id != spec.model_id
@@ -214,10 +240,13 @@ class ModelManager:
         except Exception as exc:
             raise ValueError("managed model snapshot is no longer valid") from exc
 
-        trusted_spec = self._trusted_spec_for(spec)
+        trusted_spec = self._trusted_spec_for(
+            spec,
+            require_policy_trust=policy_required,
+        )
         if manifest.policy_trust is not None:
             if trusted_spec is None:
-                if self.enforce_policy_trust:
+                if policy_required:
                     raise ValueError(
                         "managed model no longer has a trusted policy entry"
                     )
@@ -227,7 +256,7 @@ class ModelManager:
                 raise ValueError(
                     "managed model policy trust evidence no longer matches"
                 )
-        elif self.enforce_policy_trust:
+        elif policy_required:
             raise ValueError("managed model lacks required policy trust evidence")
 
     def _has_current_policy_trust(
@@ -238,17 +267,27 @@ class ModelManager:
         return (
             manifest is not None
             and manifest.policy_trust is not None
-            and self._trusted_spec_for(spec) is not None
+            and self._trusted_spec_for(spec, require_policy_trust=False) is not None
         )
 
-    def _trusted_spec_for(self, spec: ModelSpec) -> TrustedModelSpec | None:
+    def _trusted_spec_for(
+        self,
+        spec: ModelSpec,
+        *,
+        require_policy_trust: bool | None = None,
+    ) -> TrustedModelSpec | None:
+        policy_required = (
+            self.enforce_policy_trust
+            if require_policy_trust is None
+            else require_policy_trust
+        )
         trust_catalog = self.trust_catalog
         if trust_catalog is None:
             return None
         try:
             trusted_spec = trust_catalog.require(spec.model_id)
         except ValueError:
-            if self.enforce_policy_trust:
+            if policy_required:
                 raise
             return None
         if (

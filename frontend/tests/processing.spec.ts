@@ -95,6 +95,26 @@ test("model downloads show an explicit in-place running state", async ({ page })
   await expect(tinyModel.getByRole("progressbar", { name: "Downloading tiny model" })).toBeVisible();
 });
 
+test("policy enforcement keeps a legacy install visible and offers a trusted reinstall", async ({ page }) => {
+  await openProcessing(page, "&model-policy=1&model-policy-untrusted=1");
+
+  await expect(page.getByText("Recommended model needs trusted reinstall")).toBeVisible();
+  const smallModel = page.locator("article.model-row").filter({ hasText: "small" });
+  await expect(smallModel).toContainText("trusted reinstall required");
+
+  await smallModel.getByRole("button", { name: "Reinstall trusted copy" }).click();
+  await expect(smallModel.getByRole("button", { name: "Reinstalling…" })).toBeDisabled();
+  await expect(
+    page.getByRole("status").filter({ hasText: "verify it against this build's model policy" }),
+  ).toBeVisible();
+
+  await expect(smallModel).toContainText("Trusted by this Scholion build", { timeout: 5_000 });
+  await expect(page.getByText("Recommended model ready")).toBeVisible();
+
+  const accessibility = await new AxeBuilder({ page }).analyze();
+  expect(accessibility.violations).toEqual([]);
+});
+
 test("speaker labeling is disabled when the backend places the capability on security hold", async ({ page }) => {
   await openProcessing(page, "&speaker-labeling-held=1");
   await page.getByRole("button", { name: "Choose recording" }).click();

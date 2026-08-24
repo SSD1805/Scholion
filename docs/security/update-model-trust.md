@@ -29,11 +29,13 @@ The application package owns a curated model-trust catalog. A model entry identi
 
 A distribution service such as Hugging Face transports bytes. It does not decide which revision or file hashes Scholion trusts.
 
-`ModelManager` now contains the production integration seam for this policy. When a curated trust catalog is supplied, installation pins the exact approved revision, rejects a conflicting caller revision before provider acquisition, verifies the complete downloaded snapshot against the bundled entry before committing the managed manifest, records policy-trust evidence separately from provider-local validation, and re-runs that exact policy verification when the managed manifest is read. An enforcement mode rejects managed state that lacks current policy trust.
+`ModelManager` applies that policy transactionally. When a curated trust catalog is supplied, installation pins the exact approved revision, rejects a conflicting caller revision before provider acquisition, verifies the complete downloaded snapshot against the bundled entry before committing the managed manifest, records policy-trust evidence separately from provider-local validation, and re-runs that exact policy verification when managed state is read for trust/admission.
 
-That seam is intentionally dormant in the ordinary application composition until Scholion ships deliberately reviewed production faster-whisper catalog entries. The current `AppContainer` does not invent or fetch a trust catalog dynamically, and current source builds therefore retain the existing local-revalidation behavior. This prevents scaffolding or development downloads from being mislabeled as project-approved model policy.
+Application composition now loads a packaged `model-trust.json` from `scholion.supply_chain`. If the current build contains that catalog, `AppContainer` automatically enables `ModelManager` policy enforcement. If the build contains no catalog, as current source/development builds do, Scholion retains the existing local/provider revalidation path. There is no runtime fetch for policy and no remotely mutable model-policy service.
 
-Integrity/local revalidation and policy trust remain separate states. A snapshot can match expected repository/revision/layout rules without being trusted by Scholion policy. Consumer UI and documentation must not collapse those states into one word such as “verified.”
+The repository still does **not** contain deliberately reviewed production faster-whisper entries. The loader and composition path do not promote development downloads, guessed hashes, mutable refs, or synthetic test data to project policy.
+
+Integrity/local revalidation and policy trust remain separate states. A snapshot can match expected repository/revision/layout rules without being trusted by the current Scholion build. Consumer UI and documentation must not collapse those states into one word such as “verified.”
 
 ## Update manifest v1
 
@@ -113,13 +115,23 @@ Production entries must be generated from a deliberately reviewed immutable upst
 
 Changing a trusted model revision is a security-sensitive repository change. The review should record why the revision changed, source/license changes, file-set changes, regression evidence, and regenerated hashes/sizes. The new catalog ships with a signed Scholion release.
 
+The packaged loader is strict UTF-8 JSON and delegates field/schema validation to the trust model. Invalid packaged policy fails during application composition rather than falling back to a weaker downloaded or remote policy.
+
 ### Managed policy evidence
 
-A managed-model manifest can now carry a separate policy-trust receipt containing the bundled catalog schema version, model identity, exact revision, policy-verification method, verified file count, and verified byte count. It does not replace provider-local provenance such as the repository identity, resolved revision, snapshot path, measured size, or provider validation method.
+A managed-model manifest can carry a separate policy-trust receipt containing the bundled catalog schema version, model identity, exact revision, policy-verification method, verified file count, and verified byte count. It does not replace provider-local provenance such as the repository identity, resolved revision, snapshot path, measured size, or provider validation method.
 
-The receipt is not treated as a permanent trust bit. With a current trust catalog loaded, `ModelManager` recomputes the exact snapshot verification and requires the observed evidence to match the recorded receipt. A same-length byte mutation, undeclared file, missing file, size change, revision change, or current-policy mismatch therefore invalidates the managed registry instead of continuing to report the model as trusted.
+The receipt is not treated as a permanent trust bit. With a current trust catalog loaded, `ModelManager` recomputes the exact snapshot verification and requires the observed evidence to match the recorded receipt. A same-length byte mutation, undeclared file, missing file, size change, revision change, or current-policy mismatch therefore invalidates current policy trust instead of continuing to report the model as trusted.
 
-Existing manifests without policy evidence remain parseable for compatibility. When policy enforcement is enabled, those manifests are not admitted as policy-trusted state; they must be reinstalled or otherwise pass the deliberate migration path defined for that release.
+Existing manifests without policy evidence remain parseable for compatibility. Under enforcement, Scholion deliberately separates **custody** from **execution admission**:
+
+- inventory may still show an otherwise locally valid legacy model as installed;
+- current policy trust is false;
+- new-transcription revision resolution rejects it;
+- removal remains available; and
+- Processing Center offers a trusted reinstall through the curated install path.
+
+This avoids unsafe grandfathering without stranding user-managed local state.
 
 ## Threat model
 
@@ -133,6 +145,7 @@ Existing manifests without policy evidence remain parseable for compatibility. W
 | Update request leaks product behavior | Request is a metadata GET with no installation ID, corpus, hardware, research, or usage payload | IP address, request time, TLS/client/network metadata remain visible to network/hosting layers |
 | Signing key compromise | Key IDs permit explicit rotation/revocation policy; release and model-signing roles should remain separable | Concrete key custody, rotation, and revocation implementation is still release work |
 | Local model cache is tampered with | File set, size, hash, path, and cache containment are rechecked before trust | Local machine compromise outside Scholion's threat boundary can also alter the application binary or pinned keys |
+| Older locally valid model survives upgrade into policy-enforced release | Custody stays visible, but new-transcription admission requires current policy trust; UI offers curated reinstall | Existing checkpoint/resume reproducibility remains a separate compatibility decision, not an authorization for a new job |
 
 ## User-visible behavior
 
@@ -157,7 +170,7 @@ Ordinary product copy should explain the consequences a user actually needs to k
 
 Do not make the primary workflow explain repository cache layouts, digest algorithms, trust-root rotation, or signed-manifest internals. Those are legitimate details, but they are not the job the person is trying to complete.
 
-Until #110's production catalog and application enforcement are complete, ordinary UI also must not say or imply that the current managed snapshot is “policy-trusted” or “cryptographically verified.” Today the default managed-model path provides explicit installation, immutable resolved-revision custody, containment, and structural/provider revalidation. The stronger byte-for-byte path now has a tested `ModelManager` integration seam but is not yet the default application policy.
+The UI now follows the actual build state. A source/development build with no bundled policy describes a managed snapshot as locally checked. A build with a bundled policy distinguishes “installed” from “trusted by this Scholion build.” An installed legacy snapshot that lacks current policy evidence is not called ready and receives an explicit **Reinstall trusted copy** path.
 
 ### Three presentation layers
 
@@ -174,22 +187,26 @@ This keeps Scholion transparent without turning normal use into an architecture 
 The `scholion.supply_chain` package provides:
 
 - strict curated model catalog parsing;
+- strict packaged-catalog loading;
 - immutable-revision validation;
 - exact model snapshot file-set/size/SHA-256 verification;
 - path/cache containment checks;
 - strict signed-update envelope and payload parsing;
 - an explicit signature-verifier interface;
 - expiry and anti-rollback sequence enforcement; and
-- tests for tampering, unknown keys, stale metadata, hostile paths, undeclared files, and malformed/extra remote configuration.
+- tests for tampering, unknown keys, stale metadata, hostile paths, undeclared files, malformed catalogs, and extra remote configuration.
 
-The managed-model layer now additionally provides the integration boundary needed to consume that model policy:
+The managed-model/application layer additionally provides:
 
 - exact curated revision selection before provider acquisition;
 - rejection of caller revision overrides that disagree with policy;
 - full policy verification before a managed manifest is committed;
 - separately persisted local-validation and policy-trust evidence;
-- exact policy revalidation on later managed-registry reads; and
-- an enforcement mode that rejects models without current policy trust.
+- exact policy revalidation on later trust/admission reads;
+- application composition that automatically enables enforcement when a packaged catalog is present;
+- policy-gated new-transcription admission through the managed revision boundary;
+- legacy installed-but-untrusted migration visibility/removal; and
+- Processing Center readiness and trusted-reinstall presentation that keeps installation and policy trust distinct.
 
 No production trust entry is generated by these mechanics. Tests use synthetic local bytes and synthetic immutable revisions only.
 
@@ -203,9 +220,7 @@ This tranche deliberately does **not** claim #110 is complete. Before closing th
 - stage downloads, enforce signed size/hash, and use platform-appropriate signed/atomic installation;
 - implement explicit update UI and separately opt-in periodic checks if periodic checking is retained;
 - review real upstream faster-whisper revisions and generate the production curated model catalog;
-- bundle that reviewed catalog in the application and enable `ModelManager` policy enforcement in production composition;
-- expose local revalidation versus “trusted by Scholion policy” accurately in technical model state and require current policy trust for new-transcription admission once enforcement is enabled;
-- add native/offline regression qualification across supported platforms; and
+- include that reviewed catalog in signed release packaging and qualify the pinned snapshots natively/offline on supported platforms; and
 - integrate platform code signing/notarization into packaging rather than treating the signed manifest as a substitute.
 
-Until those steps land, current local/offline workflows remain unchanged and no update service is required for Scholion to run.
+Until reviewed production trust content is bundled, current source builds remain on their existing local/provider revalidation path. No update service is required for Scholion to open or use its local corpus.

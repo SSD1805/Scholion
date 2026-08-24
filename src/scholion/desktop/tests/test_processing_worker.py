@@ -55,8 +55,14 @@ class _ModelManager:
     def install(self, model_id: str, *, revision: str | None) -> None:
         self.installs.append((model_id, revision))
 
-    def resolved_revision(self, model_id: str) -> str | None:
-        return self.revisions.get(model_id)
+    def inventory(self) -> tuple[SimpleNamespace, ...]:
+        return tuple(
+            SimpleNamespace(
+                spec=SimpleNamespace(model_id=model_id),
+                manifest=SimpleNamespace(resolved_revision=revision),
+            )
+            for model_id, revision in self.revisions.items()
+        )
 
     def remove(self, model_id: str) -> None:
         self.removals.append(model_id)

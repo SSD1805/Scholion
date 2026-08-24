@@ -228,7 +228,19 @@ def _run_model_install(task: _ModelInstall, container: AppContainer) -> None:
 
 def _run_model_remove(task: _ModelRemove, container: AppContainer) -> None:
     manager = container.model_manager()
-    current = manager.resolved_revision(task.model_id)
+    item = next(
+        (
+            candidate
+            for candidate in manager.inventory()
+            if candidate.spec.model_id == task.model_id
+        ),
+        None,
+    )
+    current = (
+        None
+        if item is None or item.manifest is None
+        else item.manifest.resolved_revision
+    )
     if current != task.expected_revision:
         raise ValueError("model state changed; refresh before removing it")
     manager.remove(task.model_id)

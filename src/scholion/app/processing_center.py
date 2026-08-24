@@ -209,16 +209,24 @@ class ProcessingCenterService:
             None,
         )
         inventory = self.model_manager.inventory()
+        policy_enforced = getattr(self.model_manager, "enforce_policy_trust", False)
+        policy_trust = {item.spec.model_id: item.policy_trusted for item in inventory}
         speaker_labeling = diarization_runtime_status()
         recommended_model: str | None = None
         recommended_installed = False
+        recommended_ready = False
         if recommended is not None:
             strategy = cast("dict[str, object]", recommended["strategy"])
             recommended_model = str(strategy["model"])
-            recommended_installed = any(
-                item.spec.model_id == recommended_model and item.installed
-                for item in inventory
+            recommended_item = next(
+                (item for item in inventory if item.spec.model_id == recommended_model),
+                None,
             )
+            if recommended_item is not None:
+                recommended_installed = recommended_item.installed
+                recommended_ready = recommended_item.installed and (
+                    not policy_enforced or recommended_item.policy_trusted
+                )
         return {
             "health": {
                 "status": health.status.value,
@@ -258,8 +266,11 @@ class ProcessingCenterService:
             },
             "strategies": [self._serialize_strategy(item) for item in assessments],
             "models": [_serialize_model(item) for item in inventory],
+            "model_policy_enforced": policy_enforced,
+            "model_policy_trust": policy_trust,
             "recommended_model": recommended_model,
             "recommended_model_installed": recommended_installed,
+            "recommended_model_ready": recommended_ready,
         }
 
     @staticmethod
@@ -344,9 +355,21 @@ class ProcessingCenterService:
         self.lifecycle_store.discard(job_id)
 
     def verify_model(self, model_id: str) -> dict[str, object]:
-        revision = self.model_manager.resolved_revision(model_id)
+        item = next(
+            (
+                candidate
+                for candidate in self.model_manager.inventory()
+                if candidate.spec.model_id == model_id
+            ),
+            None,
+        )
+        if item is None:
+            raise ValueError(f"unknown model: {model_id}")
+        manifest = item.manifest
         return {
             "model_id": model_id,
-            "installed": revision is not None,
-            "resolved_revision": revision,
+            "installed": item.installed,
+            "resolved_revision": None
+            if manifest is None
+            else manifest.resolved_revision,
         }
