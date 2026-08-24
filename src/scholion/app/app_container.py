@@ -38,16 +38,17 @@ from scholion.library.transcript_tools import TranscriptToolsService
 from scholion.library.workspace_metadata import SqliteWorkspaceMetadataStore
 from scholion.media.probe import FfprobeMediaProbe
 from scholion.media.selection import AudioStreamSelector
-from scholion.model_management.catalog import faster_whisper_model_catalog
+from scholion.model_management.catalog import ModelCatalog, faster_whisper_model_catalog
 from scholion.model_management.errors import ModelManagementError
 from scholion.model_management.provider import HuggingFaceModelProvider
-from scholion.model_management.service import ModelManager
+from scholion.model_management.service import ModelManager, ModelStorageAdmitter
 from scholion.runner.inspector import RunnerInspector
 from scholion.runner.policy import RunnerPolicyPlanner
 from scholion.runner.topology import (
     HardwareTopologyInspector,
     NvidiaSmiAcceleratorProbe,
 )
+from scholion.supply_chain import ModelTrustCatalog, load_bundled_model_trust_catalog
 from scholion.transcription.adaptive_executor import AdaptiveTranscriptionExecutor
 from scholion.transcription.assembly import TranscriptAssembler
 from scholion.transcription.audio import FfmpegAudioDecoder
@@ -201,6 +202,27 @@ def _restore_embedding_provider(
     return SentenceTransformersE5Provider.from_profile(profile)
 
 
+def _create_model_manager(
+    *,
+    catalog: ModelCatalog,
+    provider: HuggingFaceModelProvider,
+    file_store: FileManagerFacade,
+    model_root: Path,
+    storage_admitter: ModelStorageAdmitter,
+    trust_catalog: ModelTrustCatalog | None,
+) -> ModelManager:
+    """Activate exact model policy automatically when this build bundles a catalog."""
+    return ModelManager(
+        catalog=catalog,
+        provider=provider,
+        file_store=file_store,
+        model_root=model_root,
+        storage_admitter=storage_admitter,
+        trust_catalog=trust_catalog,
+        enforce_policy_trust=trust_catalog is not None,
+    )
+
+
 class _ModelStorageAdmitter:
     """Adapt the shared disk policy without coupling model management to ASR."""
 
@@ -255,13 +277,15 @@ class AppContainer(containers.DeclarativeContainer):
     model_storage_admitter = providers.Singleton(
         _ModelStorageAdmitter, policy=storage_admission
     )
+    model_trust_catalog = providers.Singleton(load_bundled_model_trust_catalog)
     model_manager = providers.Singleton(
-        ModelManager,
+        _create_model_manager,
         catalog=model_catalog,
         provider=model_provider,
         file_store=file_manager,
         model_root=config.provided.MODEL_DIR,
         storage_admitter=model_storage_admitter,
+        trust_catalog=model_trust_catalog,
     )
     media_probe = providers.Singleton(_create_media_probe, config=config)
     audio_stream_selector = providers.Singleton(AudioStreamSelector)
