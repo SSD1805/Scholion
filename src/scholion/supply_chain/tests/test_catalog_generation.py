@@ -73,7 +73,9 @@ def test_generator_rejects_file_symlink_that_escapes_cache(tmp_path: Path) -> No
         _generate(snapshot, cache)
 
 
-def test_generator_allows_huggingface_style_symlink_within_cache(tmp_path: Path) -> None:
+def test_generator_allows_huggingface_style_symlink_within_cache(
+    tmp_path: Path,
+) -> None:
     cache = tmp_path / "cache"
     snapshot = cache / "repo" / "snapshots" / _REVISION
     blobs = cache / "repo" / "blobs"
