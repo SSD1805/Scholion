@@ -151,3 +151,8 @@ pub async fn transcript_tools_request(request: Value) -> Result<Value, String> {
 pub async fn lifecycle_request(request: Value) -> Result<Value, String> {
     request_module("scholion.desktop.custody_bridge", request).await
 }
+
+#[tauri::command]
+pub async fn update_request(request: Value) -> Result<Value, String> {
+    request_module("scholion.desktop.update_bridge", request).await
+}

@@ -5,6 +5,7 @@ import { createLifecycleClient } from "./api/lifecycle";
 import { createPlaybackClient } from "./api/playback";
 import { createProcessingClient } from "./api/processing";
 import { createTranscriptToolsClient } from "./api/transcriptTools";
+import { createUpdateClient } from "./api/updates";
 import { InfoPopover } from "./components/InfoPopover";
 import { type Theme } from "./components/WorkspaceHeader";
 import type { HelpTopicId } from "./help";
@@ -15,18 +16,27 @@ import { ProcessingCenter } from "./ProcessingCenter";
 import { ResearchWorkspaceWithAnchorReview } from "./ResearchWorkspaceWithAnchorReview";
 import { SearchWorkspace } from "./SearchWorkspace";
 import { DEFAULT_THEME, isTheme, THEME_STORAGE_KEY } from "./themes";
+import { UpdatesWorkspace } from "./UpdatesWorkspace";
 import "./help.css";
 import "./lifecycle.css";
 import "./processing-center.css";
 import "./theme-extras.css";
+import "./updates.css";
 
 const client = createDesktopClient();
 const lifecycle = createLifecycleClient();
 const playback = createPlaybackClient();
 const processing = createProcessingClient();
 const transcriptTools = createTranscriptToolsClient();
+const updates = createUpdateClient();
 
-type View = "intake" | "processing" | "library" | "research" | "storage";
+type View =
+  | "intake"
+  | "processing"
+  | "library"
+  | "research"
+  | "storage"
+  | "updates";
 
 const VIEW_HELP_TOPIC: Record<View, HelpTopicId> = {
   intake: "intake",
@@ -34,6 +44,7 @@ const VIEW_HELP_TOPIC: Record<View, HelpTopicId> = {
   library: "library",
   research: "research",
   storage: "storage",
+  updates: "updates",
 };
 
 function initialTheme(): Theme {
@@ -88,6 +99,15 @@ export function App() {
       return (
         <LifecycleWorkspace
           lifecycle={lifecycle}
+          theme={theme}
+          onThemeChange={setTheme}
+        />
+      );
+    }
+    if (view === "updates") {
+      return (
+        <UpdatesWorkspace
+          updates={updates}
           theme={theme}
           onThemeChange={setTheme}
         />
@@ -155,6 +175,14 @@ export function App() {
             onClick={() => setView("storage")}
           >
             <span aria-hidden="true">▣</span> Storage
+          </button>
+          <button
+            className={view === "updates" ? "nav-item nav-item-active" : "nav-item"}
+            type="button"
+            aria-current={view === "updates" ? "page" : undefined}
+            onClick={() => setView("updates")}
+          >
+            <span aria-hidden="true">↻</span> Updates
           </button>
         </nav>
 

@@ -22,6 +22,7 @@ fn main() {
             backend::desktop_request,
             backend::transcript_tools_request,
             backend::lifecycle_request,
+            backend::update_request,
             processing::processing_start_task,
             processing::processing_task_status,
             processing::processing_cancel_task,
