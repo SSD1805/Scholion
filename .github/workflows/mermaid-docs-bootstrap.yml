@@ -52,6 +52,33 @@ jobs:
         if: steps.state.outputs.needed == 'true'
         run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
 
+      - name: Fix qualified Mermaid portability defects
+        if: steps.state.outputs.needed == 'true'
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFileSync, writeFileSync } from "node:fs";
+
+          const replacements = [
+            {
+              file: "docs/architecture/diarization.md",
+              before: "    B --> D[Dr. Chen (speaker-01)]",
+              after: '    B --> D["Dr. Chen (speaker-01)"]',
+            },
+          ];
+
+          for (const { file, before, after } of replacements) {
+            const text = readFileSync(file, "utf8");
+            const count = text.split(before).length - 1;
+            if (count !== 1) {
+              throw new Error(
+                `${file}: expected exactly one qualified portability defect, found ${count}`,
+              );
+            }
+            writeFileSync(file, text.replace(before, after), "utf8");
+          }
+          NODE
+
       - name: Migrate inline Mermaid and render deterministic SVGs
         if: steps.state.outputs.needed == 'true'
         run: node tools/mermaid/render.mjs --migrate-inline
