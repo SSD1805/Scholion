@@ -199,9 +199,9 @@ need to distinguish architectural roles at a glance.
 
 Styled example:
 
-![Documentation Mermaid palette diagram](./diagrams/generated/docs/documentation-style-1.svg)
+![Documentation Mermaid palette diagram](./diagrams/generated/documentation-mermaid-palette.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/documentation-style-1.mmd)
+[Diagram source (Mermaid)](./diagrams/src/documentation-mermaid-palette.mmd)
 
 The labels remain meaningful without color. Color makes the structure faster to read.
 

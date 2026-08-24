@@ -42,9 +42,9 @@ Scholion owns deterministic work windows over canonical decoded audio. Faster-wh
 returns timestamps relative to one work window. Assembly rebases both segment and word
 intervals onto one source-relative timeline.
 
-![The timeline stays the same diagram](../diagrams/generated/docs/architecture/word-alignment-1.svg)
+![The timeline stays the same diagram](../diagrams/generated/word-alignment-timeline.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/word-alignment-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/word-alignment-timeline.mmd)
 
 If work window 7 begins at source second `4200` and the engine reports a word at `21.70`,
 the canonical word starts at `4221.70`.
@@ -97,9 +97,9 @@ support one uniform speaker.
 
 Mixed handoffs and ambiguous overlap therefore remain explicit.
 
-![Speaker handoffs get much better 💃 diagram](../diagrams/generated/docs/architecture/word-alignment-2.svg)
+![Speaker handoffs get much better 💃 diagram](../diagrams/generated/speaker-handoffs.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/word-alignment-2.mmd)
+[Diagram source (Mermaid)](../diagrams/src/speaker-handoffs.mmd)
 
 Scholion now also has a derived speaker transcript that presents clean handoffs, true
 simultaneous overlap, sequential mixed/unresolved text, and unattributed text separately.

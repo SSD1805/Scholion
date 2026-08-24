@@ -15,9 +15,9 @@ So Scholion keeps one deliberate boundary around them:
 That gives ordinary users a simpler experience and gives maintainers something they can
 actually reason about.
 
-![The human version diagram](../diagrams/generated/docs/architecture/model-management-1.svg)
+![The human version diagram](../diagrams/generated/model-management.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/model-management-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/model-management.mmd)
 
 Application composition now loads a packaged `model-trust.json` from
 `scholion.supply_chain` when one is present. A build that contains that reviewed catalog

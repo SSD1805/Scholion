@@ -39,9 +39,9 @@ remain responsive without bypassing the same application services used in produc
 
 Neither should be tuned from one heroic laptop run.
 
-![What are we measuring now? diagram](../diagrams/generated/docs/development/benchmarking-1.svg)
+![What are we measuring now? diagram](../diagrams/generated/benchmarking-measurements.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/development/benchmarking-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/benchmarking-measurements.mmd)
 
 Text fallback: conservative policy is exercised on representative workloads; observed
 results are compared with prediction; only reviewed evidence changes policy.

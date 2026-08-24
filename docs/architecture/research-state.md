@@ -20,9 +20,9 @@ The design deliberately uses two stores with different authority:
 The databases do not share a transaction and do not attach to one another. Scholion
 coordinates them through stable evidence identities and a deterministic projector.
 
-![Durable research state architecture diagram](../diagrams/generated/docs/architecture/research-state-1.svg)
+![Durable research state architecture diagram](../diagrams/generated/durable-research-state.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/research-state-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/durable-research-state.mmd)
 
 Text fallback: canonical evidence creates a verified anchor; user research commits to
 SQLite with a monotonic journal; a deterministic projector builds disposable DuckDB query

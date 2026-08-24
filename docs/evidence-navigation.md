@@ -10,9 +10,9 @@ was indexed, and resolves the result onto canonical segments and word timing.
 
 A search database may point at evidence. It does not get to become the evidence.
 
-![🔎 From search result to the exact evidence diagram](./diagrams/generated/docs/evidence-navigation-1.svg)
+![🔎 From search result to the exact evidence diagram](./diagrams/generated/search-to-evidence.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/evidence-navigation-1.mmd)
+[Diagram source (Mermaid)](./diagrams/src/search-to-evidence.mmd)
 
 Text fallback: retrieval ranks a passage, canonical navigation verifies it, and the same
 verified evidence coordinates feed the desktop reader, native playback, and durable research notes.
@@ -126,9 +126,9 @@ The note body remains separate durable user knowledge. Rebuilding BM25, semantic
 or the DuckDB research projection does not delete it. A changed canonical generation is
 detected instead of silently teleporting the annotation.
 
-![Durable research uses the same coordinate system 📝 diagram](./diagrams/generated/docs/evidence-navigation-2.svg)
+![Durable research uses the same coordinate system 📝 diagram](./diagrams/generated/durable-research-coordinate-system.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/evidence-navigation-2.mmd)
+[Diagram source (Mermaid)](./diagrams/src/durable-research-coordinate-system.mmd)
 
 Text fallback: verified canonical coordinates drive result presentation, durable SQLite
 research anchors, rebuildable research projection, the desktop evidence cursor, and

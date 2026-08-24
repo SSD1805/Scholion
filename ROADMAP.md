@@ -6,9 +6,9 @@ Modern Scholion restarted on August 2, 2026. The MVP product foundation is now s
 
 The project is now in **pre-packaging release readiness**. Packaging itself is deliberately the next milestone after issue #145, not part of the current branch.
 
-![Scholion roadmap 🗺️✨ diagram](./docs/diagrams/generated/ROADMAP-1.svg)
+![Scholion roadmap 🗺️✨ diagram](./docs/diagrams/generated/scholion-roadmap.svg)
 
-[Diagram source (Mermaid)](./docs/diagrams/src/ROADMAP-1.mmd)
+[Diagram source (Mermaid)](./docs/diagrams/src/scholion-roadmap.mmd)
 
 Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, and signed update/model-trust mechanics. The current milestone is pre-packaging release readiness, followed by Windows/macOS packaging and representative release qualification. Official Linux binary distribution remains separately blocked by issue #135.
 

@@ -14,9 +14,9 @@ Scholion lets a user work in two modes without confusing them:
 Remembering a location is durable application preference state. It is not transcript
 evidence, research annotation state, or permission to copy/delete the user's source files.
 
-![Durable library locations and recording discovery diagram](../diagrams/generated/docs/architecture/library-locations-1.svg)
+![Durable library locations and recording discovery diagram](../diagrams/generated/library-locations.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/library-locations-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/library-locations.mmd)
 
 Text fallback: explicit selection can remain one-time or become a remembered location;
 remembered transcript roots feed incremental canonical refresh, while remembered recording

@@ -27,9 +27,9 @@ transcript truth.
 > **Canonical transcript JSON is evidence. SQLite research state is human-authored truth.
 > DuckDB search/research databases are rebuildable projections.**
 
-![The human version diagram](../diagrams/generated/docs/architecture/corpus-search-1.svg)
+![The human version diagram](../diagrams/generated/corpus-search-overview.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/corpus-search-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/corpus-search-overview.mmd)
 
 Text fallback: canonical transcript evidence produces rebuildable lexical/semantic search
 state; ranked passages are re-verified against canonical evidence; authoritative SQLite
@@ -59,9 +59,9 @@ Before exposing precise canonical words or segments, `EvidenceLocator` re-reads 
 JSON and verifies SHA, document identity, and source identity against the ranked passage.
 Stale indexed evidence fails closed.
 
-![Canonical hashing and stale-state refusal diagram](../diagrams/generated/docs/architecture/corpus-search-2.svg)
+![Canonical hashing and stale-state refusal diagram](../diagrams/generated/canonical-hashing-stale-refusal.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/corpus-search-2.mmd)
+[Diagram source (Mermaid)](../diagrams/src/canonical-hashing-stale-refusal.mmd)
 
 Text fallback: ranked passages must still match the canonical generation and segment set;
 otherwise precise navigation refuses instead of fabricating evidence.

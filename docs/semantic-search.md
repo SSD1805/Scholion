@@ -21,9 +21,9 @@ The vocabulary differs, but the idea is related.
 
 **Hybrid search** lets exact terminology and conceptual similarity support each other.
 
-![Semantic search, without the mystery box ✨ diagram](./diagrams/generated/docs/semantic-search-1.svg)
+![Semantic search, without the mystery box ✨ diagram](./diagrams/generated/semantic-search-overview.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/semantic-search-1.mmd)
+[Diagram source (Mermaid)](./diagrams/src/semantic-search-overview.mmd)
 
 Semantic search is optional. Lexical search remains the default and requires no semantic
 model runtime.
@@ -45,9 +45,9 @@ An embedding is **not**:
 
 It is derived search data.
 
-![What is an embedding? diagram](./diagrams/generated/docs/semantic-search-2.svg)
+![What is an embedding? diagram](./diagrams/generated/embedding-concept.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/semantic-search-2.mmd)
+[Diagram source (Mermaid)](./diagrams/src/embedding-concept.mmd)
 
 Scholion's current profile produces 384-number vectors. Those numbers are for the
 computer. You are not expected to inspect them manually.
@@ -258,9 +258,9 @@ generation.
 
 Nothing about canonical transcript evidence or durable research state has to migrate.
 
-![What if a better model appears later? diagram](./diagrams/generated/docs/semantic-search-3.svg)
+![What if a better model appears later? diagram](./diagrams/generated/semantic-model-upgrade.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/semantic-search-3.mmd)
+[Diagram source (Mermaid)](./diagrams/src/semantic-model-upgrade.mmd)
 
 Vectors are derived state. Rebuild them. Keep the evidence.
 
