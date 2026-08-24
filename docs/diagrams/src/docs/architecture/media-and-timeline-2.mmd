@@ -1,0 +1,19 @@
+flowchart TD
+    A[Canonical elapsed evidence] --> B[Human timestamp]
+    A --> C[Verified seek_seconds]
+    A --> D[EvidenceAnchor]
+    D --> E[SQLite durable note]
+    C --> F[Desktop evidence cursor]
+    F --> G[Verified native playback]
+
+    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
+    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
+    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
+    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
+    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
+
+    class A,C,D evidence
+    class B view
+    class E source
+    class F inspect
+    class G process

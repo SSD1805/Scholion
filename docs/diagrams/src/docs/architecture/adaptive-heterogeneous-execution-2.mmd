@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant M as Main execution path
+    participant G as Accelerator inference
+    participant P as One CPU prefetch worker
+    participant C as Checkpoint store
+
+    M->>G: transcribe segment N
+    par while N is in flight
+        M->>P: materialize segment N+1
+    end
+    G-->>M: result N
+    M->>C: commit checkpoint N
+    P-->>M: prepared N+1
+    M->>G: transcribe N+1

@@ -9,21 +9,9 @@ transcript can say which anonymous voice most likely owns a passage.
 It does **not** mean “identify this human,” and Scholion does not infer that
 `speaker-01` in one recording is the same person as `speaker-01` in another.
 
-```mermaid
-flowchart LR
-    A[Recording audio] --> D[Local diarization]
-    D --> T[Speaker-turn timeline]
-    T --> P[Conservative projection onto transcript]
-    P --> C[Canonical transcript evidence]
+![Anonymous speaker diarization 👥 diagram](../diagrams/generated/docs/architecture/diarization-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-
-    class A source
-    class D,P process
-    class T,C evidence
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/diarization-1.mmd)
 
 ## What the user would see
 
@@ -205,20 +193,9 @@ scholion library speakers forget-name TRANSCRIPT_ID speaker-01
 The design rule is that this is **display/user-authored state**, not a rewrite of the
 underlying anonymous diarization evidence.
 
-```mermaid
-flowchart LR
-    A[speaker-01 evidence] --> B[User-authored display label: Dr. Chen]
-    A --> C[Canonical speaker coordinates]
-    B --> D[Dr. Chen (speaker-01)]
+![User-assigned display labels without biometric identity diagram](../diagrams/generated/docs/architecture/diarization-2.svg)
 
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef user fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A,C evidence
-    class B user
-    class D view
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/diarization-2.mmd)
 
 The label is meaningful user knowledge and does **not** share the deletion semantics of
 a rebuildable search index. It is written to private user state separately from lexical

@@ -53,32 +53,9 @@ Scholion preserves those declarations with their format/stream origin. It does n
 them as interchangeable with `4788.37` seconds, and it does not claim that a device clock
 was historically correct merely because a tag exists.
 
-```mermaid
-flowchart LR
-    A[Local media] --> B[FFprobe and source SHA]
-    B --> C[Canonical elapsed seconds]
-    B --> D[Declared timecode]
-    B --> E[Declared creation time]
-    C --> F[Word and segment evidence]
-    F --> G[Canonical transcript JSON]
-    D --> G
-    E --> G
-    F --> H[Human elapsed display]
-    F --> I[Verified seek and EvidenceAnchor]
-    I --> J[Desktop evidence cursor]
+![The human version diagram](../diagrams/generated/docs/architecture/media-and-timeline-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-
-    class A source
-    class B,D,E inspect
-    class C,F,G,I evidence
-    class H view
-    class J process
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/media-and-timeline-1.mmd)
 
 Text fallback: FFprobe/source identity produces canonical elapsed time plus preserved
 source-declared clocks; canonical word/segment evidence drives transcript JSON, human
@@ -263,27 +240,9 @@ currently pointing at?
 
 **EvidenceAnchor** answers: which exact canonical evidence does this user note refer to?
 
-```mermaid
-flowchart TD
-    A[Canonical elapsed evidence] --> B[Human timestamp]
-    A --> C[Verified seek_seconds]
-    A --> D[EvidenceAnchor]
-    D --> E[SQLite durable note]
-    C --> F[Desktop evidence cursor]
-    F --> G[Verified native playback]
+![Word timing, evidence cursor, playback, and durable notes share one axis diagram](../diagrams/generated/docs/architecture/media-and-timeline-2.svg)
 
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-
-    class A,C,D evidence
-    class B view
-    class E source
-    class F inspect
-    class G process
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/media-and-timeline-2.mmd)
 
 Text fallback: one canonical elapsed coordinate drives display, verified seek, durable
 research anchors, the desktop evidence cursor, and generation/source-verified native

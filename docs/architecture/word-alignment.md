@@ -42,22 +42,9 @@ Scholion owns deterministic work windows over canonical decoded audio. Faster-wh
 returns timestamps relative to one work window. Assembly rebases both segment and word
 intervals onto one source-relative timeline.
 
-```mermaid
-flowchart LR
-    A[Source audio timeline] --> B[Deterministic work window]
-    B --> C[Faster-whisper]
-    C --> D[Window-relative words]
-    D --> E[Source-relative word evidence]
-    E --> F[Canonical transcript JSON]
+![The timeline stays the same diagram](../diagrams/generated/docs/architecture/word-alignment-1.svg)
 
-    classDef evidence fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef result fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A evidence
-    class B,C,D process
-    class E,F result
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/word-alignment-1.mmd)
 
 If work window 7 begins at source second `4200` and the engine reports a word at `21.70`,
 the canonical word starts at `4221.70`.
@@ -110,28 +97,9 @@ support one uniform speaker.
 
 Mixed handoffs and ambiguous overlap therefore remain explicit.
 
-```mermaid
-flowchart TD
-    A[ASR segment spans speakers] --> B[Aligned words]
-    B --> C[Compare each word with speaker turns]
-    C --> D{Exactly one speaker overlaps?}
-    D -->|yes| E[Attach anonymous ref to word]
-    D -->|no| F[Leave word unattributed]
-    E --> G{Every word same speaker?}
-    F --> G
-    G -->|yes| H[Keep segment convenience label]
-    G -->|no| I[Segment speaker remains null]
+![Speaker handoffs get much better 💃 diagram](../diagrams/generated/docs/architecture/word-alignment-2.svg)
 
-    classDef evidence fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef safe fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef ambiguous fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-
-    class A,B evidence
-    class C,D,G process
-    class E,H safe
-    class F,I ambiguous
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/word-alignment-2.mmd)
 
 Scholion now also has a derived speaker transcript that presents clean handoffs, true
 simultaneous overlap, sequential mixed/unresolved text, and unattributed text separately.

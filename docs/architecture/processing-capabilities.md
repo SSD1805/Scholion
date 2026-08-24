@@ -26,39 +26,9 @@ explainable afterward.
 The next product layer is a dedicated Research workspace, then advanced Library controls
 and Tauri-owned media playback.
 
-```mermaid
-flowchart LR
-    A[Local recording] --> B[Inspect source and runtime]
-    B --> C[Immutable plan]
-    C --> D[Normalize enhance segment ASR]
-    D --> E[Word timing and checkpoints]
-    E --> F[Language and speaker evidence]
-    F --> G[Canonical transcript JSON]
-    G --> H[Derived exports]
-    G --> I[Lexical semantic hybrid search]
-    I --> J[Verified evidence navigation]
-    J --> K[SQLite research authority]
-    K --> L[DuckDB research projection]
-    L --> I
-    K --> M[Saved searches]
-    I --> N[Unified discovery]
-    K --> N
-    N --> O[Desktop Library]
-    J --> O
-    K --> P[Next Desktop Research]
+![What the user experiences now diagram](../diagrams/generated/docs/architecture/processing-capabilities-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-
-    class A source
-    class B,C,D,E,F,P process
-    class G,J,K evidence
-    class H,I,L,M,N view
-    class O inspect
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/processing-capabilities-1.mmd)
 
 Text fallback: local execution produces canonical transcript evidence; rebuildable search
 ranks it; verified navigation resolves results; authoritative research state attaches to

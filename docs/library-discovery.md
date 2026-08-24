@@ -26,31 +26,9 @@ Scholion keeps result types separate and useful.
 
 ## The simple mental model
 
-```mermaid
-flowchart LR
-    Q[One library query] --> T[Transcript evidence]
-    Q --> N[Your notes]
-    Q --> G[Tags]
-    Q --> C[Collections]
-    T --> R[Grouped discovery response]
-    N --> R
-    G --> R
-    C --> R
-    R --> U[CLI Library view]
-    R --> V[Desktop Library view]
+![The simple mental model diagram](./diagrams/generated/docs/library-discovery-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-
-    class Q source
-    class T evidence
-    class N,G,C process
-    class R view
-    class U,V inspect
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/library-discovery-1.mmd)
 
 Text fallback: one human query fans out through existing typed capabilities and returns
 separate transcript, note, tag, and collection groups. CLI and desktop Library views share

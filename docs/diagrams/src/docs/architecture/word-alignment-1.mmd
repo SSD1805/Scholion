@@ -1,0 +1,14 @@
+flowchart LR
+    A[Source audio timeline] --> B[Deterministic work window]
+    B --> C[Faster-whisper]
+    C --> D[Window-relative words]
+    D --> E[Source-relative word evidence]
+    E --> F[Canonical transcript JSON]
+
+    classDef evidence fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
+    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
+    classDef result fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
+
+    class A evidence
+    class B,C,D process
+    class E,F result

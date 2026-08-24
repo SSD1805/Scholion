@@ -86,48 +86,9 @@ An update check is network activity, but it is not behavioral telemetry. GitHub/
 
 ## The Scholion family portrait
 
-```mermaid
-flowchart LR
-    A[Your recording] --> B[Local transcription]
-    B --> C[Canonical transcript]
-    C --> D[Lexical semantic hybrid search]
-    D --> E[Verified evidence navigation]
-    E --> F[Research authority]
-    F --> D
-    D --> G[Unified discovery]
-    F --> G
-    G --> H[Saved searches]
-    C --> I[Typed custody planning]
-    F --> I
-    B --> I
-    H --> J[Incremental refresh]
-    J --> K[Desktop Library]
-    E --> K
-    F --> L[Desktop Research]
-    K --> M[Updates and release trust]
+![The Scholion family portrait diagram](./diagrams/generated/docs/README-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef stop fill:#FFD6D6,stroke:#9E3434,stroke-width:2px,color:#351616
-
-    class A source
-    class B,M process
-    class C,E,F evidence
-    class D,G,H,J view
-    class I stop
-    class K inspect
-    class L process
-```
-
-<details>
-<summary>Static diagram fallback if rich rendering is unavailable</summary>
-
-![Scholion family portrait static diagram](diagrams/docs-family-portrait.svg)
-
-</details>
+[Diagram source (Mermaid)](./diagrams/src/docs/README-1.mmd)
 
 Text fallback: canonical evidence feeds rebuildable search; search resolves back to verified evidence; durable notes/tags/collections, speaker labels, and saved searches remain authoritative human knowledge; lifecycle and refresh reuse those identities; the desktop Processing, Library, transcript-tools, playback, Research, Storage, and Updates surfaces consume the same application authorities.
 

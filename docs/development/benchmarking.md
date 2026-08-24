@@ -39,24 +39,9 @@ remain responsive without bypassing the same application services used in produc
 
 Neither should be tuned from one heroic laptop run.
 
-```mermaid
-flowchart LR
-    A[Conservative prediction] --> B[Representative workload]
-    B --> C[Measured result]
-    C --> D[Compare expected and observed]
-    D --> E[Reviewed calibration or optimization]
-    E --> A
+![What are we measuring now? diagram](../diagrams/generated/docs/development/benchmarking-1.svg)
 
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A inspect
-    class B,C evidence
-    class D process
-    class E view
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/development/benchmarking-1.mmd)
 
 Text fallback: conservative policy is exercised on representative workloads; observed
 results are compared with prediction; only reviewed evidence changes policy.

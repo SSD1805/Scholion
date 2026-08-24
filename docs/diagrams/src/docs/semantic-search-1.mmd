@@ -1,0 +1,9 @@
+flowchart LR
+    A[Your query] --> B[Lexical BM25]
+    A --> C[Semantic embeddings]
+    B --> D[Hybrid rank fusion]
+    C --> D
+    B --> E[Transcript passages]
+    C --> E
+    D --> E
+    E --> F[Verified canonical evidence]

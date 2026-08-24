@@ -168,22 +168,9 @@ need to distinguish architectural roles at a glance.
 
 Styled example:
 
-```mermaid
-flowchart LR
-    A[Original recording] --> B[Local processing]
-    B --> C[Canonical transcript evidence]
-    C --> D[Rebuildable search view]
+![Documentation Mermaid palette diagram](./diagrams/generated/docs/documentation-style-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A source
-    class B process
-    class C evidence
-    class D view
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/documentation-style-1.mmd)
 
 The labels remain meaningful without color. Color makes the structure faster to read.
 

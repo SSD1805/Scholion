@@ -6,39 +6,9 @@ Modern Scholion restarted on August 2, 2026. The MVP product foundation is now s
 
 The project is now in **pre-packaging release readiness**. Packaging itself is deliberately the next milestone after issue #145, not part of the current branch.
 
-```mermaid
-flowchart LR
-    A[Local media] --> B[Reliable local transcription]
-    B --> C[Canonical evidence]
-    C --> D[Private retrieval]
-    D --> E[Verified evidence navigation]
-    E --> F[Durable research authority]
-    F --> G[Native desktop workflows]
-    G --> H[Lifecycle and playback]
-    H --> I[Signed update and model trust mechanics]
-    I --> J[Pre-packaging readiness]
-    J --> K[Windows and macOS packaging]
-    K --> L[Representative release qualification]
-    L --> M[MVP release]
+![Scholion roadmap 🗺️✨ diagram](./docs/diagrams/generated/ROADMAP-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-
-    class A source
-    class B,D,G,H,I,J,K,L process
-    class C,E,F evidence
-    class M view
-```
-
-<details>
-<summary>Static diagram fallback if rich rendering is unavailable</summary>
-
-![Scholion product-roadmap static diagram](docs/diagrams/product-roadmap.svg)
-
-</details>
+[Diagram source (Mermaid)](./docs/diagrams/src/ROADMAP-1.mmd)
 
 Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, and signed update/model-trust mechanics. The current milestone is pre-packaging release readiness, followed by Windows/macOS packaging and representative release qualification. Official Linux binary distribution remains separately blocked by issue #135.
 

@@ -14,30 +14,9 @@ Scholion lets a user work in two modes without confusing them:
 Remembering a location is durable application preference state. It is not transcript
 evidence, research annotation state, or permission to copy/delete the user's source files.
 
-```mermaid
-flowchart LR
-    A[Choose files or folder] --> B{Remember this folder}
-    B -->|No| C[One-time selection]
-    B -->|Yes| D[Durable location permission]
-    D --> E{Purpose}
-    E -->|Transcript library| F[Incremental canonical refresh]
-    E -->|Recording source| G[Cheap recording discovery]
-    G --> H[Manual processing by default]
-    G --> I[Automatic permission metadata if explicitly enabled]
-    I --> H
+![Durable library locations and recording discovery diagram](../diagrams/generated/docs/architecture/library-locations-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-
-    class A source
-    class B,E evidence
-    class C,D process
-    class F,G view
-    class H,I inspect
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/library-locations-1.mmd)
 
 Text fallback: explicit selection can remain one-time or become a remembered location;
 remembered transcript roots feed incremental canonical refresh, while remembered recording

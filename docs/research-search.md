@@ -80,28 +80,9 @@ a normal `SearchQuery`, `ResearchQueryFilters`, `RetrievalMode`, and context cou
 rejects an `evidence_scope` supplied as user intent because evidence scope is derived state,
 not something the desktop is allowed to author.
 
-```mermaid
-flowchart LR
-    A[Human search choices] --> B[Strict desktop DTO]
-    B --> C[ResearchSearchIntent]
-    C --> D[ResearchQueryFilters]
-    C --> E[SearchQuery]
-    D --> F[Derived evidence scope]
-    E --> G[Current transcript retrieval]
-    F --> G
-    G --> H[Canonical evidence verifier]
-    H --> I[Desktop evidence result]
+![The typed intent underneath diagram](./diagrams/generated/docs/research-search-1.svg)
 
-    classDef input fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef authority fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef derived fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-
-    class A,B input
-    class C,D,E authority
-    class F,G derived
-    class H,I evidence
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/research-search-1.mmd)
 
 Text fallback: React collects ordinary search choices and submits a strict desktop DTO.
 Python constructs and validates search intent and research filters, derives any evidence
