@@ -1,20 +1,24 @@
 # Scholion application icon
 
-Scholion's application icon should represent the product it became: a private workspace for **recorded evidence and annotation**, not a generic transcription utility.
+Scholion's application icon represents the product it became: a private workspace for **recorded evidence and annotation**, not a generic transcription utility.
+
+![Scholion application icon master](../frontend/src-tauri/icons/scholion-master.svg)
+
+The reviewed visual authority is `frontend/src-tauri/icons/scholion-master.svg`. Platform-specific native assets must be generated from that master rather than treated as independent designs.
 
 ## Product metaphor
 
 The mark combines three ideas without trying to draw all of them literally:
 
-1. **evidence page / source**: a stable rectangular or page-like field;
-2. **marginal annotation**: a bracket, marginal stroke, or note mark attached to that source rather than replacing it; and
-3. **recorded time**: a restrained waveform/timeline gesture that reads as a secondary clue, not a microphone logo.
+1. **evidence page / source**: a stable page-like field;
+2. **marginal annotation**: an attached brace/stroke that marks the source rather than replacing it; and
+3. **recorded time**: a restrained waveform/timeline gesture that remains secondary to the evidence metaphor.
 
-A successful mark should still make sense if the viewer never knows the word *scholion*. It should communicate “source + annotation / evidence work” before “audio recorder.”
+The surrounding `S`-shaped annotation stroke gives the mark a Scholion identity without relying on tiny text. The icon should communicate “source + annotation / evidence work” before “audio recorder.”
 
 ## Visual constraints
 
-The master should be:
+The master is intended to remain:
 
 - square and centered with generous optical padding;
 - legible at 16×16 and 32×32 without relying on tiny text/details;
@@ -28,25 +32,25 @@ The master should be:
 
 The icon is product identity, not evidence/research state. Theme switching must never recolor the installed application icon dynamically.
 
-## Preferred direction
+## Approved direction
 
-The first final candidate should use a compact **page/evidence tile with a marginal bracket and one restrained waveform/timeline cut**. The bracket should feel attached to or embracing the source. The waveform should be abstract enough that the icon does not collapse into “audio editor.”
+The approved master uses a compact **page/evidence tile with a marginal brace and one restrained recorded-time waveform**, wrapped by a large `S`-shaped annotation gesture. The page is warm paper/ivory against a dark durable field, with restrained gold and blue secondary accents.
 
-The overall tone should be scholarly without becoming faux-antique: modern geometric construction, slightly human edges if useful, no quills, scrolls, wax seals, columns, books-with-tiny-pages, or illuminated-manuscript micro-detail.
-
-Color should be quiet and durable. A warm paper/ivory field with very dark ink and one restrained plum/indigo accent is a good starting direction, but contrast and silhouette matter more than a fixed palette. The final packaging asset set should include enough opaque background/edge treatment that the mark does not disappear on either light or dark desktops.
+The tone is scholarly without becoming faux-antique: modern geometric construction, no quills, scrolls, wax seals, columns, books-with-tiny-pages, or illuminated-manuscript micro-detail.
 
 ## Asset custody
 
-`frontend/src-tauri/icons/icon.png` is currently the checked-in placeholder required by the native build. Do not delete it until a reviewed master is committed and the generated native icon family is present.
+`frontend/src-tauri/icons/scholion-master.svg` is the reviewed master and visual authority.
 
-The final icon source/master should be retained in the repository in a reproducible high-resolution/vector-friendly form. Packaging then generates the platform derivatives required by Tauri, including Windows `.ico`, macOS `.icns`, and the required PNG sizes. Generated derivatives are build assets; the reviewed master is the visual authority.
+`frontend/src-tauri/icons/icon.png` remains the checked-in pre-production placeholder required by the current native source build. Packaging will replace it with a master-derived PNG at the same time the complete native icon family is generated and wired.
+
+Packaging generates the platform derivatives required by Tauri, including Windows `.ico`, macOS `.icns`, and the required PNG sizes. Generated derivatives are build assets; the reviewed SVG master remains the visual authority.
 
 Do not regenerate platform assets from a screenshot, compressed chat preview, or different visual revision on each operating system.
 
-## Acceptance checks
+## Packaging acceptance checks
 
-Before packaging freezes the icon:
+Before packaging freezes the generated native family:
 
 - inspect at 16, 20, 24, 32, 48, 64, 128, 256, 512, and 1024 px;
 - inspect on light, dark, and mid-tone neutral backgrounds;
@@ -56,4 +60,4 @@ Before packaging freezes the icon:
 - verify there is no accidental resemblance to a microphone, chat bubble, document-upload icon, or generic AI sparkle mark; and
 - keep the same approved master across Windows/macOS/Linux derivatives even while official Linux binary packaging remains blocked by issue #135.
 
-Issue #145 owns the final pre-packaging icon decision. Platform derivative generation belongs with the subsequent packaging milestone once the final master is approved.
+Issue #145 owns selection and commitment of the final master. Platform derivative generation and replacement of the current Tauri PNG placeholder belong to the subsequent packaging milestone.
