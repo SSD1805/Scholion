@@ -30,7 +30,9 @@ class _Service:
         return self._result("stage")
 
 
-def _request(method: str, *, params: dict[str, object] | None = None) -> dict[str, object]:
+def _request(
+    method: str, *, params: dict[str, object] | None = None
+) -> dict[str, object]:
     return {
         "protocol_version": 1,
         "request_id": "update-request",
