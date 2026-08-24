@@ -122,6 +122,13 @@ flowchart LR
     class L process
 ```
 
+<details>
+<summary>Static diagram fallback if rich rendering is unavailable</summary>
+
+![Scholion family portrait static diagram](diagrams/docs-family-portrait.svg)
+
+</details>
+
 Text fallback: canonical evidence feeds rebuildable search; search resolves back to verified evidence; durable notes/tags/collections, speaker labels, and saved searches remain authoritative human knowledge; lifecycle and refresh reuse those identities; the desktop Processing, Library, transcript-tools, playback, Research, Storage, and Updates surfaces consume the same application authorities.
 
 ## What belongs to you, and what can the raccoon rebuild? 🦝
