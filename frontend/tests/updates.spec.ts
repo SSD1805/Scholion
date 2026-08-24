@@ -16,9 +16,9 @@ test("manual update check explains privacy boundaries and stays accessible", asy
   await openUpdates(page);
 
   await expect(page.getByRole("heading", { name: "Never checked" })).toBeVisible();
-  await expect(page.getByText(/does not include an installation ID/)).toBeVisible();
+  await expect(page.getByText(/does not send an installation ID/)).toBeVisible();
   await expect(page.getByText(/IP address and request time/)).toBeVisible();
-  await expect(page.getByText(/Local evidence work remains available/)).toBeVisible();
+  await expect(page.getByText(/Existing local work remains available/)).toBeVisible();
 
   await page.getByRole("button", { name: "Check for updates" }).click();
   await expect(page.getByRole("heading", { name: "Checking for updates" })).toBeVisible();
