@@ -82,7 +82,9 @@ def test_payload_rejects_duplicate_platforms_through_runtime_schema(
         )
 
 
-def test_envelope_preserves_exact_payload_and_external_signature(tmp_path: Path) -> None:
+def test_envelope_preserves_exact_payload_and_external_signature(
+    tmp_path: Path,
+) -> None:
     artifact = _artifact(tmp_path, "windows-x86_64", "app.bin", b"artifact")
     payload = build_update_payload_bytes(
         sequence=1,
