@@ -153,7 +153,9 @@ def _service(
     return channel, resolved_store, verifier, transport
 
 
-def test_source_build_without_verifier_stays_off_and_never_fetches(tmp_path: Path) -> None:
+def test_source_build_without_verifier_stays_off_and_never_fetches(
+    tmp_path: Path,
+) -> None:
     store = _Store()
     transport = _Transport({})
     channel = UpdateChannelService(
@@ -213,7 +215,9 @@ def test_rollback_is_rejected_against_persisted_sequence(tmp_path: Path) -> None
     assert second.state_store.load().highest_trusted_sequence == 8
 
 
-def test_same_sequence_cannot_authorize_different_signed_content(tmp_path: Path) -> None:
+def test_same_sequence_cannot_authorize_different_signed_content(
+    tmp_path: Path,
+) -> None:
     first_payload = _payload(sequence=8, version="0.3.0")
     first, store, _, _ = _service(tmp_path, first_payload)
     first.check(now=_NOW)
@@ -300,9 +304,7 @@ def test_stage_requires_prior_trusted_check_and_newer_release(tmp_path: Path) ->
 
 def test_state_store_fails_closed_on_malformed_or_partial_state(tmp_path: Path) -> None:
     store = _Store()
-    state_store = UpdateStateStore(
-        tmp_path / "state", cast(FileManagerFacade, store)
-    )
+    state_store = UpdateStateStore(tmp_path / "state", cast(FileManagerFacade, store))
     store.files[state_store.path] = b"not-json"
     with pytest.raises(UpdateChannelError, match="invalid"):
         state_store.load()
