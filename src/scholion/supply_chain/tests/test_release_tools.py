@@ -82,7 +82,9 @@ def test_payload_rejects_duplicate_platforms_through_runtime_schema(
         )
 
 
-def test_payload_builder_refuses_non_stable_channel_before_signing(tmp_path: Path) -> None:
+def test_payload_builder_refuses_non_stable_channel_before_signing(
+    tmp_path: Path,
+) -> None:
     artifact = _artifact(tmp_path, "windows-x86_64", "app.bin", b"artifact")
 
     with pytest.raises(ValueError, match="only emits the stable channel"):
@@ -97,7 +99,9 @@ def test_payload_builder_refuses_non_stable_channel_before_signing(tmp_path: Pat
         )
 
 
-def test_payload_builder_refuses_non_semver_version_before_signing(tmp_path: Path) -> None:
+def test_payload_builder_refuses_non_semver_version_before_signing(
+    tmp_path: Path,
+) -> None:
     artifact = _artifact(tmp_path, "windows-x86_64", "app.bin", b"artifact")
 
     with pytest.raises(ValueError, match="semantic version"):
