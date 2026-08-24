@@ -28,6 +28,8 @@ const MMDC_PATH = path.join(
   "cli.js",
 );
 const BACKGROUND = "#FFFDF7";
+const SEMANTIC_ID = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const POSITIONAL_ID = /-\d+$/;
 
 async function exists(filePath) {
   try {
@@ -87,9 +89,16 @@ function absoluteFromManifest(value) {
   return absolute;
 }
 
+function diagramPaths(id) {
+  return {
+    source: path.join(SOURCE_ROOT, `${id}.mmd`),
+    output: path.join(OUTPUT_ROOT, `${id}.svg`),
+  };
+}
+
 async function loadManifest() {
   const parsed = JSON.parse(await readFile(MANIFEST_PATH, "utf8"));
-  if (parsed.version !== 1 || !Array.isArray(parsed.diagrams)) {
+  if (parsed.version !== 2 || !Array.isArray(parsed.diagrams)) {
     throw new Error("docs/diagrams/manifest.json has an unsupported schema");
   }
   return parsed;
@@ -111,41 +120,37 @@ async function assertNoInlineMermaid() {
 }
 
 async function validateManifest(manifest) {
-  const seenSources = new Set();
-  const seenOutputs = new Set();
+  const seenIds = new Set();
   const expectedSources = new Set();
   const expectedOutputs = new Set();
 
   for (const entry of manifest.diagrams) {
-    for (const field of ["document", "source", "output", "alt"]) {
+    for (const field of ["id", "document", "alt"]) {
       if (typeof entry[field] !== "string" || entry[field].trim() === "") {
         throw new Error(`manifest diagram has an invalid ${field}`);
       }
     }
 
-    const documentPath = absoluteFromManifest(entry.document);
-    const source = absoluteFromManifest(entry.source);
-    const output = absoluteFromManifest(entry.output);
-
-    if (!source.startsWith(`${SOURCE_ROOT}${path.sep}`) || !source.endsWith(".mmd")) {
-      throw new Error(`manifest source is outside docs/diagrams/src: ${entry.source}`);
+    if (!SEMANTIC_ID.test(entry.id)) {
+      throw new Error(`diagram ID is not a lowercase semantic slug: ${entry.id}`);
     }
-    if (!output.startsWith(`${OUTPUT_ROOT}${path.sep}`) || !output.endsWith(".svg")) {
+    if (POSITIONAL_ID.test(entry.id)) {
       throw new Error(
-        `manifest output is outside docs/diagrams/generated: ${entry.output}`,
+        `diagram ID must describe meaning, not position/version: ${entry.id}`,
       );
     }
-    if (seenSources.has(entry.source) || seenOutputs.has(entry.output)) {
-      throw new Error(`manifest contains a duplicate source/output: ${entry.source}`);
+    if (seenIds.has(entry.id)) {
+      throw new Error(`manifest contains duplicate diagram ID: ${entry.id}`);
     }
+    seenIds.add(entry.id);
 
-    seenSources.add(entry.source);
-    seenOutputs.add(entry.output);
+    const documentPath = absoluteFromManifest(entry.document);
+    const { source, output } = diagramPaths(entry.id);
     expectedSources.add(path.resolve(source));
     expectedOutputs.add(path.resolve(output));
 
     if (!(await exists(documentPath)) || !(await exists(source))) {
-      throw new Error(`manifest references a missing document/source: ${entry.source}`);
+      throw new Error(`manifest references a missing document/source: ${entry.id}`);
     }
 
     const markdown = await readFile(documentPath, "utf8");
@@ -153,7 +158,7 @@ async function validateManifest(manifest) {
     const expectedSource = `[Diagram source (Mermaid)](${markdownLink(documentPath, source)})`;
     if (!markdown.includes(expectedImage) || !markdown.includes(expectedSource)) {
       throw new Error(
-        `document does not reference its generated SVG/source exactly: ${entry.document}`,
+        `document does not reference its generated SVG/source exactly: ${entry.document} (${entry.id})`,
       );
     }
   }
@@ -218,7 +223,7 @@ function renderOne(source, output) {
 async function renderWrite(manifest) {
   await mkdir(OUTPUT_ROOT, { recursive: true });
   const expected = new Set(
-    manifest.diagrams.map((entry) => path.resolve(ROOT, entry.output)),
+    manifest.diagrams.map((entry) => path.resolve(diagramPaths(entry.id).output)),
   );
 
   for (const existing of await walkFiles(OUTPUT_ROOT, ".svg")) {
@@ -228,8 +233,7 @@ async function renderWrite(manifest) {
   }
 
   for (const entry of manifest.diagrams) {
-    const source = absoluteFromManifest(entry.source);
-    const output = absoluteFromManifest(entry.output);
+    const { source, output } = diagramPaths(entry.id);
     await mkdir(path.dirname(output), { recursive: true });
     renderOne(source, output);
   }
@@ -241,22 +245,20 @@ async function renderCheck(manifest) {
 
   try {
     for (const entry of manifest.diagrams) {
-      const source = absoluteFromManifest(entry.source);
-      const committed = absoluteFromManifest(entry.output);
+      const { source, output: committed } = diagramPaths(entry.id);
       if (!(await exists(committed))) {
-        stale.push(`${entry.output} (missing)`);
+        stale.push(`${repoRelative(committed)} (missing)`);
         continue;
       }
 
-      const rendered = path.join(tempRoot, entry.output);
-      await mkdir(path.dirname(rendered), { recursive: true });
+      const rendered = path.join(tempRoot, `${entry.id}.svg`);
       renderOne(source, rendered);
       const [expected, actual] = await Promise.all([
         readFile(rendered),
         readFile(committed),
       ]);
       if (!expected.equals(actual)) {
-        stale.push(entry.output);
+        stale.push(repoRelative(committed));
       }
     }
   } finally {
