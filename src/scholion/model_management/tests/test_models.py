@@ -84,6 +84,50 @@ def test_manifest_parser_rejects_schema_and_type_mutations(
         ManagedModelManifest.from_dict(document)
 
 
+@pytest.mark.parametrize(
+    ("overrides", "message"),
+    [
+        ({"catalog_schema_version": 0}, "catalog_schema_version must be positive"),
+        ({"model_id": ""}, "model_id cannot be empty"),
+        ({"revision": " "}, "revision cannot be empty"),
+        ({"verification": ""}, "verification cannot be empty"),
+        ({"verified_files": 0}, "verified_files must be positive"),
+        ({"total_bytes": 0}, "total_bytes must be positive"),
+    ],
+)
+def test_policy_trust_rejects_invalid_evidence_boundaries(
+    overrides: dict[str, object], message: str
+) -> None:
+    values: dict[str, object] = {
+        "catalog_schema_version": 1,
+        "model_id": "small",
+        "revision": "abc123",
+        "verification": "scholion_curated_sha256_v1",
+        "verified_files": 1,
+        "total_bytes": 1,
+    }
+    values.update(overrides)
+
+    with pytest.raises(ValueError, match=message):
+        ManagedModelPolicyTrust(**values)  # type: ignore[arg-type]
+
+
+def test_policy_trust_parser_wraps_missing_or_mistyped_fields() -> None:
+    with pytest.raises(ValueError, match="invalid model policy trust evidence"):
+        ManagedModelPolicyTrust.from_dict({"catalog_schema_version": 1})
+    with pytest.raises(ValueError, match="invalid model policy trust evidence"):
+        ManagedModelPolicyTrust.from_dict(
+            {
+                "catalog_schema_version": True,
+                "model_id": "small",
+                "revision": "abc123",
+                "verification": "scholion_curated_sha256_v1",
+                "verified_files": 1,
+                "total_bytes": 1,
+            }
+        )
+
+
 def test_manifest_rejects_policy_trust_for_different_revision() -> None:
     trust = ManagedModelPolicyTrust(
         catalog_schema_version=1,
@@ -98,6 +142,47 @@ def test_manifest_rejects_policy_trust_for_different_revision() -> None:
         _manifest(policy_trust=trust)
 
 
+def test_manifest_rejects_policy_trust_for_different_model() -> None:
+    trust = ManagedModelPolicyTrust(
+        catalog_schema_version=1,
+        model_id="medium",
+        revision="abc123",
+        verification="scholion_curated_sha256_v1",
+        verified_files=1,
+        total_bytes=1,
+    )
+
+    with pytest.raises(ValueError, match="policy trust model identity"):
+        _manifest(policy_trust=trust)
+
+
+def test_manifest_rejects_empty_requested_revision_and_nonpositive_size() -> None:
+    with pytest.raises(ValueError, match="requested_revision cannot be empty"):
+        ManagedModelManifest(
+            schema_version=1,
+            model_id="small",
+            engine="faster-whisper",
+            repository_id="repo/small",
+            requested_revision=" ",
+            resolved_revision="abc123",
+            snapshot_path=Path("snapshot"),
+            size_bytes=1,
+            verification="required_files_v1",
+        )
+    with pytest.raises(ValueError, match="size_bytes must be positive"):
+        ManagedModelManifest(
+            schema_version=1,
+            model_id="small",
+            engine="faster-whisper",
+            repository_id="repo/small",
+            requested_revision=None,
+            resolved_revision="abc123",
+            snapshot_path=Path("snapshot"),
+            size_bytes=0,
+            verification="required_files_v1",
+        )
+
+
 def test_model_spec_rejects_storage_and_identity_boundaries() -> None:
     with pytest.raises(ValueError, match="estimated_cache_bytes must be positive"):
         ModelSpec("small", "faster-whisper", "repo/small", 0, 1)
@@ -109,7 +194,9 @@ def test_model_spec_rejects_storage_and_identity_boundaries() -> None:
         ModelSpec("small", "faster-whisper", "repo/small", 1, 1, ("",))
 
 
-def test_installed_snapshot_rejects_empty_verification_and_nonpositive_size() -> None:
+def test_installed_snapshot_rejects_empty_revision_verification_and_size() -> None:
+    with pytest.raises(ValueError, match="resolved_revision cannot be empty"):
+        InstalledSnapshot(" ", Path("snapshot"), 1, "verified")
     with pytest.raises(ValueError, match="size_bytes must be positive"):
         InstalledSnapshot("abc", Path("snapshot"), 0, "verified")
     with pytest.raises(ValueError, match="verification cannot be empty"):
