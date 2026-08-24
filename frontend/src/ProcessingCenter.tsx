@@ -436,7 +436,11 @@ export function ProcessingCenter({
       setTaskModelId(model.model_id);
       setTaskModelAction("install");
       setTaskDescription(`Downloading ${model.model_id} transcription model`);
-      setStatus(`Downloading the ${model.model_id} transcription model to this device. Scholion will check it before using it.`);
+      setStatus(
+        readiness?.model_policy_enforced
+          ? `Downloading the ${model.model_id} transcription model to this device. Scholion will verify it against this build's model policy before using it.`
+          : `Downloading the ${model.model_id} transcription model to this device. Scholion will check it locally before using it.`,
+      );
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Scholion could not start the model download.");
     } finally {
@@ -467,10 +471,16 @@ export function ProcessingCenter({
     setError(null);
     try {
       const verified = await processing.verifyModel(model.model_id);
+      const policyEnforced = readiness?.model_policy_enforced === true;
+      const policyTrusted = readiness?.model_policy_trust[model.model_id] === true;
       setStatus(
-        verified.installed
-          ? `The ${model.model_id} transcription model is ready to use.`
-          : `The ${model.model_id} transcription model is not installed.`,
+        !verified.installed
+          ? `The ${model.model_id} transcription model is not installed.`
+          : policyEnforced && !policyTrusted
+            ? `The ${model.model_id} model is installed but is not trusted by this Scholion build's current model policy. Reinstall it before starting a new transcription.`
+            : policyEnforced
+              ? `The ${model.model_id} transcription model is trusted by this Scholion build and ready to use.`
+              : `The ${model.model_id} transcription model passed local checks and is ready to use.`,
       );
       await refresh();
     } catch (caught) {
@@ -642,22 +652,42 @@ export function ProcessingCenter({
             <h3 id="models-title">Models used for local transcription.</h3>
           </div>
           {recommendedModel && (
-            <span className={readiness?.recommended_model_installed ? "model-ready" : "model-needed"}>
-              {readiness?.recommended_model_installed ? "Recommended model installed" : "Recommended model needs download"}
+            <span className={readiness?.recommended_model_ready ? "model-ready" : "model-needed"}>
+              {readiness?.recommended_model_ready
+                ? "Recommended model ready"
+                : readiness?.recommended_model_installed && readiness.model_policy_enforced
+                  ? "Recommended model needs trusted reinstall"
+                  : "Recommended model needs download"}
             </span>
           )}
         </div>
-        <p>Models are downloaded only when you choose. Once installed, transcription can run without an internet connection. Scholion keeps installed models in its private model cache.</p>
+        <p>
+          Models are downloaded only when you choose. Once installed, transcription can run without an internet connection. Scholion keeps installed models in its private model cache.
+          {readiness?.model_policy_enforced
+            ? " This build also requires installed model bytes to match its bundled Scholion model policy before a new transcription can use them."
+            : " This build checks local model custody and provider structure before use."}
+        </p>
         <div className="model-list">
           {readiness?.models.map((model) => {
             const modelTaskActive = task?.state === "running" && taskModelId === model.model_id;
             const downloading = modelTaskActive && taskModelAction === "install";
             const removing = modelTaskActive && taskModelAction === "remove";
+            const policyTrusted = readiness.model_policy_trust[model.model_id] === true;
+            const needsPolicyReinstall =
+              model.installed && readiness.model_policy_enforced && !policyTrusted;
             return (
               <article key={model.model_id} className="model-row">
                 <div>
                   <strong>{model.model_id}</strong>
-                  <span>{model.installed ? `Installed · ${formatBytes(model.installed_size_bytes ?? model.estimated_cache_bytes)}` : `Download size about ${formatBytes(model.estimated_cache_bytes)}`}</span>
+                  <span>
+                    {model.installed
+                      ? needsPolicyReinstall
+                        ? `Installed · trusted reinstall required · ${formatBytes(model.installed_size_bytes ?? model.estimated_cache_bytes)}`
+                        : readiness.model_policy_enforced && policyTrusted
+                          ? `Trusted by this Scholion build · ${formatBytes(model.installed_size_bytes ?? model.estimated_cache_bytes)}`
+                          : `Installed · ${formatBytes(model.installed_size_bytes ?? model.estimated_cache_bytes)}`
+                      : `Download size about ${formatBytes(model.estimated_cache_bytes)}`}
+                  </span>
                   {modelTaskActive && (
                     <progress aria-label={`${downloading ? "Downloading" : "Removing"} ${model.model_id} model`} />
                   )}
@@ -666,6 +696,11 @@ export function ProcessingCenter({
                   {model.installed ? (
                     <>
                       <button type="button" onClick={() => void verifyModel(model)} disabled={busy || modelTaskActive}>Check files</button>
+                      {needsPolicyReinstall && (
+                        <button type="button" className="secondary-action" onClick={() => void installModel(model)} disabled={busy || modelTaskActive}>
+                          {downloading ? "Reinstalling…" : "Reinstall trusted copy"}
+                        </button>
+                      )}
                       <button type="button" className="danger-link" onClick={() => setPendingRemove(model)} disabled={busy || modelTaskActive}>{removing ? "Removing…" : "Remove"}</button>
                     </>
                   ) : (
