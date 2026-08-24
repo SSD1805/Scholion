@@ -42,7 +42,9 @@ def parser() -> argparse.ArgumentParser:
     )
     subcommands = command.add_subparsers(dest="command", required=True)
 
-    payload = subcommands.add_parser("payload", help="Build exact bytes for offline signing")
+    payload = subcommands.add_parser(
+        "payload", help="Build exact bytes for offline signing"
+    )
     payload.add_argument("--sequence", type=int, required=True)
     payload.add_argument("--channel", required=True)
     payload.add_argument("--version", required=True)
