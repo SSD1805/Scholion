@@ -214,11 +214,15 @@ class ModelManager:
         if manifest.policy_trust is not None:
             if trusted_spec is None:
                 if self.enforce_policy_trust:
-                    raise ValueError("managed model no longer has a trusted policy entry")
+                    raise ValueError(
+                        "managed model no longer has a trusted policy entry"
+                    )
                 return
             observed = self._verify_policy_snapshot(spec, snapshot, trusted_spec)
             if observed != manifest.policy_trust:
-                raise ValueError("managed model policy trust evidence no longer matches")
+                raise ValueError(
+                    "managed model policy trust evidence no longer matches"
+                )
         elif self.enforce_policy_trust:
             raise ValueError("managed model lacks required policy trust evidence")
 
@@ -236,7 +240,9 @@ class ModelManager:
             trusted_spec.engine != spec.engine
             or trusted_spec.repository_id != spec.repository_id
         ):
-            raise ValueError("model trust catalog identity does not match model catalog")
+            raise ValueError(
+                "model trust catalog identity does not match model catalog"
+            )
         return trusted_spec
 
     def _verify_policy_snapshot(
