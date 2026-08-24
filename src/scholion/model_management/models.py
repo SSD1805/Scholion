@@ -210,7 +210,9 @@ class ModelInventoryItem:
 
     def __post_init__(self) -> None:
         if self.policy_trusted and self.manifest is None:
-            raise ValueError("policy-trusted inventory item requires a managed manifest")
+            raise ValueError(
+                "policy-trusted inventory item requires a managed manifest"
+            )
 
     @property
     def installed(self) -> bool:
