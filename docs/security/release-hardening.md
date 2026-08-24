@@ -1,119 +1,167 @@
 # Pre-release security hardening roadmap
 
-This document turns the remaining security ideas into an ordered release-hardening program rather than seven unrelated checkboxes. Scholion is local-first, but local software still processes hostile media, stores sensitive research, downloads executable/model artifacts, and crosses a WebView → Rust → Python boundary. Privacy therefore depends on both custody and containment.
+This document turns Scholion's remaining security work into explicit release gates rather than a pile of unrelated checkboxes. Scholion is local-first, but local software still processes hostile media, stores sensitive research, downloads model/application artifacts, and crosses a WebView → Rust → Python boundary. Privacy therefore depends on both custody and containment.
+
+The implementation status below is deliberately conservative. A mechanism is not called complete merely because an interface or test fixture exists.
 
 ## Release gate A: supply-chain trust
 
-### Cryptographic signatures for release metadata
+### Signed application metadata
 
-Application update metadata must be signed with an offline-controlled signing identity. Verification happens before release metadata can authorize an application update or artifact hash set. Signature failure, unknown key ID, malformed metadata, rollback, and expired metadata fail closed.
+**Implemented in repository code:**
 
-The curated model-trust catalog is bundled inside the signed Scholion release rather than fetched as independently mutable policy. Its bytes therefore inherit the release artifact's authenticated custody. If Scholion ever distributes model-trust policy independently of an application release, that channel must gain its own separately pinned signature/key role before it can authorize a model revision or hash set.
+- strict versioned signed-envelope and payload schemas;
+- exact signed payload bytes rather than JSON re-serialization;
+- Ed25519 verifier interface with bounded key IDs and signature encoding;
+- publication-time and expiry enforcement;
+- monotonic release sequence rollback protection;
+- rejection of same-sequence signed-content equivocation;
+- explicit stable-channel enforcement;
+- exact per-platform artifact URL, byte size, and SHA-256 authorization;
+- unknown-field rejection; and
+- tests for payload tampering, unknown keys, expiry, rollback, channel mismatch, malformed metadata, and conflicting same-sequence metadata.
 
-Acceptance evidence:
+**Production gate still required:** provision a reviewed native Ed25519 implementation and pinned production public key/key-rotation material. The current locked Rust graph does not contain an Ed25519 primitive Scholion can reuse without a reviewed dependency/lockfile change. Source/development builds therefore keep update checking fail-closed/off and make no update request.
 
-- signed release-manifest fixture verifies;
-- modified signed payload bytes fail verification;
-- unknown/revoked key fails;
-- rollback to an older trusted release sequence is rejected according to explicit policy;
-- verification is independent of transport security;
-- a curated model entry cannot trust a moving revision, undeclared file, size mismatch, hash mismatch, or cache/path escape; and
-- an independently fetched model-policy channel, if one is ever introduced, cannot become authoritative without a separately reviewed signature boundary.
+The private signing key is intentionally outside the repository and application. `scripts/build_release_metadata.py` produces deterministic exact payload bytes for an offline signer and can wrap only the resulting public signature. There is no repository tool that accepts or stores a private signing key.
 
-### Secure update framework
+### Privacy-preserving manual update channel
 
-Application updates need a signed metadata framework with rollback/freeze protection, explicit channel/version semantics, staged download, hash verification, and atomic activation. An update check may make an outbound request without becoming telemetry; the privacy contract must state what network metadata is exposed.
+**Implemented in repository code:**
 
-Do not ship an auto-updater that trusts only HTTPS or a mutable release URL.
+- one fixed GitHub-hosted manifest location;
+- manual check only, with no periodic background check;
+- HTTPS-only bounded metadata transport;
+- no installation ID, corpus/recording/transcript/research data, hardware inventory, model inventory, or behavioral telemetry in requests;
+- generic update-specific User-Agent without a device identifier;
+- private local highest-trusted-sequence state;
+- exact platform selection from signed metadata;
+- streamed staging with signed size and SHA-256 enforcement;
+- private temporary files, fsync, and atomic replacement into the staged cache;
+- signed metadata re-verification immediately before staging;
+- a closed desktop bridge that accepts no caller URL, path, header, shell command, or installer argument;
+- WebView CSP remains without general external network authority; and
+- explicit UI states for Off, Never checked, Checking, Up to date, Trusted update available, Staging/Staged, and bounded failure.
+
+The user-facing copy says the network truth plainly: GitHub/CDN still sees ordinary connection metadata such as IP address and request time. A failed/offline update check never blocks the local evidence workspace.
+
+**Production gate still required:** native package activation plus platform signing/notarization. A staged hash-matching package is not called installed or executable merely because Scholion downloaded it successfully.
 
 ### Curated model trust root
 
-The curated model catalog must resolve to repository/source identity, immutable revision, exact allowed files, sizes, hashes, and license/source metadata. Hugging Face or another transport host is a distribution mechanism, not the trust root.
+**Implemented in repository code:**
 
-For the first-release design, that catalog ships inside the signed Scholion application release. Updating model trust therefore requires a reviewed Scholion release and cannot happen because an upstream repository changes `main` or `HEAD`.
+- project-owned catalog schema with model/engine/repository identity;
+- immutable 40-character upstream revision;
+- source/license metadata;
+- exact complete file set, byte sizes, and SHA-256;
+- cache/path containment;
+- provider-local validation kept separate from Scholion policy trust;
+- `ModelManager` policy pinning, pre-registration exact verification, policy receipts, and re-verification;
+- application enforcement automatically enabled when a reviewed catalog is bundled;
+- legacy installed-but-untrusted models remain visible/removable but are refused for new-transcription admission;
+- Processing UI distinguishes installation from current policy trust; and
+- `scripts/generate_model_trust_entry.py` deterministically measures a deliberately selected snapshot, including safe Hugging Face-style in-cache symlinks.
 
-If future product requirements demand model-policy updates between application releases, introduce a separate signed model-policy envelope and separable key role before enabling that behavior. Do not silently turn the current static catalog into remotely mutable configuration.
+The generator measures bytes. It does not decide that a model is trustworthy.
 
-See **[Signed update and model trust channel](update-model-trust.md)** for the concrete #110 schemas, threat model, and verification rules.
+**Production gate still required:** deliberately review real faster-whisper revisions, licenses, file sets, regression behavior, and generated entries, then commit/bundle that catalog in a signed release. Development cache contents, guessed hashes, `main`, and `HEAD` are not acceptable trust inputs.
+
+See **[Signed update and model trust channel](update-model-trust.md)** for schemas and threat-model detail.
+
+## Release metadata operations
+
+For a production candidate:
+
+1. build the platform artifacts from the reviewed release commit;
+2. run `scripts/build_release_metadata.py payload` with a strictly increasing sequence, stable channel, exact version/timestamps, release-notes URL, and each `PLATFORM::LOCAL_PATH::HTTPS_URL` artifact;
+3. publish/review the generated `SHA256SUMS` as human-auditable checksums, without treating an unsigned checksum file as a trust root;
+4. send the exact generated payload bytes to the offline Ed25519 signing process;
+5. run `scripts/build_release_metadata.py envelope` with the exact payload, public signature bytes, and approved key ID;
+6. verify the resulting envelope with the same production public-key verifier used by the desktop client before publication; and
+7. publish only after OS code signing/notarization and native qualification also pass.
+
+A new release sequence must not be reused for different signed content. Key rotation, metadata correction, or artifact replacement requires a new sequence.
 
 ## Release gate B: hostile-input containment
 
-### Sandboxing native parsers
+### Current parser controls
 
-FFmpeg/FFprobe, native decoders, archive/parsing helpers, and future media parsers should be treated as hostile-input surfaces. The goal is to make a parser compromise materially less useful.
+Scholion already treats media parsing as hostile input in several concrete ways:
 
-Platform work should evaluate:
+- FFprobe and FFmpeg are invoked without a shell;
+- network protocols are restricted to `file` for media probe/decode;
+- parser/decode calls have explicit timeouts;
+- FFmpeg has no interactive stdin;
+- FFprobe metadata is schema-checked and subject to an application output-size boundary;
+- media input is fingerprinted and checked for mutation while inspected; and
+- decode output goes only to a planned private workspace path and is validated before use.
 
-- Linux seccomp/namespaces or an appropriate sandbox launcher;
-- macOS sandbox/hardened-runtime entitlements;
-- Windows AppContainer/job-object/restricted-token options;
-- read-only source handles where practical;
-- no ambient access to the whole Scholion workspace during probe/decode;
-- explicit CPU/memory/time/output limits.
+These are valuable controls, but **they are not an OS sandbox**.
 
-The sandbox boundary must be tested with malformed/truncated media and intentional parser failure.
+### Remaining parser sandbox gate
 
-### Tighter process isolation
+Before describing Scholion as highly hardened against malicious media, qualify a real least-privilege parser boundary per supported OS:
 
-Long-running transcription, probing, model verification, and helper processes should receive only the filesystem/network/device capabilities they need. Process supervision should include bounded startup/response time, cancellation, exit-state capture, and cleanup after crashes.
+- Linux seccomp/namespaces or an appropriate maintained sandbox launcher;
+- macOS hardened-runtime/sandbox capability reduction;
+- Windows AppContainer/restricted-token/job-object equivalent;
+- read-only source authority where practical;
+- no ambient workspace/home-directory access from parser helpers;
+- explicit CPU/memory/time/output limits; and
+- malformed/truncated/adversarial-media tests through the native desktop path.
 
-The React WebView never receives arbitrary Python-module selection, shell-command capability, or raw filesystem authority.
+This cannot be replaced by browser mocks or by calling a subprocess with `shell=False`.
 
-## Release gate C: data-at-rest protection
+### Process isolation already present
+
+The React WebView cannot select Python modules, execute arbitrary shell commands, or receive raw private filesystem authority. One-shot native bridge requests are bounded and serialized where they cross shared DuckDB state. Long-running Processing work uses a separately supervised worker path with bounded typed tasks, cancellation/status, and controlled public failures.
+
+Further OS process-capability reduction belongs with the parser sandbox work above.
+
+## Release gate C: data at rest
 
 ### OS keychain integration
 
-If Scholion protects application secrets or encryption keys, those secrets should be wrapped by the operating system's credential/key facility where available rather than stored beside encrypted data.
+If Scholion later stores application secrets or at-rest encryption keys, those keys should be wrapped by the platform credential/key facility rather than stored beside encrypted data:
 
-Target abstractions:
-
-- Windows Credential Manager/DPAPI or platform-appropriate protected storage;
+- Windows DPAPI/Credential Manager or the chosen platform-protected storage API;
 - macOS Keychain;
-- Linux Secret Service/libsecret when available, with an explicit fallback policy for headless/minimal systems.
+- Linux Secret Service/libsecret when available, with an explicit headless/minimal-system policy.
 
-Key loss/recovery behavior must be documented before encryption becomes default.
+Key loss and recovery semantics must be designed before this becomes a default dependency.
 
 ### Application-layer encryption
 
-Application-layer encryption is not an automatic launch blocker until the threat model defines what it protects beyond filesystem/full-disk encryption. It materially changes backup, restore, portability, corruption recovery, key rotation, multi-machine use, and evidence export.
+Application-layer encryption is **not automatically a launch blocker**. It needs a threat model explaining what it protects beyond filesystem/full-disk encryption and how backup, restore, portability, corruption recovery, key rotation, multi-machine use, and evidence export work.
 
-Before implementation, decide independently for:
+Decide independently for authoritative research state, canonical transcript evidence, remembered locations/preferences, checkpoints/temp state, model cache, and rebuildable search indexes. Do not create new irreplaceable key-bound state merely to say “encrypted.”
 
-- authoritative research SQLite;
-- canonical transcript evidence;
-- remembered locations/preferences;
-- processing checkpoints/temp state;
-- model cache;
-- derived search indexes.
+## Native and release qualification
 
-Do not encrypt rebuildable projections in a way that creates new irreplaceable key-bound state. Do not make canonical evidence unrecoverable without an explicit recovery/export story.
+Browser Playwright intentionally swaps in mock clients and is not native evidence. Public release qualification still needs:
 
-## Ordering and dependencies
-
-Recommended sequence:
-
-1. define application update trust-root/key-rotation policy;
-2. signed application release metadata + bundled curated model trust;
-3. secure update framework + pinned model installation/verification;
-4. parser sandbox and process-capability reduction;
-5. native end-to-end qualification across supported OSes;
-6. keychain abstraction and recovery design;
-7. application-layer encryption only after a documented threat model and portability/backup contract.
-
-The first five are release-hardening work. Keychain/encryption may be release blockers if the threat model shows an unacceptable at-rest risk; otherwise they should not be bolted on without recovery semantics.
-
-## Native transport qualification discovered during real-device testing
-
-Browser Playwright uses `?e2e=1` and intentionally swaps in mock clients. That is useful UI evidence but does not prove React → Tauri → Rust → Python wiring works on a real machine.
-
-Before release, qualification must include:
-
-- real `processing.readiness` and `processing.jobs.list` through the native Tauri command;
-- bounded failure when the Python child never responds;
-- useful controlled error propagation when spawn/exit/JSON parsing fails;
+- real React → Tauri → Rust → Python update/Processing calls;
+- bounded behavior when child processes fail/hang;
 - no evidence/request parameters in routine native diagnostics;
-- Linux Wayland/WebKitGTK qualification including the known DMABUF workaround path;
-- Windows and macOS native transport smoke;
-- representative CPU-only and CUDA-capable devices.
+- model install/revalidation/offline transcription with the actual reviewed catalog;
+- update-check/offline/failure/staging behavior with the actual production public key;
+- Windows and macOS package signature verification;
+- Linux Wayland/WebKitGTK qualification once the upstream dependency gate permits public Linux packaging;
+- representative CPU-only and accelerator-capable devices; and
+- verification that installed/notarized artifacts match the release metadata/checksums.
 
-This is a release seam, not a browser-mock seam.
+Issue #114 tracks representative native task-transport qualification. Issue #135 remains the upstream-blocked Linux GTK/GLib dependency gate.
+
+## Ordered residual work
+
+After the update/model mechanics in #141, #142, and the current release-hardening tranche, the remaining gates are intentionally narrow:
+
+1. review/pin the native Ed25519 verifier dependency and provision production public key/rotation material;
+2. review real faster-whisper revisions and commit the generated catalog;
+3. implement/qualify native package activation with OS signing/notarization;
+4. qualify real devices/offline behavior;
+5. complete an OS-level hostile-parser sandbox before making a strong hostile-media-hardening claim; and
+6. revisit keychain/application-layer encryption only if the documented at-rest threat model justifies its recovery and portability cost.
+
+None of those should be “completed” by placeholder keys, synthetic hashes, CI browser mocks, or credentials committed to the repository.
