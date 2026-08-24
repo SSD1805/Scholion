@@ -1,0 +1,50 @@
+name: Mermaid semantic ID bootstrap
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mermaid-semantic-id-bootstrap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/stable-mermaid-diagram-ids'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Check out migration branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Detect completed migration
+        id: state
+        shell: bash
+        run: |
+          if grep -q '"version": 2' docs/diagrams/manifest.json; then
+            echo 'needed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needed=true' >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Migrate diagram names and references
+        if: steps.state.outputs.needed == 'true'
+        run: node tools/mermaid/migrate-semantic-ids.mjs
+
+      - name: Commit semantic diagram IDs
+        if: steps.state.outputs.needed == 'true'
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --cached --check
+          git commit -m 'Migrate Mermaid diagrams to stable semantic IDs'
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
