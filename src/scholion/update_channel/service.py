@@ -22,8 +22,7 @@ from scholion.supply_chain.update_manifest import (
 )
 
 FIXED_UPDATE_MANIFEST_URL = (
-    "https://github.com/SSD1805/Scholion/releases/latest/download/"
-    "scholion-update.json"
+    "https://github.com/SSD1805/Scholion/releases/latest/download/scholion-update.json"
 )
 _STATE_SCHEMA_VERSION = 1
 _MAX_MANIFEST_BYTES = 64 * 1024
@@ -54,7 +53,12 @@ class UpdateTransport(Protocol):
 
 def _require_https(value: str, field: str) -> None:
     parsed = urlparse(value)
-    if parsed.scheme != "https" or not parsed.netloc or parsed.username or parsed.password:
+    if (
+        parsed.scheme != "https"
+        or not parsed.netloc
+        or parsed.username
+        or parsed.password
+    ):
         raise UpdateChannelError(f"{field} must be a credential-free HTTPS URL")
 
 
@@ -170,7 +174,9 @@ class HttpsUpdateTransport:
             )
             temporary_path = None
         except (HTTPError, URLError, TimeoutError, OSError) as exc:
-            raise UpdateChannelError("Trusted update artifact could not be staged") from exc
+            raise UpdateChannelError(
+                "Trusted update artifact could not be staged"
+            ) from exc
         finally:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
@@ -186,9 +192,13 @@ class HttpsUpdateTransport:
         expected_sha256: str,
     ) -> None:
         if total != expected_size:
-            raise UpdateChannelError("Downloaded update size did not match signed metadata")
+            raise UpdateChannelError(
+                "Downloaded update size did not match signed metadata"
+            )
         if observed_sha256 != expected_sha256:
-            raise UpdateChannelError("Downloaded update hash did not match signed metadata")
+            raise UpdateChannelError(
+                "Downloaded update hash did not match signed metadata"
+            )
         os.replace(temporary_path, destination)
         if os.name != "nt":
             os.chmod(destination, 0o600)
@@ -226,8 +236,13 @@ class UpdateStateStore:
             "last_version",
             "trusted_manifest",
         }
-        if set(document) != expected or document.get("schema_version") != _STATE_SCHEMA_VERSION:
-            raise UpdateChannelError("Stored update trust state has an unsupported schema")
+        if (
+            set(document) != expected
+            or document.get("schema_version") != _STATE_SCHEMA_VERSION
+        ):
+            raise UpdateChannelError(
+                "Stored update trust state has an unsupported schema"
+            )
 
         sequence = document.get("highest_trusted_sequence")
         if sequence is not None and (
@@ -243,7 +258,9 @@ class UpdateStateStore:
         }:
             raise UpdateChannelError("Stored update status is invalid")
         version = document.get("last_version")
-        if version is not None and (not isinstance(version, str) or not version.strip()):
+        if version is not None and (
+            not isinstance(version, str) or not version.strip()
+        ):
             raise UpdateChannelError("Stored update version is invalid")
         manifest = document.get("trusted_manifest")
         if manifest is not None and not isinstance(manifest, dict):
@@ -288,7 +305,9 @@ def current_platform_id() -> str:
         "linux": "linux",
     }.get(system)
     if architecture is None or operating_system is None:
-        raise UpdateChannelError("This platform does not have a supported update package")
+        raise UpdateChannelError(
+            "This platform does not have a supported update package"
+        )
     return f"{operating_system}-{architecture}"
 
 
@@ -395,7 +414,9 @@ class UpdateChannelService:
                 highest_seen_sequence=state.highest_trusted_sequence,
             )
         except UpdateTrustError as exc:
-            raise UpdateChannelError("Update metadata did not pass trust verification") from exc
+            raise UpdateChannelError(
+                "Update metadata did not pass trust verification"
+            ) from exc
 
         self._require_expected_channel(payload.channel)
         if (
@@ -451,7 +472,9 @@ class UpdateChannelService:
             )
             artifact = payload.artifact_for(self.platform_id)
         except UpdateTrustError as exc:
-            raise UpdateChannelError("Stored update metadata is no longer trusted") from exc
+            raise UpdateChannelError(
+                "Stored update metadata is no longer trusted"
+            ) from exc
         self._require_expected_channel(payload.channel)
         if not _is_newer(payload.version, self.current_version):
             raise UpdateChannelError("The trusted release is not newer than this build")
