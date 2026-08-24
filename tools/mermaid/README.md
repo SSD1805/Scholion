@@ -2,7 +2,14 @@
 
 Scholion uses Mermaid as **source**, not as a GitHub runtime rendering dependency.
 
-The editable definitions live under `docs/diagrams/src/`. The checked-in SVGs under `docs/diagrams/generated/` are derived from those definitions with the pinned official Mermaid CLI in this directory. `docs/diagrams/manifest.json` binds each source and generated asset to the Markdown document that displays it.
+The editable definitions live under `docs/diagrams/src/`. The checked-in SVGs under `docs/diagrams/generated/` are derived from those definitions with the pinned official Mermaid CLI in this directory. `docs/diagrams/manifest.json` gives every diagram one stable semantic ID and binds that ID to the Markdown document that displays it. The renderer derives both artifact paths from that ID:
+
+```text
+docs/diagrams/src/<diagram-id>.mmd
+docs/diagrams/generated/<diagram-id>.svg
+```
+
+The ID describes what the diagram *is*, not where it happens to appear. Positional or version-looking IDs such as `corpus-search-1` are rejected.
 
 ## Normal edit
 
@@ -18,7 +25,7 @@ Edit the relevant `.mmd` source, then regenerate the checked-in SVGs:
 npm --prefix tools/mermaid run render
 ```
 
-Commit the `.mmd` change and its generated `.svg` together. Never hand-edit a generated SVG.
+The existing `.svg` for that semantic ID is overwritten. A render does not create a new numbered copy. Commit the `.mmd` change and its generated `.svg` together. Never hand-edit a generated SVG.
 
 ## Verify without rewriting
 
@@ -26,19 +33,19 @@ Commit the `.mmd` change and its generated `.svg` together. Never hand-edit a ge
 npm --prefix tools/mermaid run check
 ```
 
-`check` validates the manifest and Markdown references, rejects inline Mermaid fences and unregistered diagram files, renders every source into a temporary directory, and byte-compares the result with the committed SVG. It does not modify the repository.
+`check` validates semantic IDs, manifest ownership, and Markdown references; rejects positional IDs, inline Mermaid fences, and unregistered diagram files; renders every source into a temporary directory; and byte-compares the result with the committed SVG. It does not modify the repository.
 
 The `mermaid-docs` Quality job runs the same check on pull requests and `main`. The job has read-only repository permission. On current Ubuntu GitHub-hosted runners it enables the kernel user-namespace facility that Chromium's normal sandbox requires; it does not launch Chromium with `--no-sandbox`.
 
 ## Add a diagram
 
-1. Add a `.mmd` source under `docs/diagrams/src/`, mirroring the owning document's path where practical.
-2. Add one entry to `docs/diagrams/manifest.json` with the owning Markdown file, source path, generated SVG path, and meaningful alt text.
-3. In the Markdown document, embed that exact SVG path and add an adjacent `[Diagram source (Mermaid)](...)` link to the `.mmd` file.
-4. Run `npm --prefix tools/mermaid run render` and inspect the SVG.
-5. Run `npm --prefix tools/mermaid run check` before committing.
+1. Choose a short lowercase semantic ID such as `canonical-hashing-stale-refusal`. Do not use document position or an artificial version suffix.
+2. Add `docs/diagrams/src/<diagram-id>.mmd`.
+3. Add one manifest entry containing that `id`, the owning Markdown `document`, and meaningful `alt` text. Source/output paths are derived and do not belong in the manifest.
+4. In the Markdown document, embed `docs/diagrams/generated/<diagram-id>.svg` using the correct relative path and add an adjacent `[Diagram source (Mermaid)](...)` link to the matching `.mmd` file.
+5. Run `npm --prefix tools/mermaid run render`, inspect the SVG, then run `npm --prefix tools/mermaid run check` before committing.
 
-Keep source and output names stable once published. Renaming is allowed, but it should be an explicit manifest/Markdown/source/output change rather than an incidental renderer side effect.
+Keep the semantic ID stable once published. Reordering a document, inserting another diagram, changing a heading, opening another PR, merging, or rerunning CI does not change that identity and therefore does not create another SVG. A deliberate diagram rename is still allowed, but it is an explicit manifest/source/output/Markdown identity change.
 
 ## Reproducibility boundary
 
