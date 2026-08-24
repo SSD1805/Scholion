@@ -239,6 +239,25 @@ def test_policy_install_pins_revision_and_persists_exact_trust(tmp_path: Path) -
     document = json.loads(store.files[manager._manifest_path("small")])
     assert document["policy_trust"]["revision"] == _TRUSTED_REVISION
     assert manager.is_policy_trusted("small") is True
+    assert manager.inventory()[0].policy_trusted is True
+
+
+def test_recorded_policy_receipt_is_not_current_trust_without_catalog(
+    tmp_path: Path,
+) -> None:
+    manager, store, provider, _ = _trusted_manager(
+        tmp_path, enforce_policy_trust=False
+    )
+    manager.install("small")
+    manager_without_catalog = ModelManager(
+        catalog=_catalog(),
+        provider=provider,
+        file_store=store,
+        model_root=manager.model_root,
+    )
+
+    assert manager_without_catalog.is_policy_trusted("small") is False
+    assert manager_without_catalog.inventory()[0].policy_trusted is False
 
 
 def test_policy_rejects_revision_override_before_provider_call(tmp_path: Path) -> None:
