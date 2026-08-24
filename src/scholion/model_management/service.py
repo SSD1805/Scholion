@@ -64,10 +64,17 @@ class ModelManager:
         self.enforce_policy_trust = enforce_policy_trust
 
     def inventory(self) -> tuple[ModelInventoryItem, ...]:
-        return tuple(
-            ModelInventoryItem(spec=spec, manifest=self._manifest(spec.model_id))
-            for spec in self.catalog.specs
-        )
+        inventory: list[ModelInventoryItem] = []
+        for spec in self.catalog.specs:
+            manifest = self._manifest(spec.model_id)
+            inventory.append(
+                ModelInventoryItem(
+                    spec=spec,
+                    manifest=manifest,
+                    policy_trusted=self._has_current_policy_trust(spec, manifest),
+                )
+            )
+        return tuple(inventory)
 
     def install(
         self, model_id: str, *, revision: str | None = None
@@ -154,12 +161,9 @@ class ModelManager:
 
     def is_policy_trusted(self, model_id: str) -> bool:
         """Return whether current bundled policy revalidates the managed snapshot."""
+        spec = self.catalog.require(model_id)
         manifest = self._manifest(model_id)
-        return (
-            manifest is not None
-            and self.trust_catalog is not None
-            and manifest.policy_trust is not None
-        )
+        return self._has_current_policy_trust(spec, manifest)
 
     def resolved_revision(self, model_id: str) -> str | None:
         """Return the locally revalidated managed revision without network access or writes."""
@@ -225,6 +229,17 @@ class ModelManager:
                 )
         elif self.enforce_policy_trust:
             raise ValueError("managed model lacks required policy trust evidence")
+
+    def _has_current_policy_trust(
+        self,
+        spec: ModelSpec,
+        manifest: ManagedModelManifest | None,
+    ) -> bool:
+        return (
+            manifest is not None
+            and manifest.policy_trust is not None
+            and self._trusted_spec_for(spec) is not None
+        )
 
     def _trusted_spec_for(self, spec: ModelSpec) -> TrustedModelSpec | None:
         trust_catalog = self.trust_catalog
