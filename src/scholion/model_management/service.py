@@ -7,9 +7,16 @@ from scholion.model_management.errors import ModelManagementError
 from scholion.model_management.models import (
     InstalledSnapshot,
     ManagedModelManifest,
+    ManagedModelPolicyTrust,
     ModelInventoryItem,
+    ModelSpec,
 )
 from scholion.model_management.provider import ModelProvider
+from scholion.supply_chain import (
+    ModelTrustCatalog,
+    TrustedModelSpec,
+    verify_trusted_model_snapshot,
+)
 
 
 class ModelFileStore(Protocol):
@@ -31,7 +38,7 @@ class ModelStorageAdmitter(Protocol):
 
 
 class ModelManager:
-    """Own Scholion's local model inventory and provenance manifests."""
+    """Own Scholion's local model inventory, provenance, and optional policy trust."""
 
     def __init__(
         self,
@@ -41,7 +48,11 @@ class ModelManager:
         file_store: ModelFileStore,
         model_root: Path,
         storage_admitter: ModelStorageAdmitter | None = None,
+        trust_catalog: ModelTrustCatalog | None = None,
+        enforce_policy_trust: bool = False,
     ) -> None:
+        if enforce_policy_trust and trust_catalog is None:
+            raise ValueError("policy-trust enforcement requires a trust catalog")
         self.catalog = catalog
         self.provider = provider
         self.file_store = file_store
@@ -49,6 +60,8 @@ class ModelManager:
         self.cache_root = self.model_root / "faster-whisper"
         self.registry_root = self.model_root / "registry" / "faster-whisper"
         self.storage_admitter = storage_admitter
+        self.trust_catalog = trust_catalog
+        self.enforce_policy_trust = enforce_policy_trust
 
     def inventory(self) -> tuple[ModelInventoryItem, ...]:
         return tuple(
@@ -62,6 +75,17 @@ class ModelManager:
         spec = self.catalog.require(model_id)
         if revision is not None and not revision.strip():
             raise ValueError("revision cannot be empty")
+        trusted_spec = self._trusted_spec_for(spec)
+        requested_revision = revision
+        if trusted_spec is not None:
+            if revision is not None and revision != trusted_spec.revision:
+                raise ValueError(
+                    "requested revision does not match Scholion model policy"
+                )
+            requested_revision = trusted_spec.revision
+        elif self.enforce_policy_trust:
+            raise ValueError(f"model is not trusted by Scholion policy: {model_id}")
+
         if self.storage_admitter is not None:
             self.storage_admitter.admit(self.cache_root, spec.estimated_cache_bytes)
         self._prepare_roots()
@@ -69,9 +93,14 @@ class ModelManager:
             snapshot = self.provider.install(
                 spec,
                 cache_root=self.cache_root,
-                revision=revision,
+                revision=requested_revision,
             )
             self._validate_snapshot(snapshot)
+            policy_trust = self._verify_policy_snapshot(
+                spec,
+                snapshot,
+                trusted_spec,
+            )
         except (KeyboardInterrupt, SystemExit):
             raise
         except Exception as exc:
@@ -84,11 +113,12 @@ class ModelManager:
             model_id=spec.model_id,
             engine=spec.engine,
             repository_id=spec.repository_id,
-            requested_revision=revision,
+            requested_revision=requested_revision,
             resolved_revision=snapshot.resolved_revision,
             snapshot_path=snapshot.snapshot_path,
             size_bytes=snapshot.size_bytes,
             verification=snapshot.verification,
+            policy_trust=policy_trust,
         )
         self.file_store.save_file(
             json.dumps(manifest.to_dict(), sort_keys=True).encode("utf-8"),
@@ -121,6 +151,15 @@ class ModelManager:
 
     def is_installed(self, model_id: str) -> bool:
         return self.resolved_revision(model_id) is not None
+
+    def is_policy_trusted(self, model_id: str) -> bool:
+        """Return whether current bundled policy revalidates the managed snapshot."""
+        manifest = self._manifest(model_id)
+        return (
+            manifest is not None
+            and self.trust_catalog is not None
+            and manifest.policy_trust is not None
+        )
 
     def resolved_revision(self, model_id: str) -> str | None:
         """Return the locally revalidated managed revision without network access or writes."""
@@ -170,6 +209,60 @@ class ModelManager:
             raise
         except Exception as exc:
             raise ValueError("managed model snapshot is no longer valid") from exc
+
+        trusted_spec = self._trusted_spec_for(spec)
+        if manifest.policy_trust is not None:
+            if trusted_spec is None:
+                if self.enforce_policy_trust:
+                    raise ValueError("managed model no longer has a trusted policy entry")
+                return
+            observed = self._verify_policy_snapshot(spec, snapshot, trusted_spec)
+            if observed != manifest.policy_trust:
+                raise ValueError("managed model policy trust evidence no longer matches")
+        elif self.enforce_policy_trust:
+            raise ValueError("managed model lacks required policy trust evidence")
+
+    def _trusted_spec_for(self, spec: ModelSpec) -> TrustedModelSpec | None:
+        if self.trust_catalog is None:
+            return None
+        try:
+            trusted_spec = self.trust_catalog.require(spec.model_id)
+        except ValueError:
+            if self.enforce_policy_trust:
+                raise
+            return None
+        if (
+            trusted_spec.engine != spec.engine
+            or trusted_spec.repository_id != spec.repository_id
+        ):
+            raise ValueError("model trust catalog identity does not match model catalog")
+        return trusted_spec
+
+    def _verify_policy_snapshot(
+        self,
+        spec: ModelSpec,
+        snapshot: InstalledSnapshot,
+        trusted_spec: TrustedModelSpec | None,
+    ) -> ManagedModelPolicyTrust | None:
+        if trusted_spec is None:
+            return None
+        if snapshot.resolved_revision != trusted_spec.revision:
+            raise ValueError("downloaded model revision does not match trusted policy")
+        if trusted_spec.model_id != spec.model_id:
+            raise ValueError("trusted model identity does not match requested model")
+        evidence = verify_trusted_model_snapshot(
+            trusted_spec,
+            snapshot_root=snapshot.snapshot_path,
+            cache_root=self.cache_root,
+        )
+        return ManagedModelPolicyTrust(
+            catalog_schema_version=self.trust_catalog.schema_version,
+            model_id=evidence.model_id,
+            revision=evidence.revision,
+            verification=evidence.verification,
+            verified_files=evidence.verified_files,
+            total_bytes=evidence.total_bytes,
+        )
 
     def _validate_snapshot(self, snapshot: InstalledSnapshot) -> None:
         if not snapshot.snapshot_path.is_relative_to(self.cache_root):
