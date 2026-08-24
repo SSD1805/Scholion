@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from scholion.supply_chain.digests import sha256_file
+from scholion.supply_chain.release_version import validate_release_version
 from scholion.supply_chain.update_manifest import (
     ReleaseArtifact,
     SignedUpdateEnvelope,
@@ -54,6 +55,7 @@ def build_update_payload_bytes(
     """Build the exact deterministic bytes that an offline release key signs."""
     if channel != "stable":
         raise ValueError("first-release metadata tooling only emits the stable channel")
+    validate_release_version(version)
     _require_utc(published_at, "published_at")
     _require_utc(expires_at, "expires_at")
 
