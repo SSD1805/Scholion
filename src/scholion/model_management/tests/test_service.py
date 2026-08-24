@@ -106,14 +106,19 @@ def _catalog() -> ModelCatalog:
     )
 
 
-def _trust_catalog() -> ModelTrustCatalog:
+def _trust_catalog(
+    *,
+    model_id: str = "small",
+    engine: str = "faster-whisper",
+    repository_id: str = "Systran/faster-whisper-small",
+) -> ModelTrustCatalog:
     return ModelTrustCatalog(
         schema_version=1,
         models=(
             TrustedModelSpec(
-                model_id="small",
-                engine="faster-whisper",
-                repository_id="Systran/faster-whisper-small",
+                model_id=model_id,
+                engine=engine,
+                repository_id=repository_id,
                 revision=_TRUSTED_REVISION,
                 source_url="https://huggingface.co/Systran/faster-whisper-small",
                 license_id="test-license",
@@ -267,6 +272,62 @@ def test_policy_rejects_revision_override_before_provider_call(tmp_path: Path) -
     assert provider.installs == []
 
 
+def test_policy_rejects_unlisted_model_before_provider_call(tmp_path: Path) -> None:
+    model_root = tmp_path / "models"
+    provider = FakeProvider(model_root / "faster-whisper" / "snapshots" / "abc")
+    manager = ModelManager(
+        catalog=_catalog(),
+        provider=provider,
+        file_store=MemoryStore(),
+        model_root=model_root,
+        trust_catalog=_trust_catalog(model_id="medium"),
+        enforce_policy_trust=True,
+    )
+
+    with pytest.raises(ValueError, match="not trusted"):
+        manager.install("small")
+
+    assert provider.installs == []
+
+
+@pytest.mark.parametrize(
+    "trust_catalog",
+    [
+        _trust_catalog(engine="different-engine"),
+        _trust_catalog(repository_id="attacker/wrong-model"),
+    ],
+)
+def test_policy_rejects_catalog_identity_mismatch_before_provider_call(
+    tmp_path: Path, trust_catalog: ModelTrustCatalog
+) -> None:
+    model_root = tmp_path / "models"
+    provider = FakeProvider(model_root / "faster-whisper" / "snapshots" / "abc")
+    manager = ModelManager(
+        catalog=_catalog(),
+        provider=provider,
+        file_store=MemoryStore(),
+        model_root=model_root,
+        trust_catalog=trust_catalog,
+    )
+
+    with pytest.raises(ValueError, match="identity does not match"):
+        manager.install("small")
+
+    assert provider.installs == []
+
+
+def test_policy_rejects_provider_revision_mismatch_without_registration(
+    tmp_path: Path,
+) -> None:
+    manager, store, provider, _ = _trusted_manager(tmp_path)
+    provider.resolved_revision = "b" * 40
+
+    with pytest.raises(ModelManagementError, match="downloaded and locally validated"):
+        manager.install("small")
+
+    assert manager._manifest_path("small") not in store.files
+
+
 def test_policy_hash_failure_does_not_register_model(tmp_path: Path) -> None:
     manager, store, provider, snapshot_path = _trusted_manager(tmp_path)
     (snapshot_path / "model.bin").write_bytes(b"tampered model bytes")
@@ -285,6 +346,36 @@ def test_policy_tamper_after_install_invalidates_registry(tmp_path: Path) -> Non
 
     with pytest.raises(ModelManagementError, match="registry is invalid"):
         manager.is_policy_trusted("small")
+
+
+def test_policy_receipt_mismatch_invalidates_registry(tmp_path: Path) -> None:
+    manager, store, _, _ = _trusted_manager(tmp_path)
+    manager.install("small")
+    path = manager._manifest_path("small")
+    document = json.loads(store.files[path])
+    document["policy_trust"]["total_bytes"] += 1
+    store.files[path] = json.dumps(document).encode()
+
+    with pytest.raises(ModelManagementError, match="registry is invalid"):
+        manager.is_policy_trusted("small")
+
+
+def test_policy_enforcement_rejects_legacy_manifest_without_receipt(
+    tmp_path: Path,
+) -> None:
+    manager, store, provider = _manager(tmp_path)
+    manager.install("small")
+    enforcing_manager = ModelManager(
+        catalog=_catalog(),
+        provider=provider,
+        file_store=store,
+        model_root=manager.model_root,
+        trust_catalog=_trust_catalog(),
+        enforce_policy_trust=True,
+    )
+
+    with pytest.raises(ModelManagementError, match="registry is invalid"):
+        enforcing_manager.is_installed("small")
 
 
 def test_policy_enforcement_requires_catalog(tmp_path: Path) -> None:
@@ -359,6 +450,15 @@ def test_install_refuses_snapshot_outside_cache(tmp_path: Path) -> None:
         manager.install("small")
 
     assert manager._manifest_path("small") not in store.files
+
+
+def test_inventory_refuses_non_object_manifest(tmp_path: Path) -> None:
+    manager, store, _ = _manager(tmp_path)
+    manager._prepare_roots()
+    store.files[manager._manifest_path("small")] = b"[]"
+
+    with pytest.raises(ModelManagementError, match="registry is invalid"):
+        manager.inventory()
 
 
 def test_inventory_refuses_manifest_with_wrong_identity(tmp_path: Path) -> None:
