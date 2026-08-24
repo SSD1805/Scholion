@@ -43,3 +43,6 @@ tools/mermaid/node_modules/
 
 # OS-specific
 Thumbs.db
+.tools/
+.venv/
+frontend/src-tauri/gen/schemas
