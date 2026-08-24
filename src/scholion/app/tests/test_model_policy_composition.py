@@ -4,6 +4,7 @@ from typing import Any, cast
 from scholion.app.app_container import _create_model_manager
 from scholion.model_management.catalog import ModelCatalog
 from scholion.model_management.models import ModelSpec
+from scholion.model_management.service import ModelManager
 from scholion.supply_chain import ModelTrustCatalog, TrustedModelFile, TrustedModelSpec
 
 
@@ -45,7 +46,9 @@ def _trust_catalog() -> ModelTrustCatalog:
     )
 
 
-def _manager(tmp_path: Path, trust_catalog: ModelTrustCatalog | None):
+def _manager(
+    tmp_path: Path, trust_catalog: ModelTrustCatalog | None
+) -> ModelManager:
     return _create_model_manager(
         catalog=_catalog(),
         provider=cast(Any, object()),
