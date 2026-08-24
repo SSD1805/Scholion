@@ -46,9 +46,7 @@ def _trust_catalog() -> ModelTrustCatalog:
     )
 
 
-def _manager(
-    tmp_path: Path, trust_catalog: ModelTrustCatalog | None
-) -> ModelManager:
+def _manager(tmp_path: Path, trust_catalog: ModelTrustCatalog | None) -> ModelManager:
     return _create_model_manager(
         catalog=_catalog(),
         provider=cast(Any, object()),
