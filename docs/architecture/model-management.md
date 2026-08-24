@@ -36,6 +36,11 @@ flowchart LR
     class H,I run
 ```
 
+That diagram describes the current default source-build path. The #110 policy-trust path
+adds an exact project-owned revision/file allowlist between provider download and managed
+registration once a reviewed production trust catalog is bundled and enforcement is
+enabled.
+
 ## Why Scholion does not just trust whatever is in a cache
 
 The Hugging Face cache is a useful byte-level storage layout. Scholion does not need to
@@ -67,34 +72,42 @@ The current contract records at least:
 - measured snapshot size; and
 - local revalidation method.
 
-The manifest is a receipt and dependency record, not a second copy of the model.
+A manifest can now also record a separate policy-trust receipt when installation was
+performed against a supplied curated Scholion trust catalog. That receipt contains the
+catalog schema version, policy model identity and revision, exact-verification method,
+verified file count, and verified byte count.
 
-## The three main responsibilities
+The manifest is a receipt and dependency record, not a second copy of the model. A
+recorded policy receipt is also not a permanent trust bit: current policy verification is
+recomputed when the managed state is read under a loaded trust catalog.
+
+## The main responsibilities
 
 `ModelCatalog` describes the finite set of models Scholion knows how to reason about.
 For faster-whisper, quality/cache metadata is derived from the transcription strategy
 catalog instead of duplicated.
 
 `ModelManager` owns application-level inventory, explicit installation, manifest custody,
-local revalidation, resolved-revision lookup, and removal.
+local revalidation, resolved-revision lookup, removal, and the boundary that applies
+project-owned model policy when a curated catalog is supplied.
 
 `ModelProvider` owns provider-specific mechanics such as obtaining a Hugging Face
 snapshot, validating its cache layout, and removing an exact cached revision.
 
 `ModelStorageAdmitter` checks disk capacity before acquisition starts.
 
-The split matters because “what models does Scholion support?” and “how does this
-provider download bytes?” are different questions.
+`scholion.supply_chain` owns the stronger project policy itself: exact approved
+repository/revision identity plus the full allowed file set, byte sizes, SHA-256 values,
+source/license metadata, and fail-closed snapshot verification.
 
-The separate `scholion.supply_chain` trust layer introduced under issue #110 defines a
-stronger project-owned policy: exact approved repository/revision identity plus the full
-allowed file set, byte sizes, SHA-256 values, source/license metadata, and fail-closed
-snapshot verification. That stronger policy is intentionally distinct from today's
-provider-layout revalidation until it is wired into production model installation.
+The split matters because “what models does Scholion support?”, “how does this provider
+download bytes?”, and “which exact bytes did the project approve?” are different
+questions. The #110 integration deliberately composes those authorities instead of
+turning provider-local validation and project policy into one vague “verified” state.
 
-## Install transaction today
+## Install transaction without a production policy catalog
 
-A model install currently follows this order:
+The current default application composition follows this order:
 
 1. resolve the model ID through the catalog;
 2. reject an invalid/blank requested revision;
@@ -116,9 +129,33 @@ local validation contract,” not “we started trying.”
 
 🦝 The raccoon gets a receipt after the groceries are actually in the pantry.
 
-When #110's production policy integration lands, acquisition must request the curated
-immutable revision and the exact file set, sizes, and SHA-256 values must match the
-bundled trust entry **before** the model can be registered as policy-trusted/ready.
+## Policy-enforced install seam
+
+The #110 integration adds a stricter transaction when `ModelManager` receives a curated
+`ModelTrustCatalog`:
+
+1. resolve the ordinary model catalog entry and the matching project trust entry;
+2. require model ID, engine, and provider repository identity to agree across both
+   catalogs;
+3. reject a caller-supplied revision that differs from the curated immutable revision
+   **before** provider acquisition starts;
+4. ask the provider for exactly the curated revision;
+5. retain the normal provider/cache/repository validation boundary;
+6. require the returned resolved revision to equal the curated revision;
+7. require the observed snapshot file set to equal the curated file set exactly;
+8. verify every curated file's byte size and SHA-256 while enforcing path/cache
+   containment;
+9. create separate policy-trust evidence from the successful exact verification; and
+10. commit the managed manifest only after both local/provider validation and policy
+    validation succeed.
+
+When `enforce_policy_trust=True`, a missing catalog entry or a previously managed
+manifest without current policy evidence fails closed. Existing manifests remain
+parseable so upgrading the manifest format does not itself destroy local custody state.
+
+This mechanism does **not** manufacture the production policy. Tests use synthetic local
+bytes and synthetic immutable revisions. The real faster-whisper entries still require a
+deliberate upstream review and must ship as part of a signed Scholion release.
 
 ## User surface
 
@@ -151,6 +188,10 @@ app storage, and can be used offline after installation. Repository IDs, exact r
 hashes, licenses, and policy-trust evidence belong under technical details or security
 documentation.
 
+Until a reviewed production catalog is actually bundled and enforcement is enabled in
+application composition, ordinary UI must continue to describe the default managed model
+as locally revalidated rather than policy-trusted.
+
 ## Inventory and local revalidation
 
 Inventory and resolved-revision lookup are offline and side-effect free. They do not
@@ -166,26 +207,35 @@ usable under the current custody contract. Validation checks that:
 - the local verification method is supported; and
 - required provider files remain present/non-empty.
 
+If the manager has a current trust catalog and the manifest carries policy-trust
+evidence, it additionally recomputes the exact file-set/size/SHA-256 verification and
+requires the resulting evidence to match the recorded receipt. With policy enforcement
+enabled, a manifest without current policy evidence is rejected.
+
 If external deletion or tampering makes that managed state stale, Scholion fails closed.
+A same-length byte mutation therefore cannot preserve policy trust merely because the
+provider-local required-file check still passes.
 
 The receipt is evidence of what Scholion checked earlier. It is not allowed to become a
-magic amulet that makes missing bytes reappear.
+magic amulet that makes missing or modified bytes reappear.
 
 ## Local revalidation is not policy trust
 
-Current faster-whisper revalidation establishes structural/provider provenance: expected
+Default faster-whisper revalidation establishes structural/provider provenance: expected
 cache layout, repository/revision identity, and required non-empty files.
 
-It does **not** yet prove that every installed byte matches a project-approved
-cryptographic allowlist. Do not describe the current state simply as “verified” where a
-reader could reasonably infer that stronger claim.
+It does **not** by itself prove that every installed byte matches a project-approved
+cryptographic allowlist. Do not describe that default state simply as “verified” where a
+reader could reasonably infer the stronger claim.
 
-The #110 foundation now provides the stronger primitives: a curated immutable model
-policy and exact file-set/size/SHA-256 verification. The remaining production work is to
-review real upstream faster-whisper revisions, ship those curated entries inside a signed
-Scholion release, make provider acquisition request only the approved revision, require
-full trust verification before registration, and record policy identity in the local
-manifest.
+The #110 code path for the stronger guarantee is now integrated into `ModelManager`: a
+supplied curated policy pins the revision, exact-verifies before registration, persists a
+separate policy receipt, and revalidates that receipt later. What remains before the
+product can rely on that guarantee is release content and composition rather than another
+parallel verification mechanism: review real upstream faster-whisper revisions, generate
+and bundle the production catalog, enable enforcement in the application container,
+expose the distinction in technical model state, and make new-transcription admission
+require current policy trust.
 
 See **[Signed update and model trust channel](../security/update-model-trust.md)** for the
 full trust model and privacy boundary.
@@ -194,8 +244,8 @@ full trust model and privacy boundary.
 
 There is one ASR model path.
 
-A new transcription plan must resolve the selected faster-whisper model through the
-locally revalidated managed registry.
+A new transcription plan currently resolves the selected faster-whisper model through
+the locally revalidated managed registry.
 
 If the model is not installed and locally revalidated, planning fails with an
 install-first message.
@@ -215,8 +265,9 @@ There is no:
 Resume restores the exact managed model revision recorded in the checkpoint contract.
 It never downloads a replacement as a side effect.
 
-After #110 integration, “usable for a new transcription” additionally requires current
-Scholion policy trust, not merely the older structural/provider receipt.
+Once the production catalog is bundled and enforcement is enabled, “usable for a new
+transcription” must additionally require current Scholion policy trust. That admission
+switch is intentionally not enabled against synthetic or unreviewed trust data.
 
 ## Network boundary 🔐
 
@@ -259,9 +310,16 @@ These conditions fail closed:
 - storage refusal; and
 - provider removal failure.
 
-Once policy trust is wired into installation, a missing trust entry, moving/unapproved
-revision, undeclared file, size mismatch, or SHA-256 mismatch must also fail closed before
-the snapshot can be registered as policy-trusted.
+With a trust catalog supplied, these conditions also fail closed before policy-trusted
+registration or revalidation:
+
+- missing required trust entry when enforcement is enabled;
+- catalog/model identity mismatch;
+- moving or unapproved revision;
+- undeclared or missing file;
+- byte-size mismatch;
+- SHA-256 mismatch; and
+- persisted policy evidence that no longer matches current verification.
 
 Routine public errors should describe the application failure without leaking private
 internal paths.
@@ -306,9 +364,10 @@ Model management does not currently provide:
 - adoption of arbitrary cache entries;
 - generic arbitrary model hubs;
 - model quota/garbage-collection policy;
-- hosted inventory/telemetry; or
-- production wiring from the #110 curated trust policy into faster-whisper install,
-  revalidation, inventory, and execution admission.
+- hosted inventory/telemetry;
+- a reviewed production faster-whisper policy catalog bundled into application releases;
+- production `AppContainer` policy enforcement and new-transcription admission; or
+- a finished technical-details UI for local revalidation versus current policy trust.
 
 The stable rule is:
 

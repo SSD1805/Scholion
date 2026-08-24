@@ -69,6 +69,55 @@ class InstalledSnapshot:
 
 
 @dataclass(frozen=True, slots=True)
+class ManagedModelPolicyTrust:
+    """Persisted evidence that a managed snapshot matched the bundled policy catalog."""
+
+    catalog_schema_version: int
+    model_id: str
+    revision: str
+    verification: str
+    verified_files: int
+    total_bytes: int
+
+    def __post_init__(self) -> None:
+        if self.catalog_schema_version < 1:
+            raise ValueError("catalog_schema_version must be positive")
+        for name in ("model_id", "revision", "verification"):
+            if not getattr(self, name).strip():
+                raise ValueError(f"{name} cannot be empty")
+        if self.verified_files < 1:
+            raise ValueError("verified_files must be positive")
+        if self.total_bytes < 1:
+            raise ValueError("total_bytes must be positive")
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "catalog_schema_version": self.catalog_schema_version,
+            "model_id": self.model_id,
+            "revision": self.revision,
+            "verification": self.verification,
+            "verified_files": self.verified_files,
+            "total_bytes": self.total_bytes,
+        }
+
+    @classmethod
+    def from_dict(cls, document: dict[str, object]) -> "ManagedModelPolicyTrust":
+        try:
+            return cls(
+                catalog_schema_version=_required_int(
+                    document, "catalog_schema_version"
+                ),
+                model_id=_required_str(document, "model_id"),
+                revision=_required_str(document, "revision"),
+                verification=_required_str(document, "verification"),
+                verified_files=_required_int(document, "verified_files"),
+                total_bytes=_required_int(document, "total_bytes"),
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("invalid model policy trust evidence") from exc
+
+
+@dataclass(frozen=True, slots=True)
 class ManagedModelManifest:
     schema_version: int
     model_id: str
@@ -79,6 +128,7 @@ class ManagedModelManifest:
     snapshot_path: Path
     size_bytes: int
     verification: str
+    policy_trust: ManagedModelPolicyTrust | None = None
 
     def __post_init__(self) -> None:
         if self.schema_version != 1:
@@ -101,6 +151,11 @@ class ManagedModelManifest:
         )
         if self.size_bytes < 1:
             raise ValueError("size_bytes must be positive")
+        if self.policy_trust is not None:
+            if self.policy_trust.model_id != self.model_id:
+                raise ValueError("policy trust model identity does not match manifest")
+            if self.policy_trust.revision != self.resolved_revision:
+                raise ValueError("policy trust revision does not match manifest")
 
     def to_dict(self) -> dict[str, object]:
         return {
@@ -113,6 +168,9 @@ class ManagedModelManifest:
             "snapshot_path": str(self.snapshot_path),
             "size_bytes": self.size_bytes,
             "verification": self.verification,
+            "policy_trust": (
+                None if self.policy_trust is None else self.policy_trust.to_dict()
+            ),
         }
 
     @classmethod
@@ -121,6 +179,9 @@ class ManagedModelManifest:
             requested = document.get("requested_revision")
             if requested is not None and not isinstance(requested, str):
                 raise ValueError("requested_revision must be a string or null")
+            raw_policy_trust = document.get("policy_trust")
+            if raw_policy_trust is not None and not isinstance(raw_policy_trust, dict):
+                raise ValueError("policy_trust must be an object or null")
             return cls(
                 schema_version=_required_int(document, "schema_version"),
                 model_id=_required_str(document, "model_id"),
@@ -131,6 +192,11 @@ class ManagedModelManifest:
                 snapshot_path=Path(_required_str(document, "snapshot_path")),
                 size_bytes=_required_int(document, "size_bytes"),
                 verification=_required_str(document, "verification"),
+                policy_trust=(
+                    None
+                    if raw_policy_trust is None
+                    else ManagedModelPolicyTrust.from_dict(raw_policy_trust)
+                ),
             )
         except (KeyError, TypeError, ValueError) as exc:
             raise ValueError("invalid model manifest") from exc
@@ -140,6 +206,13 @@ class ManagedModelManifest:
 class ModelInventoryItem:
     spec: ModelSpec
     manifest: ManagedModelManifest | None = None
+    policy_trusted: bool = False
+
+    def __post_init__(self) -> None:
+        if self.policy_trusted and self.manifest is None:
+            raise ValueError(
+                "policy-trusted inventory item requires a managed manifest"
+            )
 
     @property
     def installed(self) -> bool:
@@ -149,5 +222,6 @@ class ModelInventoryItem:
         return {
             "spec": self.spec.to_dict(),
             "installed": self.installed,
+            "policy_trusted": self.policy_trusted,
             "manifest": None if self.manifest is None else self.manifest.to_dict(),
         }
