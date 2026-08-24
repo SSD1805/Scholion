@@ -223,10 +223,11 @@ class ModelManager:
             raise ValueError("managed model lacks required policy trust evidence")
 
     def _trusted_spec_for(self, spec: ModelSpec) -> TrustedModelSpec | None:
-        if self.trust_catalog is None:
+        trust_catalog = self.trust_catalog
+        if trust_catalog is None:
             return None
         try:
-            trusted_spec = self.trust_catalog.require(spec.model_id)
+            trusted_spec = trust_catalog.require(spec.model_id)
         except ValueError:
             if self.enforce_policy_trust:
                 raise
@@ -246,6 +247,9 @@ class ModelManager:
     ) -> ManagedModelPolicyTrust | None:
         if trusted_spec is None:
             return None
+        trust_catalog = self.trust_catalog
+        if trust_catalog is None:
+            raise ValueError("model policy trust requires a trust catalog")
         if snapshot.resolved_revision != trusted_spec.revision:
             raise ValueError("downloaded model revision does not match trusted policy")
         if trusted_spec.model_id != spec.model_id:
@@ -256,7 +260,7 @@ class ModelManager:
             cache_root=self.cache_root,
         )
         return ManagedModelPolicyTrust(
-            catalog_schema_version=self.trust_catalog.schema_version,
+            catalog_schema_version=trust_catalog.schema_version,
             model_id=evidence.model_id,
             revision=evidence.revision,
             verification=evidence.verification,
