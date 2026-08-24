@@ -3,25 +3,20 @@ from __future__ import annotations
 import base64
 import json
 from dataclasses import dataclass
-from datetime import datetime
-from hashlib import sha256
+from datetime import UTC, datetime
 from pathlib import Path
 
+from scholion.supply_chain.digests import sha256_file
 from scholion.supply_chain.update_manifest import (
     ReleaseArtifact,
     SignedUpdateEnvelope,
     UpdateManifestPayload,
 )
 
-_READ_CHUNK_BYTES = 1024 * 1024
 
-
-def _sha256(path: Path) -> str:
-    digest = sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(_READ_CHUNK_BYTES), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
+def _require_utc(value: datetime, field: str) -> None:
+    if value.tzinfo is None or value.utcoffset() != UTC.utcoffset(value):
+        raise ValueError(f"{field} must be an explicit UTC timestamp")
 
 
 @dataclass(frozen=True, slots=True)
@@ -42,7 +37,7 @@ def measure_release_artifact(item: ReleaseArtifactInput) -> ReleaseArtifact:
         platform=item.platform,
         url=item.url,
         size_bytes=item.path.stat().st_size,
-        sha256_hex=_sha256(item.path),
+        sha256_hex=sha256_file(item.path),
     )
 
 
@@ -57,6 +52,11 @@ def build_update_payload_bytes(
     artifacts: tuple[ReleaseArtifactInput, ...],
 ) -> bytes:
     """Build the exact deterministic bytes that an offline release key signs."""
+    if channel != "stable":
+        raise ValueError("first-release metadata tooling only emits the stable channel")
+    _require_utc(published_at, "published_at")
+    _require_utc(expires_at, "expires_at")
+
     measured = tuple(measure_release_artifact(item) for item in artifacts)
     payload_document = {
         "schema_version": 1,
@@ -117,7 +117,7 @@ def build_sha256sums(artifacts: tuple[ReleaseArtifactInput, ...]) -> bytes:
     if len(names) != len(set(names)):
         raise ValueError("release artifact filenames must be unique for SHA256SUMS")
     lines = [
-        f"{_sha256(item.path)}  {item.path.name}"
+        f"{sha256_file(item.path)}  {item.path.name}"
         for item in sorted(artifacts, key=lambda value: value.path.name)
     ]
     return ("\n".join(lines) + "\n").encode("utf-8")
