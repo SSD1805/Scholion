@@ -1,5 +1,10 @@
 """Supply-chain trust primitives for models and application releases."""
 
+from scholion.supply_chain.catalog_loader import (
+    load_bundled_model_trust_catalog,
+    load_model_trust_catalog,
+    parse_model_trust_catalog,
+)
 from scholion.supply_chain.model_trust import (
     ModelTrustCatalog,
     ModelTrustEvidence,
@@ -24,6 +29,9 @@ __all__ = [
     "TrustedModelSpec",
     "UpdateManifestPayload",
     "UpdateTrustError",
+    "load_bundled_model_trust_catalog",
+    "load_model_trust_catalog",
+    "parse_model_trust_catalog",
     "verify_signed_update_manifest",
     "verify_trusted_model_snapshot",
 ]
