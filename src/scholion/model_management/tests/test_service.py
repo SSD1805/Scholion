@@ -245,9 +245,7 @@ def test_policy_install_pins_revision_and_persists_exact_trust(tmp_path: Path) -
 def test_recorded_policy_receipt_is_not_current_trust_without_catalog(
     tmp_path: Path,
 ) -> None:
-    manager, store, provider, _ = _trusted_manager(
-        tmp_path, enforce_policy_trust=False
-    )
+    manager, store, provider, _ = _trusted_manager(tmp_path, enforce_policy_trust=False)
     manager.install("small")
     manager_without_catalog = ModelManager(
         catalog=_catalog(),
