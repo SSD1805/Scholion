@@ -1,0 +1,18 @@
+flowchart LR
+    A[Canonical word time 4788.370 seconds] --> B[Human display 01:19:48.370]
+    A --> C[Verified search seek coordinate]
+    A --> D[Durable note anchor]
+    A --> E[Desktop evidence cursor]
+    E --> F[Verified Tauri media playback]
+
+    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
+    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
+    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
+    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
+    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
+
+    class A evidence
+    class B,C view
+    class D source
+    class E inspect
+    class F process

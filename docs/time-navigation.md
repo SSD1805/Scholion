@@ -25,26 +25,9 @@ positions:
 "problem"  → 4791.125 s → 01:19:51.125
 ```
 
-```mermaid
-flowchart LR
-    A[Canonical word time 4788.370 seconds] --> B[Human display 01:19:48.370]
-    A --> C[Verified search seek coordinate]
-    A --> D[Durable note anchor]
-    A --> E[Desktop evidence cursor]
-    E --> F[Verified Tauri media playback]
+![What word timestamps add diagram](./diagrams/generated/docs/time-navigation-1.svg)
 
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-
-    class A evidence
-    class B,C view
-    class D source
-    class E inspect
-    class F process
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/time-navigation-1.mmd)
 
 Text fallback: one canonical numeric time drives human clock display, verified search
 navigation, durable research anchors, the desktop evidence cursor, and verified local
@@ -140,23 +123,9 @@ with their format/stream origin. It does not silently decide that a device tag i
 Devices can have wrong clocks, copied metadata, conflicting tags, or SMPTE semantics that
 require more information before arithmetic is safe.
 
-```mermaid
-flowchart LR
-    A[Original media] --> B[Canonical elapsed seconds]
-    A --> C[Declared timecode if present]
-    A --> D[Declared creation time if present]
-    B --> E[Canonical transcript evidence]
-    C --> E
-    D --> E
+![What if the media already declares a timecode? diagram](./diagrams/generated/docs/time-navigation-2.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-
-    class A source
-    class B,C,D inspect
-    class E evidence
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/time-navigation-2.mmd)
 
 **Elapsed time answers:** where is this inside the selected recording?
 

@@ -10,26 +10,9 @@ was indexed, and resolves the result onto canonical segments and word timing.
 
 A search database may point at evidence. It does not get to become the evidence.
 
-```mermaid
-flowchart LR
-    A[Your query] --> B[Lexical semantic hybrid ranking]
-    B --> C[Ranked passage]
-    C --> D[Verify canonical transcript]
-    D --> E[Canonical segments and words]
-    E --> F[Context highlights and seek]
-    E --> G[Durable EvidenceAnchor]
-    G --> H[Notes tags collections]
+![🔎 From search result to the exact evidence diagram](./diagrams/generated/docs/evidence-navigation-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A source
-    class B,C process
-    class D,E,G evidence
-    class F,H view
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/evidence-navigation-1.mmd)
 
 Text fallback: retrieval ranks a passage, canonical navigation verifies it, and the same
 verified evidence coordinates feed the desktop reader, native playback, and durable research notes.
@@ -143,28 +126,9 @@ The note body remains separate durable user knowledge. Rebuilding BM25, semantic
 or the DuckDB research projection does not delete it. A changed canonical generation is
 detected instead of silently teleporting the annotation.
 
-```mermaid
-flowchart TD
-    A[Canonical transcript evidence] --> B[Verified evidence location]
-    B --> C[CLI and desktop result view]
-    B --> D[Durable EvidenceAnchor]
-    D --> E[SQLite note]
-    E --> F[Rebuildable DuckDB research projection]
-    B --> G[Desktop evidence cursor]
-    G --> H[Verified Tauri media capability]
+![Durable research uses the same coordinate system 📝 diagram](./diagrams/generated/docs/evidence-navigation-2.svg)
 
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-
-    class A,B,D evidence
-    class E source
-    class C,F view
-    class G inspect
-    class H process
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/evidence-navigation-2.mmd)
 
 Text fallback: verified canonical coordinates drive result presentation, durable SQLite
 research anchors, rebuildable research projection, the desktop evidence cursor, and

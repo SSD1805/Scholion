@@ -1,0 +1,15 @@
+flowchart LR
+    A[Original media] --> B[Canonical elapsed seconds]
+    A --> C[Declared timecode if present]
+    A --> D[Declared creation time if present]
+    B --> E[Canonical transcript evidence]
+    C --> E
+    D --> E
+
+    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
+    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
+    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
+
+    class A source
+    class B,C,D inspect
+    class E evidence

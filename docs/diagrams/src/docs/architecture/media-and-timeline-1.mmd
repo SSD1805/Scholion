@@ -1,0 +1,24 @@
+flowchart LR
+    A[Local media] --> B[FFprobe and source SHA]
+    B --> C[Canonical elapsed seconds]
+    B --> D[Declared timecode]
+    B --> E[Declared creation time]
+    C --> F[Word and segment evidence]
+    F --> G[Canonical transcript JSON]
+    D --> G
+    E --> G
+    F --> H[Human elapsed display]
+    F --> I[Verified seek and EvidenceAnchor]
+    I --> J[Desktop evidence cursor]
+
+    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
+    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
+    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
+    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
+    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
+
+    class A source
+    class B,D,E inspect
+    class C,F,G,I evidence
+    class H view
+    class J process

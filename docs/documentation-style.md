@@ -112,39 +112,70 @@ Use motifs sparingly enough that they stay useful.
 Do not put emoji into every diagram node simply because Mermaid and mermaid sound alike.
 The diagram should communicate structure first.
 
-## Mermaid diagrams: portable, colorful, and legible
+## Mermaid diagrams: source-controlled, generated, and legible
 
-GitHub renders Mermaid when the syntax is placed directly inside a fenced code block whose
-language identifier is `mermaid`. GitHub's own documentation uses the classic
-`graph TD;` spelling. Mermaid's `flowchart LR` / `flowchart TD` spelling is also used
-throughout Scholion. **Do not mechanically rewrite one valid spelling into the other.**
-Portability is about the whole diagram, not a cosmetic keyword preference.
+Mermaid is Scholion's **diagram source language**, not a runtime dependency of the
+reader's GitHub page.
 
-The August 2026 documentation regression had two separate causes:
+GitHub can render inline Mermaid itself, but that path depends on GitHub's embedded
+renderer and browser/network behavior outside this repository's control. Scholion instead
+keeps Mermaid definitions as canonical `.mmd` source and renders ordinary SVG files with
+the pinned official `@mermaid-js/mermaid-cli` toolchain. Markdown displays the generated
+SVG and links the editable Mermaid source immediately underneath it.
 
-1. a one-shot normalizer stripped `classDef` and class assignments from styled diagrams,
-   turning the established visual language into monochrome boxes; and
-2. a later “fallback” change made hand-written SVG files the primary visible diagrams and
-   moved the real Mermaid fences inside collapsed `<details>` blocks. The SVGs used
-   `currentColor`, which is unreliable as a page-theme inheritance mechanism when the SVG
-   is loaded as an external image, especially on dark GitHub themes.
+The ownership model is therefore explicit:
 
-The repair is to keep Mermaid **directly visible**, preserve the palette, use a small
-compatible syntax surface, and retain prose fallback for meaning. It is not to ban
-`graph`.
+- `docs/diagrams/src/**/*.mmd` is the human-edited diagram source;
+- `docs/diagrams/generated/**/*.svg` is rebuildable generated documentation;
+- `docs/diagrams/manifest.json` binds each source, generated SVG, owning document, and
+  accessible image description;
+- `tools/mermaid/mermaid.config.json` freezes renderer behavior such as deterministic IDs,
+  font family, security level, and flowchart label mode; and
+- `tools/mermaid/package-lock.json` freezes the Mermaid CLI, Puppeteer, browser, and
+  transitive documentation-tool dependency graph.
 
-For high-traffic and load-bearing diagrams:
+Do **not** hand-edit generated SVG. Do not add an inline `````mermaid`` fence as a second
+rendering path. Do not create a JPEG/PNG screenshot of a diagram when SVG can represent it
+natively. Change the `.mmd` source, regenerate, inspect the result, and commit source and
+SVG together.
 
-- use a fence that is exactly `````mermaid`` and keep the Mermaid visible directly in the
-  document rather than hiding the primary diagram inside `<details>`;
-- use simple `graph LR` / `graph TD` or `flowchart LR` / `flowchart TD` syntax;
-- avoid HTML labels, embedded markup, renderer directives, and `linkStyle` tricks unless a
-  current GitHub Mermaid version has been deliberately qualified;
-- keep node labels short and literal;
-- put the important relationship in edge/node text, not only visual styling;
-- use the Scholion palette when color improves hierarchy; and
-- keep nearby prose sufficient to understand the architectural point if Mermaid is not
-  available at all.
+For a normal edit:
+
+```bash
+npm ci --prefix tools/mermaid
+npm --prefix tools/mermaid run render
+```
+
+The first command installs only the isolated documentation renderer. The second rewrites
+the generated SVG set from the manifest. To verify without modifying committed assets:
+
+```bash
+npm --prefix tools/mermaid run check
+```
+
+`check` renders every source into a temporary directory and byte-compares it with the
+checked-in SVG. CI runs the same operation. A pull request cannot pass the Mermaid docs
+gate with a stale, missing, hand-edited, unregistered, or differently rendered SVG.
+Inline Mermaid fences are also rejected so GitHub's renderer cannot silently become a
+second source of visual truth.
+
+When adding a new diagram, add its `.mmd` file and manifest entry, embed the manifest's SVG
+path in the owning Markdown document, add the adjacent **Diagram source (Mermaid)** link,
+and run `npm --prefix tools/mermaid run render`. Keep the important relationship in the
+node/edge text rather than styling alone, and keep nearby prose sufficient to understand
+the architectural point if images are unavailable.
+
+The August 2026 diagram regressions are useful history. A one-shot normalizer once stripped
+`classDef` and class assignments from styled diagrams. A later fallback approach used
+hand-written SVGs and created another independently maintained representation. The current
+contract removes both failure modes: **Mermaid source is authoritative; official Mermaid
+output is generated; CI proves the two still agree.**
+
+Use simple `graph LR` / `graph TD` or `flowchart LR` / `flowchart TD` syntax where it fits.
+Quote node labels when Mermaid grammar requires it. Avoid HTML labels, embedded markup,
+renderer directives, and `linkStyle` tricks unless the pinned renderer has been
+deliberately qualified. `graph` and `flowchart` are both valid; do not mechanically rewrite
+one spelling into the other.
 
 Color is **not** forbidden. It is part of Scholion's documentation language. It simply may
 not be the only carrier of meaning.
@@ -168,42 +199,11 @@ need to distinguish architectural roles at a glance.
 
 Styled example:
 
-```mermaid
-flowchart LR
-    A[Original recording] --> B[Local processing]
-    B --> C[Canonical transcript evidence]
-    C --> D[Rebuildable search view]
+![Documentation Mermaid palette diagram](./diagrams/generated/docs/documentation-style-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A source
-    class B process
-    class C evidence
-    class D view
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/documentation-style-1.mmd)
 
 The labels remain meaningful without color. Color makes the structure faster to read.
-
-### Static fallback when rich rendering is unavailable
-
-A secondary SVG fallback is allowed for a high-traffic Mermaid diagram when GitHub's rich
-renderer itself is unavailable. It must follow these rules:
-
-- Mermaid remains the **primary, directly visible** source in Markdown;
-- the SVG appears only afterward, preferably inside a disclosure labelled as a static
-  fallback;
-- the SVG uses the same Scholion palette and explicit fixed colors rather than
-  `currentColor` inheritance;
-- text and arrows remain legible on both light and dark GitHub pages without depending on
-  page CSS;
-- the SVG has a `<title>` and `<desc>` and is understandable without color alone; and
-- the fallback must be kept intentionally in sync with its paired Mermaid diagram.
-
-Do not put an SVG *before* the Mermaid and do not hide Mermaid inside `<details>`. That
-turns the fallback into the product and recreates the August 2026 regression.
 
 ## Jargon has to earn rent
 
@@ -266,7 +266,8 @@ The latter may be funny in prose. They are poor anchors for someone searching a 
 ## Accessibility
 
 - Emoji supplements text; it does not replace meaning.
-- Diagrams receive surrounding prose.
+- Diagrams receive meaningful Markdown alt text and surrounding prose.
+- Every displayed generated SVG has an adjacent link to copyable Mermaid source.
 - Color is never the only carrier of state.
 - Commands and identifiers remain copyable and exact.
 - Avoid joke-heavy error examples that obscure the real failure message.

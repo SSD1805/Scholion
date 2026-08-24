@@ -1,0 +1,6 @@
+flowchart TD
+    A[Canonical transcript passage] --> B[Local embedding model]
+    C[Search phrase] --> B
+    B --> D[Numeric vectors]
+    D --> E[Local similarity comparison]
+    E --> F[Original canonical passage coordinates]

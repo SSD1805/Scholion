@@ -23,27 +23,9 @@ For an ordinary user, the intended outcome is simple: Scholion chooses a sensibl
 strategy, refuses impossible explicit requests, and does not pretend that a detected
 accelerator is magic extra RAM.
 
-```mermaid
-flowchart LR
-    A[Inspect this machine] --> B[CPU + system memory]
-    A --> C[Physical accelerators]
-    C --> D[Ask engine what it can really use]
-    B --> E[Admit safe strategies]
-    D --> E
-    E --> F[Rank eligible choices]
-    F --> G[Run locally]
-    G --> H[Checkpoint in order]
+![The human version diagram](../diagrams/generated/docs/architecture/adaptive-heterogeneous-execution-1.svg)
 
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef decision fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef run fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-
-    class A,B,C,D inspect
-    class E,F decision
-    class G run
-    class H evidence
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/adaptive-heterogeneous-execution-1.mmd)
 
 No tensor-sharding opera is hiding behind this diagram. The current system is
 purposefully narrower.
@@ -158,22 +140,9 @@ recovery semantics harder to reason about.
 The first concurrency optimization is therefore much less glamorous and much easier to
 prove:
 
-```mermaid
-sequenceDiagram
-    participant M as Main execution path
-    participant G as Accelerator inference
-    participant P as One CPU prefetch worker
-    participant C as Checkpoint store
+![Why bounded pipeline overlap comes before model sharding diagram](../diagrams/generated/docs/architecture/adaptive-heterogeneous-execution-2.svg)
 
-    M->>G: transcribe segment N
-    par while N is in flight
-        M->>P: materialize segment N+1
-    end
-    G-->>M: result N
-    M->>C: commit checkpoint N
-    P-->>M: prepared N+1
-    M->>G: transcribe N+1
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/adaptive-heterogeneous-execution-2.mmd)
 
 The invariants are:
 

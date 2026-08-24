@@ -16,26 +16,9 @@ It asks a narrower question:
 > Can a conservative, reproducible local transform improve downstream transcription
 > without changing source custody, timeline semantics, or resume behavior?
 
-```mermaid
-flowchart LR
-    A[Original recording] --> B[Canonical decode]
-    B --> C{Enhancement requested?}
-    C -->|no| D[ASR]
-    C -->|yes| E[Private noise-suppressed derivative]
-    E --> F[Timeline identity checks]
-    F --> D
-    D --> G[Canonical transcript + provenance]
+![The human version diagram](../diagrams/generated/docs/architecture/speech-enhancement-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef check fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef result fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-
-    class A source
-    class B,C,D,E process
-    class F check
-    class G result
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/speech-enhancement-1.mmd)
 
 ## User surface
 

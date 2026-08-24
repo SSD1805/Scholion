@@ -1,0 +1,11 @@
+{
+  "securityLevel": "strict",
+  "deterministicIds": true,
+  "deterministicIDSeed": "scholion-docs-v1",
+  "theme": "base",
+  "fontFamily": "Arial, Helvetica, sans-serif",
+  "flowchart": {
+    "htmlLabels": false,
+    "useMaxWidth": true
+  }
+}

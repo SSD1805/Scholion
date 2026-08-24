@@ -27,41 +27,9 @@ transcript truth.
 > **Canonical transcript JSON is evidence. SQLite research state is human-authored truth.
 > DuckDB search/research databases are rebuildable projections.**
 
-```mermaid
-flowchart LR
-    A[Canonical transcript JSON] --> B[Lexical projection]
-    A --> C[Semantic chunks and vectors]
-    B --> D[BM25 ranking]
-    C --> E[Dense ranking]
-    D --> F[Hybrid RRF when requested]
-    E --> F
-    D --> G[Ranked passages]
-    E --> G
-    F --> G
-    G --> H[Verify canonical evidence]
-    H --> I[Segments words context seek]
-    J[SQLite notes tags collections] --> K[DuckDB research projection]
-    K --> B
-    K --> C
-    I --> L[ResearchWorkspaceService]
-    J --> L
-    L --> M[Unified discovery]
-    M --> N[CLI Library]
-    M --> O[Desktop Library]
-    L --> P[Next Desktop Research]
+![The human version diagram](../diagrams/generated/docs/architecture/corpus-search-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-
-    class A,H,I evidence
-    class B,C,D,E,F,P process
-    class G,K,M view
-    class J source
-    class L,N,O inspect
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/corpus-search-1.mmd)
 
 Text fallback: canonical transcript evidence produces rebuildable lexical/semantic search
 state; ranked passages are re-verified against canonical evidence; authoritative SQLite
@@ -91,24 +59,9 @@ Before exposing precise canonical words or segments, `EvidenceLocator` re-reads 
 JSON and verifies SHA, document identity, and source identity against the ranked passage.
 Stale indexed evidence fails closed.
 
-```mermaid
-flowchart TD
-    A[Ranked passage] --> B{Canonical generation still matches}
-    B -->|No| C[Refuse precise navigation]
-    B -->|Yes| D{Segment IDs still exist}
-    D -->|No| C
-    D -->|Yes| E[Resolve canonical words context and seek]
+![Canonical hashing and stale-state refusal diagram](../diagrams/generated/docs/architecture/corpus-search-2.svg)
 
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef stop fill:#FFD6D6,stroke:#9E3434,stroke-width:2px,color:#351616
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A process
-    class B,D evidence
-    class C stop
-    class E view
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/corpus-search-2.mmd)
 
 Text fallback: ranked passages must still match the canonical generation and segment set;
 otherwise precise navigation refuses instead of fabricating evidence.

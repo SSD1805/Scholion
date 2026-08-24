@@ -1,0 +1,18 @@
+{
+  "name": "scholion-mermaid-docs",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Pinned renderer for reproducible Scholion documentation SVGs.",
+  "type": "module",
+  "engines": {
+    "node": "^20.19.0 || >=22.12.0"
+  },
+  "scripts": {
+    "render": "node render.mjs --write",
+    "check": "node render.mjs --check"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "11.16.0",
+    "puppeteer": "^25.0.0"
+  }
+}

@@ -1,0 +1,16 @@
+flowchart TD
+    A[Ranked passage] --> B{Canonical generation still matches}
+    B -->|No| C[Refuse precise navigation]
+    B -->|Yes| D{Segment IDs still exist}
+    D -->|No| C
+    D -->|Yes| E[Resolve canonical words context and seek]
+
+    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
+    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
+    classDef stop fill:#FFD6D6,stroke:#9E3434,stroke-width:2px,color:#351616
+    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
+
+    class A process
+    class B,D evidence
+    class C stop
+    class E view

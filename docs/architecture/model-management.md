@@ -15,30 +15,9 @@ So Scholion keeps one deliberate boundary around them:
 That gives ordinary users a simpler experience and gives maintainers something they can
 actually reason about.
 
-```mermaid
-flowchart LR
-    A[Model catalog] --> B[Recommend]
-    B --> C[Explicit install]
-    C --> D[Disk admission]
-    D --> E[Provider download]
-    E --> F[Local revalidation]
-    F --> P{Bundled model policy?}
-    P -->|No| G[Private managed manifest]
-    P -->|Yes| T[Exact policy verification]
-    T --> G
-    G --> H[Local transcription plan]
-    H --> I[Local-only execution]
+![The human version diagram](../diagrams/generated/docs/architecture/model-management-1.svg)
 
-    classDef info fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef network fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef run fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A,B,D info
-    class C,E network
-    class F,P,T,G evidence
-    class H,I run
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/model-management-1.mmd)
 
 Application composition now loads a packaged `model-trust.json` from
 `scholion.supply_chain` when one is present. A build that contains that reviewed catalog

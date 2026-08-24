@@ -20,36 +20,9 @@ The design deliberately uses two stores with different authority:
 The databases do not share a transaction and do not attach to one another. Scholion
 coordinates them through stable evidence identities and a deterministic projector.
 
-```mermaid
-flowchart LR
-    A[Canonical transcript] --> B[Verified EvidenceAnchor]
-    B --> C[SQLite research authority]
-    C --> D[Monotonic change journal]
-    D --> E[ResearchStateProjector]
-    E --> F[DuckDB research projection]
-    F --> G[Typed research constraints]
-    G --> H[Lexical semantic retrieval]
-    H --> A
-    C --> I[Saved searches]
-    C --> J[ResearchWorkspaceService]
-    B --> J
-    F --> J
-    I --> J
-    J --> K[CLI and unified discovery]
-    J --> L[Desktop Research workspace]
+![Durable research state architecture diagram](../diagrams/generated/docs/architecture/research-state-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-
-    class A,B evidence
-    class C,I source
-    class D,E,L process
-    class F,G,H view
-    class J,K inspect
-```
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/research-state-1.mmd)
 
 Text fallback: canonical evidence creates a verified anchor; user research commits to
 SQLite with a monotonic journal; a deterministic projector builds disposable DuckDB query

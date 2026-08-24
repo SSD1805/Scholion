@@ -17,60 +17,9 @@ canonical transcript truth, private execution state, rebuildable projections, du
 knowledge, native process/media lifetime, and desktop presentation deliberately do not share
 authority semantics.
 
-```mermaid
-flowchart LR
-    A[Source media] --> B[Media and resource inspection]
-    B --> C[Immutable local plan]
-    C --> D[Transcription and checkpoints]
-    D --> E[Canonical transcript JSON]
-    E --> F[Derived exports]
-    E --> G[DuckDB lexical and semantic projections]
-    G --> H[Ranked passages]
-    E --> I[Verified evidence navigation]
-    H --> I
-    I --> J[SQLite research authority]
-    J --> K[Deterministic projector]
-    K --> L[DuckDB research projection]
-    L --> H
-    J --> M[Saved searches]
-    J --> N[ResearchWorkspaceService]
-    I --> N
-    M --> N
-    N --> O[Unified discovery]
-    E --> P[LibraryCustodyService]
-    G --> P
-    J --> P
-    D --> P
-    P --> Q[Plan-bound deletion]
-    O --> R[Versioned desktop bridge]
-    I --> R
-    N --> R
-    C --> U[ProcessingCenterService]
-    D --> U
-    U --> R
-    R --> S[React Library Research Processing]
+![The shape of the system diagram](../diagrams/generated/docs/architecture/README-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef stop fill:#FFD6D6,stroke:#9E3434,stroke-width:2px,color:#351616
-
-    class A source
-    class B,C,D,U process
-    class E,I,J evidence
-    class F,G,H,K,L,M,O view
-    class N,R,S inspect
-    class P,Q stop
-```
-
-<details>
-<summary>Static diagram fallback if rich rendering is unavailable</summary>
-
-![Scholion system-architecture static diagram](../diagrams/system-architecture.svg)
-
-</details>
+[Diagram source (Mermaid)](../diagrams/src/docs/architecture/README-1.mmd)
 
 Text fallback: canonical JSON is evidence; DuckDB ranks rebuildable views; canonical
 navigation verifies evidence; SQLite owns human research; `ResearchWorkspaceService`

@@ -76,27 +76,9 @@ its exact evidence address:
 
 The note survives search-index and research-projection rebuilds.
 
-```mermaid
-flowchart LR
-    A[Canonical transcript evidence] --> B[Verified EvidenceAnchor]
-    B --> C[SQLite durable research state]
-    C --> D[Monotonic change journal]
-    D --> E[Deterministic projector]
-    E --> F[DuckDB research projection]
-    F --> G[Fast research-aware search]
-    G --> A
-    C --> H[Desktop Research workspace]
+![The short version diagram](./diagrams/generated/docs/research-notes-1.svg)
 
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-
-    class A,B evidence
-    class C source
-    class D,E,H process
-    class F,G view
-```
+[Diagram source (Mermaid)](./diagrams/src/docs/research-notes-1.mmd)
 
 Text fallback: verified canonical evidence anchors durable SQLite research state; a
 transactional journal projects that authority into rebuildable DuckDB query state; the

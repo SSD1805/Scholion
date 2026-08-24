@@ -1,0 +1,24 @@
+flowchart LR
+    A[Local media] --> B[Reliable local transcription]
+    B --> C[Canonical evidence]
+    C --> D[Private retrieval]
+    D --> E[Verified evidence navigation]
+    E --> F[Durable research authority]
+    F --> G[Native desktop workflows]
+    G --> H[Lifecycle and playback]
+    H --> I[Signed update and model trust mechanics]
+    I --> J[Pre-packaging readiness]
+    J --> K[Windows and macOS packaging]
+    K --> L[Representative release qualification]
+    L --> M[MVP release]
+
+    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
+    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
+    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
+    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
+    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
+
+    class A source
+    class B,D,G,H,I,J,K,L process
+    class C,E,F evidence
+    class M view

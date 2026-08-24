@@ -52,47 +52,9 @@ Model trust has two deliberately separate concepts. Provider/local custody prove
 
 ## From recording to useful evidence
 
-```mermaid
-flowchart LR
-    A[Original recording] --> B[Inspect source and machine]
-    B --> C[Choose safe local strategy]
-    C --> D[Transcribe and checkpoint]
-    D --> E[Canonical transcript JSON]
-    E --> F[TXT SRT WebVTT]
-    E --> G[Lexical semantic hybrid search]
-    G --> H[Verify canonical evidence]
-    H --> I[Context highlights and seek]
-    I --> J[Durable notes tags collections]
-    J --> G
-    G --> K[Unified discovery]
-    J --> K
-    K --> L[Saved searches navigation]
-    E --> M[Custody-aware deletion planning]
-    J --> M
-    D --> M
+![From recording to useful evidence diagram](./docs/diagrams/generated/README-1.svg)
 
-    classDef source fill:#F9D5E5,stroke:#7B2E52,stroke-width:2px,color:#22151B
-    classDef process fill:#E8D9FF,stroke:#68469B,stroke-width:2px,color:#1F1630
-    classDef evidence fill:#FFF0B8,stroke:#8A6B18,stroke-width:2px,color:#2C260F
-    classDef view fill:#DDF5E3,stroke:#347A46,stroke-width:2px,color:#142719
-    classDef inspect fill:#D8EEFF,stroke:#2E617B,stroke-width:2px,color:#12222A
-    classDef stop fill:#FFD6D6,stroke:#9E3434,stroke-width:2px,color:#351616
-
-    class A source
-    class B,C,D process
-    class E,H evidence
-    class F,G,K,L view
-    class I inspect
-    class J source
-    class M stop
-```
-
-<details>
-<summary>Static diagram fallback if rich rendering is unavailable</summary>
-
-![Scholion recording-to-evidence static diagram](docs/diagrams/recording-to-evidence.svg)
-
-</details>
+[Diagram source (Mermaid)](./docs/diagrams/src/README-1.mmd)
 
 Text fallback: source media is inspected and transcribed locally into canonical JSON; rebuildable search finds passages; canonical verification turns results back into evidence; durable human research attaches to that evidence; custody planning keeps destructive work explicit.
 
