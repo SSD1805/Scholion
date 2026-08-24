@@ -9,8 +9,7 @@
   },
   "scripts": {
     "render": "node render.mjs --write",
-    "check": "node render.mjs --check",
-    "migrate-inline": "node render.mjs --migrate-inline"
+    "check": "node render.mjs --check"
   },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "11.16.0",
