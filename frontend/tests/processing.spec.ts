@@ -104,7 +104,9 @@ test("policy enforcement keeps a legacy install visible and offers a trusted rei
 
   await smallModel.getByRole("button", { name: "Reinstall trusted copy" }).click();
   await expect(smallModel.getByRole("button", { name: "Reinstalling…" })).toBeDisabled();
-  await expect(page.getByRole("status")).toContainText("verify it against this build's model policy");
+  await expect(
+    page.getByRole("status").filter({ hasText: "verify it against this build's model policy" }),
+  ).toBeVisible();
 
   await expect(smallModel).toContainText("Trusted by this Scholion build", { timeout: 5_000 });
   await expect(page.getByText("Recommended model ready")).toBeVisible();
