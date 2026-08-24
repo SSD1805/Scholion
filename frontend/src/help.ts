@@ -5,6 +5,7 @@ export type HelpTopicId =
   | "library"
   | "research"
   | "storage"
+  | "updates"
   | "evidence"
   | "playback"
   | "transcript-tools";
@@ -85,6 +86,18 @@ export const HELP_TOPICS: Record<HelpTopicId, HelpTopic> = {
       "Temporary-file cleanup uses the time a job was last updated. The preview shows any unfinished job that would lose saved progress.",
     ],
     note: "Normal file deletion is not forensic secure erasure from device history, snapshots, backups, or external sync systems.",
+  },
+  updates: {
+    title: "Checking for Scholion updates",
+    summary:
+      "Update checks are explicit network requests. A trusted release must pass Scholion's local signature, expiry, rollback, platform, size, and hash checks before it can be staged.",
+    points: [
+      "Check for updates contacts one fixed GitHub-hosted metadata location only when you choose it.",
+      "The request does not include an installation ID, recording or transcript data, research state, hardware inventory, model inventory, or behavioral telemetry.",
+      "GitHub or its delivery network can still see ordinary connection metadata such as your IP address and request time.",
+      "Local evidence work remains available when update checking is off, unavailable, or offline.",
+    ],
+    note: "A verified Scholion release manifest is separate from operating-system application signing. Public release packages must satisfy both trust layers before installation is enabled.",
   },
   evidence: {
     title: "Using the transcript reader",
