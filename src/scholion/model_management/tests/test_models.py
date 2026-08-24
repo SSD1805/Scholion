@@ -22,7 +22,9 @@ def _policy_trust() -> ManagedModelPolicyTrust:
     )
 
 
-def _manifest(*, policy_trust: ManagedModelPolicyTrust | None = None) -> ManagedModelManifest:
+def _manifest(
+    *, policy_trust: ManagedModelPolicyTrust | None = None
+) -> ManagedModelManifest:
     return ManagedModelManifest(
         schema_version=1,
         model_id="small",
