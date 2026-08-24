@@ -210,9 +210,7 @@ class ProcessingCenterService:
         )
         inventory = self.model_manager.inventory()
         policy_enforced = getattr(self.model_manager, "enforce_policy_trust", False)
-        policy_trust = {
-            item.spec.model_id: item.policy_trusted for item in inventory
-        }
+        policy_trust = {item.spec.model_id: item.policy_trusted for item in inventory}
         speaker_labeling = diarization_runtime_status()
         recommended_model: str | None = None
         recommended_installed = False
@@ -221,11 +219,7 @@ class ProcessingCenterService:
             strategy = cast("dict[str, object]", recommended["strategy"])
             recommended_model = str(strategy["model"])
             recommended_item = next(
-                (
-                    item
-                    for item in inventory
-                    if item.spec.model_id == recommended_model
-                ),
+                (item for item in inventory if item.spec.model_id == recommended_model),
                 None,
             )
             if recommended_item is not None:
