@@ -167,7 +167,9 @@ def test_enforcement_refuses_legacy_model_for_new_execution(tmp_path: Path) -> N
         manager.resolved_revision("small")
 
 
-def test_enforcement_allows_legacy_model_removal_for_replacement(tmp_path: Path) -> None:
+def test_enforcement_allows_legacy_model_removal_for_replacement(
+    tmp_path: Path,
+) -> None:
     manager, store, provider = _enforcing_manager(tmp_path)
 
     removed = manager.remove("small")
