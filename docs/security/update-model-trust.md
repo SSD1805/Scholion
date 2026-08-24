@@ -2,44 +2,55 @@
 
 Scholion has two related but distinct supply-chain trust problems: application releases and local model snapshots. Both need project-owned trust roots, but neither should turn a local-first application into a telemetry client or make an upstream distribution host authoritative for what Scholion executes.
 
-This document defines the first-release contract tracked by issue #110.
+This document describes the implemented first-release trust mechanics and the remaining production provisioning gates.
 
 ## Trust boundaries
 
 ### Application releases
 
-The native desktop host owns application-update trust. A release check must fetch only a bounded signed metadata envelope from a fixed Scholion update endpoint. The request must not include an installation identifier, corpus metadata, hardware inventory, recording names, research state, model inventory, or behavioral telemetry.
+Scholion's update policy is a strict signed metadata envelope. The signature covers the **exact payload bytes**, not a re-serialized JSON object. The payload can authorize only typed release metadata: release sequence, channel, version, publication/expiry timestamps, release-notes URL, and per-platform artifact URL/size/SHA-256. Unknown envelope/payload fields fail closed.
 
-The envelope carries exact signed payload bytes plus a key identifier, signature algorithm, and signature. The signed payload is typed data only: release sequence, channel, version, publication/expiry timestamps, release-notes URL, and per-platform artifact URL/size/SHA-256. Unknown envelope or payload fields fail closed.
+The production signature verifier belongs at the native application boundary and must use a reviewed implementation with pinned public key/key-rotation material. Scholion does not implement Ed25519 arithmetic itself in Python.
 
-The signature covers the exact payload bytes rather than a re-serialized JSON object. This avoids cross-language JSON canonicalization becoming part of the security boundary.
+The repository now contains the complete application-side orchestration around that verifier:
 
-The production verifier belongs in the native/Tauri layer and must use a reviewed signature implementation with public keys pinned in the application. Scholion must not implement Ed25519 arithmetic itself in Python.
+- one fixed GitHub-hosted metadata location;
+- manual checks only;
+- bounded HTTPS-only metadata transport;
+- local highest-trusted-sequence state;
+- publication/expiry and rollback enforcement;
+- same-sequence signed-content equivocation rejection;
+- explicit stable-channel enforcement;
+- signed platform selection;
+- staged artifact download with exact signed size and SHA-256 enforcement;
+- signed metadata re-verification immediately before staging;
+- private temporary staging plus fsync/atomic replacement;
+- a closed Tauri command with no caller-provided URL/path/header/command/installer argument; and
+- explicit user-facing update/privacy states.
+
+A source/development build that has no production verifier remains **Updates off** and makes no update request. This is intentional fail-closed behavior, not a fallback to unsigned HTTPS trust.
 
 ### Models
 
-The application package owns a curated model-trust catalog. A model entry identifies:
+The application package owns a curated model-trust catalog. Each entry identifies:
 
 - Scholion model ID and engine;
 - exact upstream repository identity;
 - immutable 40-character upstream revision;
-- source URL;
-- license ID and license URL; and
+- source URL and license metadata; and
 - every allowed snapshot file with exact relative path, byte size, and SHA-256.
 
 A distribution service such as Hugging Face transports bytes. It does not decide which revision or file hashes Scholion trusts.
 
-`ModelManager` applies that policy transactionally. When a curated trust catalog is supplied, installation pins the exact approved revision, rejects a conflicting caller revision before provider acquisition, verifies the complete downloaded snapshot against the bundled entry before committing the managed manifest, records policy-trust evidence separately from provider-local validation, and re-runs that exact policy verification when managed state is read for trust/admission.
+`ModelManager` applies the policy transactionally. When a curated trust catalog is bundled, installation pins the exact approved revision, rejects conflicting caller revisions before acquisition, verifies the complete snapshot before committing managed state, records policy evidence separately from provider-local validation, and re-runs exact verification for later trust/admission reads.
 
-Application composition now loads a packaged `model-trust.json` from `scholion.supply_chain`. If the current build contains that catalog, `AppContainer` automatically enables `ModelManager` policy enforcement. If the build contains no catalog, as current source/development builds do, Scholion retains the existing local/provider revalidation path. There is no runtime fetch for policy and no remotely mutable model-policy service.
+Application composition loads packaged `model-trust.json`. If the build contains a valid catalog, policy enforcement is automatically enabled. If no catalog is bundled, current source/development builds remain on the provider/local-revalidation path. There is no runtime policy fetch and no remotely mutable model-policy service.
 
-The repository still does **not** contain deliberately reviewed production faster-whisper entries. The loader and composition path do not promote development downloads, guessed hashes, mutable refs, or synthetic test data to project policy.
-
-Integrity/local revalidation and policy trust remain separate states. A snapshot can match expected repository/revision/layout rules without being trusted by the current Scholion build. Consumer UI and documentation must not collapse those states into one word such as “verified.”
+The repository deliberately still contains **no production faster-whisper trust entries**. `scripts/generate_model_trust_entry.py` can deterministically measure a deliberately selected immutable snapshot, including safe Hugging Face-style in-cache symlinks, but the generated JSON becomes policy only after human review and inclusion in a signed Scholion release.
 
 ## Update manifest v1
 
-The wire envelope is deliberately small:
+The signed envelope is:
 
 ```json
 {
@@ -51,7 +62,7 @@ The wire envelope is deliberately small:
 }
 ```
 
-After signature verification, the payload is parsed as:
+After signature verification, the payload is:
 
 ```json
 {
@@ -59,13 +70,13 @@ After signature verification, the payload is parsed as:
   "sequence": 42,
   "channel": "stable",
   "version": "1.0.0",
-  "published_at": "2026-08-23T15:00:00Z",
-  "expires_at": "2026-08-30T15:00:00Z",
-  "release_notes_url": "https://updates.example.invalid/releases/1.0.0",
+  "published_at": "2026-08-24T15:00:00Z",
+  "expires_at": "2026-08-31T15:00:00Z",
+  "release_notes_url": "https://github.com/SSD1805/Scholion/releases/tag/v1.0.0",
   "artifacts": [
     {
-      "platform": "linux-x86_64",
-      "url": "https://updates.example.invalid/artifacts/scholion-linux-x86_64.tar.zst",
+      "platform": "windows-x86_64",
+      "url": "https://github.com/SSD1805/Scholion/releases/download/v1.0.0/scholion.exe",
       "size_bytes": 123,
       "sha256": "<64 lowercase hexadecimal characters>"
     }
@@ -73,19 +84,75 @@ After signature verification, the payload is parsed as:
 }
 ```
 
-The repository examples use `.invalid` hosts intentionally. A production endpoint and signing keys must be provisioned separately.
+The fixed first-release metadata location is:
 
-### Replay, downgrade, and freeze policy
+`https://github.com/SSD1805/Scholion/releases/latest/download/scholion-update.json`
 
-The native client persists the highest successfully trusted manifest sequence. A subsequently signed manifest with a lower sequence is rejected. Re-seeing the same sequence is allowed so a user can check repeatedly without manufacturing state changes.
+That mutable transport location is **not** the trust root. A compromised/misconfigured host can deny availability or serve garbage, but a payload cannot authorize an update unless it passes the independent signature and local policy checks.
 
-Signed metadata expires. Expired metadata cannot authorize an update, which limits indefinite replay of old signed metadata after hosting compromise. A client that stays offline past expiry continues to run normally; it simply cannot authorize a new update until it can obtain fresh signed metadata.
+### Replay, downgrade, and equivocation
 
-A valid signature does not mean “install immediately.” Version/channel/platform policy and explicit user intent are separate decisions after trust verification.
+The client persists the highest successfully trusted manifest sequence. A lower signed sequence is rejected. Re-seeing the exact same signed metadata at the same sequence is allowed. Reusing the same sequence for different signed content is rejected so a split-brain/mistaken release cannot silently replace already trusted metadata without advancing sequence.
+
+Signed metadata expires. Expired metadata cannot authorize a new update or staging operation. A client that remains offline continues to run normally; it simply cannot authorize a new release until fresh signed metadata is available.
+
+The stable client requires `channel == "stable"`. A correctly signed beta/nightly payload cannot accidentally flow through the stable endpoint.
+
+### Local anti-rollback state
+
+Update trust state is stored privately under Scholion's app state directory. It records only:
+
+- schema version;
+- highest trusted release sequence;
+- last trusted update state/version; and
+- the last trusted signed manifest needed for re-verification before staging.
+
+It does **not** generate an installation identifier and it is never sent to the update host.
+
+This protects against network/hosting rollback. It is not a defense against a same-user local attacker who can arbitrarily rewrite both application state and application binaries. That stronger local-compromise model belongs to OS code signing/protected-storage policy.
+
+## Update transport and staging
+
+`HttpsUpdateTransport` enforces:
+
+- credential-free HTTPS request/final redirect URLs;
+- 64 KiB maximum metadata response;
+- finite network timeout;
+- generic update-specific User-Agent with no device identifier;
+- streamed artifact reads;
+- immediate failure if bytes exceed the signed size;
+- exact final byte-count and SHA-256 match;
+- private temporary file on supported filesystems;
+- fsync before activation into staged custody; and
+- atomic local replacement of the staged file.
+
+A staged package is **not installed**. Native platform activation remains a separate trust boundary because Windows/macOS/Linux packaging, application signatures/notarization, rollback behavior, and process replacement are platform responsibilities. The UI says this explicitly instead of presenting staging as installation.
+
+## Release metadata generation
+
+`scripts/build_release_metadata.py` separates deterministic metadata construction from private-key custody.
+
+`payload` mode:
+
+- measures each local release artifact;
+- computes exact size and SHA-256;
+- sorts platform entries deterministically;
+- re-parses generated bytes through the same runtime update schema;
+- emits the exact payload bytes for signing; and
+- emits deterministic `SHA256SUMS` for human/release auditing.
+
+`envelope` mode:
+
+- accepts the exact payload bytes;
+- accepts only the public 64-byte signature produced by an external signer;
+- validates the strict envelope; and
+- writes `scholion-update.json`.
+
+There is deliberately no private-key option in this repository tool. Public checksums are useful auditing material but are not treated as a substitute for the signed manifest.
 
 ## Model trust catalog v1
 
-The bundled catalog shape is:
+The bundled catalog shape remains:
 
 ```json
 {
@@ -111,116 +178,70 @@ The bundled catalog shape is:
 }
 ```
 
-Production entries must be generated from a deliberately reviewed immutable upstream revision. Do not guess hashes, copy mutable `main`/`HEAD`, or treat whatever revision happened to download during development as trusted policy.
+Production entries must come from a deliberately reviewed immutable upstream revision. Do not guess hashes, copy mutable `main`/`HEAD`, or treat whatever happened to download during development as project policy.
 
-Changing a trusted model revision is a security-sensitive repository change. The review should record why the revision changed, source/license changes, file-set changes, regression evidence, and regenerated hashes/sizes. The new catalog ships with a signed Scholion release.
-
-The packaged loader is strict UTF-8 JSON and delegates field/schema validation to the trust model. Invalid packaged policy fails during application composition rather than falling back to a weaker downloaded or remote policy.
+Changing a trusted model revision is a security-sensitive repository change. Review should record why the revision changed, source/license changes, file-set changes, regression/qualification evidence, and regenerated hashes/sizes. The new catalog ships only with a signed Scholion release.
 
 ### Managed policy evidence
 
-A managed-model manifest can carry a separate policy-trust receipt containing the bundled catalog schema version, model identity, exact revision, policy-verification method, verified file count, and verified byte count. It does not replace provider-local provenance such as the repository identity, resolved revision, snapshot path, measured size, or provider validation method.
+A managed-model manifest can carry a separate policy-trust receipt containing catalog schema version, model identity, exact revision, policy verification method, verified file count, and verified byte count. It does not replace provider-local provenance such as repository identity, resolved revision, cache path, measured size, or provider validation method.
 
-The receipt is not treated as a permanent trust bit. With a current trust catalog loaded, `ModelManager` recomputes the exact snapshot verification and requires the observed evidence to match the recorded receipt. A same-length byte mutation, undeclared file, missing file, size change, revision change, or current-policy mismatch therefore invalidates current policy trust instead of continuing to report the model as trusted.
+The receipt is not a permanent trust bit. With a current catalog loaded, `ModelManager` recomputes exact verification and requires observed evidence to match the receipt. Same-length byte mutation, undeclared/missing files, size change, revision change, or current-policy mismatch therefore invalidates current trust.
 
-Existing manifests without policy evidence remain parseable for compatibility. Under enforcement, Scholion deliberately separates **custody** from **execution admission**:
+Existing manifests without policy evidence remain parseable. Under enforcement Scholion separates **custody** from **new-execution admission**:
 
-- inventory may still show an otherwise locally valid legacy model as installed;
+- inventory can still show a locally valid legacy model as installed;
 - current policy trust is false;
 - new-transcription revision resolution rejects it;
 - removal remains available; and
-- Processing Center offers a trusted reinstall through the curated install path.
+- Processing offers a trusted reinstall through the curated path.
 
-This avoids unsafe grandfathering without stranding user-managed local state.
+Historical cache revisions are not automatically purged during trusted reinstall because an interrupted checkpoint may legitimately need its exact earlier model revision for reproducible resume. Future model garbage collection must therefore understand checkpoint references instead of deleting old bytes by assumption.
+
+## User-visible behavior
+
+The first-release update behavior is manual. There is no periodic background check in this tranche.
+
+The Updates screen distinguishes:
+
+1. **Updates off**: this build has no production trust key/verifier; no network request occurs.
+2. **Never checked**: a verifier exists but the user has not requested a check.
+3. **Checking**: one bounded request is being made to the fixed metadata location.
+4. **Up to date**: trusted metadata contains no newer stable release.
+5. **Trusted update available**: a newer signed stable release for this platform is authorized.
+6. **Staging/Staged**: exact signed package bytes are being downloaded/verified or have been staged.
+7. **Failure**: network/trust/platform failure is presented as one bounded public error without private diagnostics.
+
+The UI states that GitHub/CDN can observe ordinary connection metadata such as IP address and request time. It also states what is **not** sent: installation ID, recordings, transcript/research content, hardware inventory, model inventory, and behavioral telemetry.
+
+Local recordings, transcripts, models, and research remain usable when update checking is off, unavailable, offline, expired, or rejected.
 
 ## Threat model
 
 | Threat | Control | Residual risk / follow-up |
 |---|---|---|
-| Upstream model repository compromised | Bundled exact revision + full allowed-file SHA-256/size set; downloaded bytes do not become trusted merely because upstream served them | A malicious revision intentionally approved into Scholion remains a review failure; review and regression evidence are required |
-| Release hosting/CDN compromised | Manifest signature is verified independently of HTTPS; artifact hash is signed metadata | Availability can still be denied; connection metadata remains visible to host/CDN |
-| Malicious mirror/artifact replacement | Signed artifact SHA-256/size must match staged bytes before installation | Native staged-download/atomic activation is still implementation work |
-| Old signed metadata replayed | Monotonic sequence rejects rollback; expiry limits freeze/replay window | Long-term offline users cannot check for updates until online again, but local operation remains unaffected |
-| Update metadata injects remote commands/config | Strict schemas reject unknown fields; only typed release/artifact metadata exists | Future schema changes require an explicit versioned review |
-| Update request leaks product behavior | Request is a metadata GET with no installation ID, corpus, hardware, research, or usage payload | IP address, request time, TLS/client/network metadata remain visible to network/hosting layers |
-| Signing key compromise | Key IDs permit explicit rotation/revocation policy; release and model-signing roles should remain separable | Concrete key custody, rotation, and revocation implementation is still release work |
-| Local model cache is tampered with | File set, size, hash, path, and cache containment are rechecked before trust | Local machine compromise outside Scholion's threat boundary can also alter the application binary or pinned keys |
-| Older locally valid model survives upgrade into policy-enforced release | Custody stays visible, but new-transcription admission requires current policy trust; UI offers curated reinstall | Existing checkpoint/resume reproducibility remains a separate compatibility decision, not an authorization for a new job |
+| Upstream model repository compromised | Bundled exact revision + complete allowed-file size/SHA-256 set | Human approval of a malicious revision remains a review failure |
+| Release hosting/CDN compromised | Independent signed metadata; signed artifact size/hash | Availability and ordinary network metadata remain exposed |
+| Malicious artifact replacement | Streamed exact signed size/hash before staging | Native OS-signed activation still required |
+| Old signed metadata replayed | Monotonic sequence + expiry | Same-user state tampering is outside the network rollback boundary |
+| Same sequence serves different signed content | Persisted-manifest equality check rejects equivocation | Release process must advance sequence for every correction/key rotation |
+| Beta/nightly metadata reaches stable endpoint | Stable channel enforced after signature verification | Separate future channels require separate explicit client policy |
+| Remote metadata injects commands/config | Strict exact schemas; no command/config fields | Schema evolution requires explicit versioned review |
+| Update request becomes telemetry | Fixed metadata GET; no identifier/corpus/hardware/research/behavior payload | Host/CDN still sees IP/time/TLS/network metadata |
+| Signing key compromise | Pinned key IDs/rotation design and offline private-key custody | Production key provisioning/revocation process still required |
+| Local model cache tampered | File set/size/hash/path/cache containment rechecked | Full local machine compromise can also alter application binaries/keys |
+| Legacy model survives policy upgrade | Custody visible, new jobs require current trust, curated reinstall available | Resume/cache retention remains a reproducibility concern, not new-job authorization |
 
-## User-visible behavior
+## Implemented versus production-provisioned
 
-### Update checks
+Repository mechanics now cover the update/model trust architecture, local update state, fixed transport, staging/hash verification, UI states, deterministic release/model metadata generation, and extensive synthetic trust tests.
 
-The default first-release behavior is manual: **Check for updates** is an explicit user action. Periodic checks, if added, are separately opt-in and must be easy to disable.
+Before enabling public production updates, release engineering still must provide:
 
-A manual check should communicate four states without implying telemetry-free networking:
+- a reviewed native Ed25519 verifier dependency and pinned production public key/key-rotation material;
+- deliberately reviewed real faster-whisper revisions and generated catalog entries;
+- platform package signing/notarization and native installation/activation;
+- representative native/offline qualification with the actual production key/catalog; and
+- resolution of the separate upstream Linux dependency gate before calling Linux packaging production-ready.
 
-1. update checks are off / have not been requested;
-2. checking the signed release metadata requires a network request and exposes ordinary connection metadata such as IP address and time to the hosting/CDN layer;
-3. no trusted newer release is available; or
-4. a trusted newer release is available, with version/release notes and an explicit install/download action.
-
-Network failure, offline mode, signature failure, expiry, rollback, or unsupported platform must never block opening Scholion or using existing local recordings, transcripts, models, or research.
-
-### Model downloads
-
-Ordinary product copy should explain the consequences a user actually needs to know:
-
-> **Models download only when you choose. After download, they stay on this computer in Scholion's private app storage, so transcription can run offline.**
-
-Do not make the primary workflow explain repository cache layouts, digest algorithms, trust-root rotation, or signed-manifest internals. Those are legitimate details, but they are not the job the person is trying to complete.
-
-The UI now follows the actual build state. A source/development build with no bundled policy describes a managed snapshot as locally checked. A build with a bundled policy distinguishes “installed” from “trusted by this Scholion build.” An installed legacy snapshot that lacks current policy evidence is not called ready and receives an explicit **Reinstall trusted copy** path.
-
-### Three presentation layers
-
-Use one consistent layering rule across Processing, Settings, help, and documentation:
-
-1. **Ordinary UI: consequence.** Say whether a network request happens, what stays local, what is optional, whether something works offline, and whether an action changes evidence or only app-managed state.
-2. **Technical details: provenance.** Show repository/source identity, exact revision, local revalidation state, policy-trust state, license/source metadata, update version/channel, and signature/trust status when those fields are useful to a technically curious user.
-3. **Security/developer docs: mechanism.** Explain exact signed payload bytes, key IDs, signature implementation, sequence/expiry rules, hashes, cache containment, threat model, and release process.
-
-This keeps Scholion transparent without turning normal use into an architecture lecture. The UI should never hide a material consequence merely because the underlying mechanism is technical, and it should never inflate a weaker backend guarantee into a stronger consumer-facing trust claim.
-
-## What is implemented
-
-The `scholion.supply_chain` package provides:
-
-- strict curated model catalog parsing;
-- strict packaged-catalog loading;
-- immutable-revision validation;
-- exact model snapshot file-set/size/SHA-256 verification;
-- path/cache containment checks;
-- strict signed-update envelope and payload parsing;
-- an explicit signature-verifier interface;
-- expiry and anti-rollback sequence enforcement; and
-- tests for tampering, unknown keys, stale metadata, hostile paths, undeclared files, malformed catalogs, and extra remote configuration.
-
-The managed-model/application layer additionally provides:
-
-- exact curated revision selection before provider acquisition;
-- rejection of caller revision overrides that disagree with policy;
-- full policy verification before a managed manifest is committed;
-- separately persisted local-validation and policy-trust evidence;
-- exact policy revalidation on later trust/admission reads;
-- application composition that automatically enables enforcement when a packaged catalog is present;
-- policy-gated new-transcription admission through the managed revision boundary;
-- legacy installed-but-untrusted migration visibility/removal; and
-- Processing Center readiness and trusted-reinstall presentation that keeps installation and policy trust distinct.
-
-No production trust entry is generated by these mechanics. Tests use synthetic local bytes and synthetic immutable revisions only.
-
-## Remaining work under #110
-
-This tranche deliberately does **not** claim #110 is complete. Before closing the issue:
-
-- choose and pin the production native signature-verification implementation and public key(s);
-- implement fixed-endpoint manual update checking in the Tauri host;
-- persist highest trusted sequence without creating an identifier sent to the server;
-- stage downloads, enforce signed size/hash, and use platform-appropriate signed/atomic installation;
-- implement explicit update UI and separately opt-in periodic checks if periodic checking is retained;
-- review real upstream faster-whisper revisions and generate the production curated model catalog;
-- include that reviewed catalog in signed release packaging and qualify the pinned snapshots natively/offline on supported platforms; and
-- integrate platform code signing/notarization into packaging rather than treating the signed manifest as a substitute.
-
-Until reviewed production trust content is bundled, current source builds remain on their existing local/provider revalidation path. No update service is required for Scholion to open or use its local corpus.
+Those are real release inputs and qualification evidence. They are not replaced by placeholder keys, guessed hashes, synthetic test fixtures, or browser mocks.
