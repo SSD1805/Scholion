@@ -2,6 +2,7 @@
   "name": "scholion-mermaid-docs",
   "private": true,
   "version": "0.0.0",
+  "description": "Pinned renderer for reproducible Scholion documentation SVGs.",
   "type": "module",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"
