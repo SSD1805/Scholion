@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
-from typing import Any, Protocol
+from typing import Any, Protocol, cast
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlparse
 from urllib.request import Request, urlopen
@@ -63,7 +63,7 @@ def _require_https(value: str, field: str) -> None:
 
 
 def _read_bounded(response: Any, limit: int) -> bytes:
-    content = response.read(limit + 1)
+    content = cast(bytes, response.read(limit + 1))
     if len(content) > limit:
         raise UpdateChannelError("Update metadata exceeded the safe size limit")
     return content
