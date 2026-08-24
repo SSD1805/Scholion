@@ -116,17 +116,27 @@ def test_installed_snapshot_rejects_empty_verification_and_nonpositive_size() ->
         InstalledSnapshot("abc", Path("snapshot"), 1, " ")
 
 
-def test_inventory_item_installed_state_tracks_manifest_presence() -> None:
+def test_inventory_item_keeps_current_trust_separate_from_recorded_evidence() -> None:
     spec = ModelSpec("small", "faster-whisper", "repo/small", 1, 1)
+    trusted_manifest = _manifest(policy_trust=_policy_trust())
 
     uninstalled = ModelInventoryItem(spec)
     installed = ModelInventoryItem(spec, _manifest())
-    trusted = ModelInventoryItem(spec, _manifest(policy_trust=_policy_trust()))
+    receipt_only = ModelInventoryItem(spec, trusted_manifest)
+    trusted = ModelInventoryItem(spec, trusted_manifest, policy_trusted=True)
 
     assert uninstalled.installed is False
     assert installed.installed is True
     assert installed.policy_trusted is False
+    assert receipt_only.policy_trusted is False
     assert trusted.policy_trusted is True
     assert uninstalled.to_dict()["manifest"] is None
     assert installed.to_dict()["manifest"] is not None
     assert trusted.to_dict()["policy_trusted"] is True
+
+
+def test_inventory_item_rejects_current_trust_without_managed_state() -> None:
+    spec = ModelSpec("small", "faster-whisper", "repo/small", 1, 1)
+
+    with pytest.raises(ValueError, match="requires a managed manifest"):
+        ModelInventoryItem(spec, policy_trusted=True)
