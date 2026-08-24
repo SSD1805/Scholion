@@ -11,14 +11,14 @@ Python remains authoritative for:
 - health and machine-resource inspection;
 - processing-profile policy;
 - strategy feasibility and recommendation;
-- model inventory, local revalidation, installation provenance, removal safety, and policy-trust checks when that stronger policy is enabled;
+- model inventory, local revalidation, installation provenance, removal safety, and current project-policy trust when a reviewed catalog is bundled;
 - media probing and audio-stream selection;
 - whether a multi-track recording requires explicit stream confirmation;
 - transcription preflight and resource admission;
 - checkpoint compatibility and resume contracts;
 - transcription execution correctness;
 - diarization requests and explicit model-download consent;
-- canonical transcript publication and derived exports;
+- canonical transcript publication and derived exports; and
 - durable private job lifecycle state.
 
 The desktop bridge exposes bounded typed operations only. It does not expose arbitrary shell, filesystem, SQL, database, or model-provider access.
@@ -32,7 +32,7 @@ Tauri therefore supervises a small allowlist of long-running task kinds:
 - new transcription;
 - checkpoint resume;
 - fresh retry;
-- model installation;
+- model installation; and
 - model removal.
 
 The native host does not decide which strategy is safe, which audio stream should be used, or whether a model is valid. It receives already-shaped intent, starts only allowlisted Python worker commands, owns the child handle, exposes status/cancel, rejects duplicate task identities, and terminates supervised children during desktop shutdown.
@@ -48,7 +48,7 @@ Long-running workers return one bounded, versioned public outcome envelope. Succ
 The normal Processing Center UI leads with outcome-oriented profiles:
 
 - **Quick draft** for provisional screening;
-- **Balanced** for the ordinary default;
+- **Balanced** for the ordinary default; and
 - **Best locally safe** for the highest-quality feasible local strategy.
 
 Ordinary users are not required to choose Whisper model sizes, thread counts, compute types, or memory limits. Expert strategy controls remain explicit advanced options and are revalidated by Python before execution.
@@ -59,9 +59,11 @@ React does not score or recommend tracks. Source-declared title, language, and c
 
 Model acquisition is never silently inferred from selecting a profile. The UI shows the recommended model and whether Scholion currently has a usable managed local snapshot. Installing or removing a model is an explicit long-running action, and the affected row shows an explicit indeterminate running state while work is active.
 
-The consumer explanation stays consequence-first: models download only when the user chooses, remain on this computer in Scholion's private app storage, and can be used offline after installation. The UI should not use a bare word such as “verified” to imply stronger supply-chain guarantees than the backend has actually established.
+The consumer explanation stays consequence-first: models download only when the user chooses, remain on this computer in Scholion's private app storage, and can be used offline after installation. The UI should not use a bare word such as “verified” to blur provider/local custody with current project policy trust.
 
-Today's managed-model path records an immutable provider revision and locally revalidates repository/revision/layout expectations. Issue #110 defines the stronger policy-trust layer: the exact approved upstream revision plus the complete allowed file set, sizes, and SHA-256 values must match before a model can be called policy-trusted. See **[Signed update and model trust channel](../security/update-model-trust.md)**.
+Scholion's stronger model-policy machinery is now implemented. When a reviewed catalog is bundled, the exact approved upstream revision plus the complete allowed file set, byte sizes, and SHA-256 values must match before a model is trusted by that Scholion build and admitted for new transcription. Legacy locally valid models remain visible/removable without becoming policy-trusted automatically.
+
+The repository intentionally contains no guessed production faster-whisper entries. Real revision/license selection and generated catalog review follow **[Production trust inputs](../security/production-trust-inputs.md)** and are later release inputs. See **[Signed update and model trust channel](../security/update-model-trust.md)** for the implemented policy mechanics.
 
 Optional diarization keeps its network/dependency boundary separate from transcription-model custody. Processing asks Python for a read-only speaker-labeling capability state before offering the option. If the optional runtime is missing, unverifiable, or security-held, the control is disabled with a safe reason rather than inviting a task the backend is guaranteed to reject.
 
@@ -71,7 +73,7 @@ Derived TXT/SRT/VTT files remain disposable views; canonical transcript JSON rem
 
 1. User selects a recording and processing intent.
 2. React asks Python for preflight.
-3. Python probes the recording, inspects current resources, assesses strategies, revalidates managed model custody, and returns a minimized preflight DTO.
+3. Python probes the recording, inspects current resources, assesses strategies, revalidates managed model custody/policy, and returns a minimized preflight DTO.
 4. If the source has several embedded audio streams and no explicit stream was requested, Python marks stream confirmation as required. The desktop presents the available tracks but does not treat the probe default as user intent.
 5. The user chooses one track. React submits only that stream index and Python re-runs preflight with the exact selection bound into the plan.
 6. The user reviews the resulting profile/strategy/resource plan.
