@@ -10,7 +10,9 @@ from scholion.update_channel.service import HttpsUpdateTransport, UpdateChannelE
 
 
 class _Response:
-    def __init__(self, content: bytes, *, url: str = "https://example.test/final") -> None:
+    def __init__(
+        self, content: bytes, *, url: str = "https://example.test/final"
+    ) -> None:
         self._stream = io.BytesIO(content)
         self._url = url
 
