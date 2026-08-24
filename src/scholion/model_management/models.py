@@ -206,14 +206,15 @@ class ManagedModelManifest:
 class ModelInventoryItem:
     spec: ModelSpec
     manifest: ManagedModelManifest | None = None
+    policy_trusted: bool = False
+
+    def __post_init__(self) -> None:
+        if self.policy_trusted and self.manifest is None:
+            raise ValueError("policy-trusted inventory item requires a managed manifest")
 
     @property
     def installed(self) -> bool:
         return self.manifest is not None
-
-    @property
-    def policy_trusted(self) -> bool:
-        return self.manifest is not None and self.manifest.policy_trust is not None
 
     def to_dict(self) -> dict[str, object]:
         return {
