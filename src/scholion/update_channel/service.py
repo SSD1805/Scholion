@@ -17,7 +17,6 @@ from urllib.request import Request, urlopen
 from scholion.core.file_manager_facade import FileManagerFacade
 from scholion.supply_chain.update_manifest import (
     SignatureVerifier,
-    UpdateManifestPayload,
     UpdateTrustError,
     verify_signed_update_manifest,
 )
@@ -64,6 +63,26 @@ def _read_bounded(response: Any, limit: int) -> bytes:
     if len(content) > limit:
         raise UpdateChannelError("Update metadata exceeded the safe size limit")
     return content
+
+
+def _copy_bounded_artifact(
+    response: Any,
+    temporary: Any,
+    *,
+    expected_size: int,
+) -> tuple[int, str]:
+    digest = sha256()
+    total = 0
+    while True:
+        chunk = response.read(_DOWNLOAD_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > expected_size:
+            raise UpdateChannelError("Downloaded update exceeded its signed size")
+        digest.update(chunk)
+        temporary.write(chunk)
+    return total, digest.hexdigest()
 
 
 class HttpsUpdateTransport:
@@ -113,9 +132,6 @@ class HttpsUpdateTransport:
             raise UpdateChannelError("Trusted update artifact hash is invalid")
 
         destination.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
-        temporary_path: Path | None = None
-        digest = sha256()
-        total = 0
         request = Request(  # noqa: S310 - URL is HTTPS-only and validated above.
             url,
             headers={
@@ -124,6 +140,7 @@ class HttpsUpdateTransport:
             },
             method="GET",
         )
+        temporary_path: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(
                 mode="wb",
@@ -135,33 +152,46 @@ class HttpsUpdateTransport:
                     os.chmod(temporary_path, 0o600)
                 with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310
                     _require_https(response.geturl(), "resolved update artifact URL")
-                    while True:
-                        chunk = response.read(_DOWNLOAD_CHUNK_BYTES)
-                        if not chunk:
-                            break
-                        total += len(chunk)
-                        if total > expected_size:
-                            raise UpdateChannelError(
-                                "Downloaded update exceeded its signed size"
-                            )
-                        digest.update(chunk)
-                        temporary.write(chunk)
+                    total, observed_sha256 = _copy_bounded_artifact(
+                        response,
+                        temporary,
+                        expected_size=expected_size,
+                    )
                 temporary.flush()
                 os.fsync(temporary.fileno())
 
-            if total != expected_size:
-                raise UpdateChannelError("Downloaded update size did not match signed metadata")
-            if digest.hexdigest() != expected_sha256:
-                raise UpdateChannelError("Downloaded update hash did not match signed metadata")
-            os.replace(temporary_path, destination)
+            self._commit_verified_artifact(
+                temporary_path,
+                destination,
+                total=total,
+                observed_sha256=observed_sha256,
+                expected_size=expected_size,
+                expected_sha256=expected_sha256,
+            )
             temporary_path = None
-            if os.name != "nt":
-                os.chmod(destination, 0o600)
         except (HTTPError, URLError, TimeoutError, OSError) as exc:
             raise UpdateChannelError("Trusted update artifact could not be staged") from exc
         finally:
             if temporary_path is not None:
                 temporary_path.unlink(missing_ok=True)
+
+    @staticmethod
+    def _commit_verified_artifact(
+        temporary_path: Path,
+        destination: Path,
+        *,
+        total: int,
+        observed_sha256: str,
+        expected_size: int,
+        expected_sha256: str,
+    ) -> None:
+        if total != expected_size:
+            raise UpdateChannelError("Downloaded update size did not match signed metadata")
+        if observed_sha256 != expected_sha256:
+            raise UpdateChannelError("Downloaded update hash did not match signed metadata")
+        os.replace(temporary_path, destination)
+        if os.name != "nt":
+            os.chmod(destination, 0o600)
 
 
 @dataclass(frozen=True, slots=True)
@@ -317,9 +347,12 @@ class UpdateChannelService:
         transport: UpdateTransport | None = None,
         manifest_url: str = FIXED_UPDATE_MANIFEST_URL,
         platform_id: str | None = None,
+        expected_channel: str = "stable",
     ) -> None:
         _semver_parts(current_version)
         _require_https(manifest_url, "update manifest URL")
+        if not expected_channel.strip():
+            raise ValueError("expected update channel cannot be empty")
         self.current_version = current_version
         self.cache_dir = cache_dir.expanduser().resolve(strict=False)
         self.state_store = state_store
@@ -327,6 +360,7 @@ class UpdateChannelService:
         self.transport = transport or HttpsUpdateTransport()
         self.manifest_url = manifest_url
         self.platform_id = platform_id or current_platform_id()
+        self.expected_channel = expected_channel
 
     def status(self) -> dict[str, object]:
         if self.verifier is None:
@@ -362,6 +396,16 @@ class UpdateChannelService:
             )
         except UpdateTrustError as exc:
             raise UpdateChannelError("Update metadata did not pass trust verification") from exc
+
+        self._require_expected_channel(payload.channel)
+        if (
+            state.highest_trusted_sequence == payload.sequence
+            and state.trusted_manifest is not None
+            and state.trusted_manifest != document
+        ):
+            raise UpdateChannelError(
+                "Update metadata reused a trusted sequence with different signed content"
+            )
 
         try:
             artifact = payload.artifact_for(self.platform_id)
@@ -408,6 +452,7 @@ class UpdateChannelService:
             artifact = payload.artifact_for(self.platform_id)
         except UpdateTrustError as exc:
             raise UpdateChannelError("Stored update metadata is no longer trusted") from exc
+        self._require_expected_channel(payload.channel)
         if not _is_newer(payload.version, self.current_version):
             raise UpdateChannelError("The trusted release is not newer than this build")
 
@@ -434,6 +479,12 @@ class UpdateChannelService:
             "download_size_bytes": artifact.size_bytes,
             "message": self._message("staged", payload.version),
         }
+
+    def _require_expected_channel(self, channel: str) -> None:
+        if channel != self.expected_channel:
+            raise UpdateChannelError(
+                f"Signed update channel is not {self.expected_channel}"
+            )
 
     @staticmethod
     def _message(status: str, version: str | None) -> str:
