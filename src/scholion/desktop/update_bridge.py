@@ -6,22 +6,18 @@ argument. The release endpoint and artifact selection remain application policy.
 
 from __future__ import annotations
 
-from importlib.metadata import version
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from scholion.app.app_container import AppContainer
+from scholion.app.update_composition import build_update_channel_service
 from scholion.desktop.host_protocol import (
     failure_response,
     run_stdio_bridge,
     success_response,
 )
-from scholion.update_channel.service import (
-    UpdateChannelError,
-    UpdateChannelService,
-    UpdateStateStore,
-)
+from scholion.update_channel.service import UpdateChannelError, UpdateChannelService
 
 
 class _UpdateRequest(BaseModel):
@@ -38,17 +34,9 @@ class _NoParams(BaseModel):
 
 
 def _service() -> UpdateChannelService:
-    container = AppContainer()
-    config = container.config()
-    return UpdateChannelService(
-        current_version=version("scholion"),
-        cache_dir=config.CACHE_DIR,
-        state_store=UpdateStateStore(config.STATE_DIR, container.file_manager()),
-        # Production verification is deliberately not guessed here. A release build must
-        # compose a reviewed native verifier and pinned public key before update network
-        # activity can be enabled.
-        verifier=None,
-    )
+    # Production packaging supplies the reviewed verifier/public-key input. Source builds
+    # intentionally compose with no verifier so update networking remains off.
+    return build_update_channel_service(AppContainer())
 
 
 def handle_request(
