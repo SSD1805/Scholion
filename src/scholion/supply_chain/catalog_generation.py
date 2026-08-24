@@ -1,19 +1,9 @@
 from __future__ import annotations
 
-from hashlib import sha256
 from pathlib import Path
 
+from scholion.supply_chain.digests import sha256_file
 from scholion.supply_chain.model_trust import TrustedModelFile, TrustedModelSpec
-
-_READ_CHUNK_BYTES = 1024 * 1024
-
-
-def _sha256(path: Path) -> str:
-    digest = sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(_READ_CHUNK_BYTES), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
 
 
 def generate_trusted_model_spec(
@@ -62,7 +52,7 @@ def generate_trusted_model_spec(
             TrustedModelFile(
                 path=relative,
                 size_bytes=candidate.stat().st_size,
-                sha256_hex=_sha256(candidate),
+                sha256_hex=sha256_file(candidate),
             )
         )
     if not files:
