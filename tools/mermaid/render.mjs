@@ -7,7 +7,6 @@ import {
   readdir,
   rm,
   unlink,
-  writeFile,
 } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -29,19 +28,6 @@ const MMDC_PATH = path.join(
   "cli.js",
 );
 const BACKGROUND = "#FFFDF7";
-const MERMAID_BLOCK = /```mermaid\r?\n([\s\S]*?)\r?\n```/g;
-const LEGACY_FALLBACK = /\n*<details>\s*<summary>Static diagram fallback[^<]*<\/summary>[\s\S]*?<\/details>\s*/g;
-const LEGACY_STATIC_FILES = [
-  "docs-family-portrait.svg",
-  "product-roadmap.svg",
-  "recording-to-evidence.svg",
-  "system-architecture.svg",
-];
-
-function fail(message) {
-  console.error(`Mermaid docs check failed: ${message}`);
-  process.exitCode = 1;
-}
 
 async function exists(filePath) {
   try {
@@ -86,139 +72,19 @@ async function walkFiles(directory, suffix) {
 }
 
 async function markdownFiles() {
-  const files = [path.join(ROOT, "README.md"), path.join(ROOT, "ROADMAP.md")];
-  files.push(...(await walkFiles(path.join(ROOT, "docs"), ".md")));
-  return files;
+  return [
+    path.join(ROOT, "README.md"),
+    path.join(ROOT, "ROADMAP.md"),
+    ...(await walkFiles(path.join(ROOT, "docs"), ".md")),
+  ];
 }
 
-function cleanHeading(raw) {
-  return raw
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/[`*_~]/g, "")
-    .replace(/\s+/g, " ")
-    .trim()
-    .replace(/[\[\]]/g, "");
-}
-
-function headingBefore(text, offset, fallback) {
-  const before = text.slice(0, offset);
-  const headings = [...before.matchAll(/^#{1,6}\s+(.+?)\s*$/gm)];
-  if (headings.length === 0) {
-    return fallback;
+function absoluteFromManifest(value) {
+  const absolute = path.resolve(ROOT, value);
+  if (absolute !== ROOT && !absolute.startsWith(`${ROOT}${path.sep}`)) {
+    throw new Error(`manifest path escapes repository: ${value}`);
   }
-  return cleanHeading(headings.at(-1)[1]) || fallback;
-}
-
-function diagramPaths(documentPath, index) {
-  const documentRelative = path.relative(ROOT, documentPath);
-  const stem = documentRelative.replace(/\.md$/i, "");
-  const relativeDiagram = `${stem}-${index}`;
-  return {
-    source: path.join(SOURCE_ROOT, `${relativeDiagram}.mmd`),
-    output: path.join(OUTPUT_ROOT, `${relativeDiagram}.svg`),
-  };
-}
-
-function renderOne(source, output) {
-  const result = spawnSync(
-    process.execPath,
-    [
-      MMDC_PATH,
-      "--input",
-      source,
-      "--output",
-      output,
-      "--configFile",
-      CONFIG_PATH,
-      "--backgroundColor",
-      BACKGROUND,
-      "--quiet",
-    ],
-    {
-      cwd: ROOT,
-      encoding: "utf8",
-      maxBuffer: 10 * 1024 * 1024,
-    },
-  );
-  if (result.error) {
-    throw result.error;
-  }
-  if (result.status !== 0) {
-    const detail = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
-    throw new Error(
-      `mmdc failed for ${repoRelative(source)}${detail ? `\n${detail}` : ""}`,
-    );
-  }
-}
-
-async function migrateInline() {
-  if (await exists(MANIFEST_PATH)) {
-    throw new Error(
-      "docs/diagrams/manifest.json already exists; inline migration is intentionally one-shot",
-    );
-  }
-
-  const manifest = { version: 1, diagrams: [] };
-  let migrated = 0;
-
-  for (const documentPath of await markdownFiles()) {
-    const original = await readFile(documentPath, "utf8");
-    const matches = [...original.matchAll(MERMAID_BLOCK)];
-    if (matches.length === 0) {
-      continue;
-    }
-
-    let cursor = 0;
-    let updated = "";
-    for (let position = 0; position < matches.length; position += 1) {
-      const match = matches[position];
-      const index = position + 1;
-      const { source, output } = diagramPaths(documentPath, index);
-      const heading = headingBefore(
-        original,
-        match.index,
-        path.basename(documentPath, ".md"),
-      );
-      const alt = `${heading} diagram`;
-      const sourceLink = markdownLink(documentPath, source);
-      const outputLink = markdownLink(documentPath, output);
-
-      await mkdir(path.dirname(source), { recursive: true });
-      await writeFile(source, `${match[1].trimEnd()}\n`, "utf8");
-
-      updated += original.slice(cursor, match.index);
-      updated += `![${alt}](${outputLink})\n\n[Diagram source (Mermaid)](${sourceLink})`;
-      cursor = match.index + match[0].length;
-
-      manifest.diagrams.push({
-        document: repoRelative(documentPath),
-        source: repoRelative(source),
-        output: repoRelative(output),
-        alt,
-      });
-      migrated += 1;
-    }
-    updated += original.slice(cursor);
-    updated = updated.replace(LEGACY_FALLBACK, "\n\n");
-    await writeFile(documentPath, updated, "utf8");
-  }
-
-  if (migrated === 0) {
-    throw new Error("no inline Mermaid fences were found to migrate");
-  }
-
-  manifest.diagrams.sort((left, right) => left.source.localeCompare(right.source));
-  await mkdir(path.dirname(MANIFEST_PATH), { recursive: true });
-  await writeFile(MANIFEST_PATH, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-
-  for (const name of LEGACY_STATIC_FILES) {
-    const candidate = path.join(ROOT, "docs", "diagrams", name);
-    if (await exists(candidate)) {
-      await unlink(candidate);
-    }
-  }
-
-  console.log(`Migrated ${migrated} Mermaid diagram(s) to canonical .mmd sources.`);
+  return absolute;
 }
 
 async function loadManifest() {
@@ -229,12 +95,19 @@ async function loadManifest() {
   return parsed;
 }
 
-function absoluteFromManifest(value) {
-  const absolute = path.resolve(ROOT, value);
-  if (absolute !== ROOT && !absolute.startsWith(`${ROOT}${path.sep}`)) {
-    throw new Error(`manifest path escapes repository: ${value}`);
+async function assertNoInlineMermaid() {
+  const offenders = [];
+  for (const documentPath of await markdownFiles()) {
+    const text = await readFile(documentPath, "utf8");
+    if (/```mermaid(?:\r?\n|\s)/.test(text)) {
+      offenders.push(repoRelative(documentPath));
+    }
   }
-  return absolute;
+  if (offenders.length > 0) {
+    throw new Error(
+      `inline Mermaid fences bypass generated SVG custody: ${offenders.join(", ")}`,
+    );
+  }
 }
 
 async function validateManifest(manifest) {
@@ -253,6 +126,7 @@ async function validateManifest(manifest) {
     const documentPath = absoluteFromManifest(entry.document);
     const source = absoluteFromManifest(entry.source);
     const output = absoluteFromManifest(entry.output);
+
     if (!source.startsWith(`${SOURCE_ROOT}${path.sep}`) || !source.endsWith(".mmd")) {
       throw new Error(`manifest source is outside docs/diagrams/src: ${entry.source}`);
     }
@@ -264,6 +138,7 @@ async function validateManifest(manifest) {
     if (seenSources.has(entry.source) || seenOutputs.has(entry.output)) {
       throw new Error(`manifest contains a duplicate source/output: ${entry.source}`);
     }
+
     seenSources.add(entry.source);
     seenOutputs.add(entry.output);
     expectedSources.add(path.resolve(source));
@@ -305,28 +180,47 @@ async function validateManifest(manifest) {
       throw new Error(`unregistered generated SVG: ${repoRelative(output)}`);
     }
   }
-
-  return { expectedOutputs };
 }
 
-async function assertNoInlineMermaid() {
-  const offenders = [];
-  for (const documentPath of await markdownFiles()) {
-    const text = await readFile(documentPath, "utf8");
-    if (/```mermaid(?:\r?\n|\s)/.test(text)) {
-      offenders.push(repoRelative(documentPath));
-    }
+function renderOne(source, output) {
+  const result = spawnSync(
+    process.execPath,
+    [
+      MMDC_PATH,
+      "--input",
+      source,
+      "--output",
+      output,
+      "--configFile",
+      CONFIG_PATH,
+      "--backgroundColor",
+      BACKGROUND,
+      "--quiet",
+    ],
+    {
+      cwd: ROOT,
+      encoding: "utf8",
+      maxBuffer: 10 * 1024 * 1024,
+    },
+  );
+
+  if (result.error) {
+    throw result.error;
   }
-  if (offenders.length > 0) {
+  if (result.status !== 0) {
+    const detail = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
     throw new Error(
-      `inline Mermaid fences bypass generated SVG custody: ${offenders.join(", ")}`,
+      `mmdc failed for ${repoRelative(source)}${detail ? `\n${detail}` : ""}`,
     );
   }
 }
 
 async function renderWrite(manifest) {
   await mkdir(OUTPUT_ROOT, { recursive: true });
-  const expected = new Set(manifest.diagrams.map((entry) => path.resolve(ROOT, entry.output)));
+  const expected = new Set(
+    manifest.diagrams.map((entry) => path.resolve(ROOT, entry.output)),
+  );
+
   for (const existing of await walkFiles(OUTPUT_ROOT, ".svg")) {
     if (!expected.has(path.resolve(existing))) {
       await unlink(existing);
@@ -344,6 +238,7 @@ async function renderWrite(manifest) {
 async function renderCheck(manifest) {
   const tempRoot = await mkdtemp(path.join(os.tmpdir(), "scholion-mermaid-"));
   const stale = [];
+
   try {
     for (const entry of manifest.diagrams) {
       const source = absoluteFromManifest(entry.source);
@@ -352,6 +247,7 @@ async function renderCheck(manifest) {
         stale.push(`${entry.output} (missing)`);
         continue;
       }
+
       const rendered = path.join(tempRoot, entry.output);
       await mkdir(path.dirname(rendered), { recursive: true });
       renderOne(source, rendered);
@@ -369,32 +265,17 @@ async function renderCheck(manifest) {
 
   if (stale.length > 0) {
     throw new Error(
-      `generated SVGs are stale: ${stale.join(", ")}\nRun: npm --prefix tools/mermaid run render`,
+      `generated SVGs are stale: ${stale.join(", ")}\n` +
+        "Run: npm --prefix tools/mermaid run render",
     );
   }
 }
 
 async function main() {
-  const args = new Set(process.argv.slice(2));
-  const modes = ["--check", "--write", "--migrate-inline"].filter((mode) =>
-    args.has(mode),
-  );
-  if (modes.length !== 1 || args.size !== 1) {
-    throw new Error(
-      "usage: node tools/mermaid/render.mjs --check|--write|--migrate-inline",
-    );
+  const args = process.argv.slice(2);
+  if (args.length !== 1 || !["--check", "--write"].includes(args[0])) {
+    throw new Error("usage: node tools/mermaid/render.mjs --check|--write");
   }
-
-  if (args.has("--migrate-inline")) {
-    await migrateInline();
-    const manifest = await loadManifest();
-    await assertNoInlineMermaid();
-    await renderWrite(manifest);
-    await validateManifest(manifest);
-    console.log("Mermaid migration and deterministic SVG generation complete.");
-    return;
-  }
-
   if (!(await exists(MANIFEST_PATH))) {
     throw new Error("missing docs/diagrams/manifest.json");
   }
@@ -408,7 +289,7 @@ async function main() {
   await assertNoInlineMermaid();
   await validateManifest(manifest);
 
-  if (args.has("--write")) {
+  if (args[0] === "--write") {
     await renderWrite(manifest);
     await validateManifest(manifest);
     console.log(`Rendered ${manifest.diagrams.length} deterministic SVG diagram(s).`);
@@ -422,5 +303,8 @@ async function main() {
 }
 
 main().catch((error) => {
-  fail(error instanceof Error ? error.message : String(error));
+  console.error(
+    `Mermaid docs check failed: ${error instanceof Error ? error.message : String(error)}`,
+  );
+  process.exitCode = 1;
 });
