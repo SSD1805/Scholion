@@ -33,6 +33,13 @@ flowchart LR
     class M view
 ```
 
+<details>
+<summary>Static diagram fallback if rich rendering is unavailable</summary>
+
+![Scholion product-roadmap static diagram](docs/diagrams/product-roadmap.svg)
+
+</details>
+
 Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, and signed update/model-trust mechanics. The current milestone is pre-packaging release readiness, followed by Windows/macOS packaging and representative release qualification. Official Linux binary distribution remains separately blocked by issue #135.
 
 # MVP foundation now
