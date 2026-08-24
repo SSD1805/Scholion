@@ -97,6 +97,21 @@ def test_payload_builder_refuses_non_stable_channel_before_signing(tmp_path: Pat
         )
 
 
+def test_payload_builder_refuses_non_semver_version_before_signing(tmp_path: Path) -> None:
+    artifact = _artifact(tmp_path, "windows-x86_64", "app.bin", b"artifact")
+
+    with pytest.raises(ValueError, match="semantic version"):
+        build_update_payload_bytes(
+            sequence=1,
+            channel="stable",
+            version="latest",
+            published_at=_NOW,
+            expires_at=_NOW + timedelta(days=1),
+            release_notes_url="https://example.test/release",
+            artifacts=(artifact,),
+        )
+
+
 @pytest.mark.parametrize(
     ("published_at", "expires_at", "field"),
     [
