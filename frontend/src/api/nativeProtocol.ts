@@ -1,7 +1,8 @@
 export type NativeProtocolCommand =
   | "desktop_request"
   | "transcript_tools_request"
-  | "lifecycle_request";
+  | "lifecycle_request"
+  | "update_request";
 
 interface NativeProtocolError {
   code: string;
