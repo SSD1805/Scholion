@@ -39,9 +39,13 @@ def generate_trusted_model_spec(
     if not resolved_snapshot.is_dir() or not resolved_snapshot.is_relative_to(
         resolved_cache
     ):
-        raise ValueError("reviewed model snapshot must be inside the supplied cache root")
+        raise ValueError(
+            "reviewed model snapshot must be inside the supplied cache root"
+        )
     if resolved_snapshot.name != revision:
-        raise ValueError("reviewed snapshot directory must match the immutable revision")
+        raise ValueError(
+            "reviewed snapshot directory must match the immutable revision"
+        )
 
     files: list[TrustedModelFile] = []
     for candidate in sorted(
@@ -50,7 +54,9 @@ def generate_trusted_model_spec(
     ):
         resolved_candidate = candidate.resolve(strict=True)
         if not resolved_candidate.is_relative_to(resolved_cache):
-            raise ValueError("reviewed model file resolves outside the supplied cache root")
+            raise ValueError(
+                "reviewed model file resolves outside the supplied cache root"
+            )
         relative = candidate.relative_to(resolved_snapshot).as_posix()
         files.append(
             TrustedModelFile(
