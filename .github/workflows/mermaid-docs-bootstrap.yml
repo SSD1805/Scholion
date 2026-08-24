@@ -1,0 +1,49 @@
+name: Mermaid docs bootstrap
+
+on:
+  push:
+    branches: [docs/deterministic-mermaid-svg]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mermaid-docs-bootstrap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bootstrap:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out migration branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Verify Node runtime
+        run: node --version && npm --version
+
+      - name: Generate the docs-tooling lockfile
+        working-directory: tools/mermaid
+        run: npm install --package-lock-only --ignore-scripts --no-fund --no-audit
+
+      - name: Install locked Mermaid renderer
+        working-directory: tools/mermaid
+        run: npm ci --no-fund --no-audit
+
+      - name: Migrate inline Mermaid and render deterministic SVGs
+        run: node tools/mermaid/render.mjs --migrate-inline
+
+      - name: Commit generated migration state
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            echo 'No generated changes to commit.'
+            exit 0
+          fi
+          git commit -m 'Generate deterministic Mermaid documentation'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
