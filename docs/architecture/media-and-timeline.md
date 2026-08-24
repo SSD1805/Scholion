@@ -53,9 +53,9 @@ Scholion preserves those declarations with their format/stream origin. It does n
 them as interchangeable with `4788.37` seconds, and it does not claim that a device clock
 was historically correct merely because a tag exists.
 
-![The human version diagram](../diagrams/generated/docs/architecture/media-and-timeline-1.svg)
+![The human version diagram](../diagrams/generated/media-timeline-overview.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/media-and-timeline-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/media-timeline-overview.mmd)
 
 Text fallback: FFprobe/source identity produces canonical elapsed time plus preserved
 source-declared clocks; canonical word/segment evidence drives transcript JSON, human
@@ -240,9 +240,9 @@ currently pointing at?
 
 **EvidenceAnchor** answers: which exact canonical evidence does this user note refer to?
 
-![Word timing, evidence cursor, playback, and durable notes share one axis diagram](../diagrams/generated/docs/architecture/media-and-timeline-2.svg)
+![Word timing, evidence cursor, playback, and durable notes share one axis diagram](../diagrams/generated/shared-evidence-time-axis.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/media-and-timeline-2.mmd)
+[Diagram source (Mermaid)](../diagrams/src/shared-evidence-time-axis.mmd)
 
 Text fallback: one canonical elapsed coordinate drives display, verified seek, durable
 research anchors, the desktop evidence cursor, and generation/source-verified native

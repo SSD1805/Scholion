@@ -83,9 +83,9 @@ Qualification should not require downloading a model or sending text anywhere.
 
 One especially important invariant is transactional replacement of semantic state.
 
-![Failure preservation: a bad rebuild must not destroy a good one diagram](../diagrams/generated/docs/development/semantic-retrieval-testing-1.svg)
+![Failure preservation: a bad rebuild must not destroy a good one diagram](../diagrams/generated/semantic-rebuild-failure-preservation.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/development/semantic-retrieval-testing-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/semantic-rebuild-failure-preservation.mmd)
 
 Tests cover embedding failure and invalid semantic replacement so a failed rebuild does
 not erase the previous usable corpus fingerprint/chunk state.

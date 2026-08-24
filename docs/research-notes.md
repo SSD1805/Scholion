@@ -76,9 +76,9 @@ its exact evidence address:
 
 The note survives search-index and research-projection rebuilds.
 
-![The short version diagram](./diagrams/generated/docs/research-notes-1.svg)
+![The short version diagram](./diagrams/generated/research-notes.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/research-notes-1.mmd)
+[Diagram source (Mermaid)](./diagrams/src/research-notes.mmd)
 
 Text fallback: verified canonical evidence anchors durable SQLite research state; a
 transactional journal projects that authority into rebuildable DuckDB query state; the

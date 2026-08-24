@@ -17,9 +17,9 @@ canonical transcript truth, private execution state, rebuildable projections, du
 knowledge, native process/media lifetime, and desktop presentation deliberately do not share
 authority semantics.
 
-![The shape of the system diagram](../diagrams/generated/docs/architecture/README-1.svg)
+![The shape of the system diagram](../diagrams/generated/system-shape.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/README-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/system-shape.mmd)
 
 Text fallback: canonical JSON is evidence; DuckDB ranks rebuildable views; canonical
 navigation verifies evidence; SQLite owns human research; `ResearchWorkspaceService`

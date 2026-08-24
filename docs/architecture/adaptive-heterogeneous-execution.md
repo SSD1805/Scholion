@@ -23,9 +23,9 @@ For an ordinary user, the intended outcome is simple: Scholion chooses a sensibl
 strategy, refuses impossible explicit requests, and does not pretend that a detected
 accelerator is magic extra RAM.
 
-![The human version diagram](../diagrams/generated/docs/architecture/adaptive-heterogeneous-execution-1.svg)
+![The human version diagram](../diagrams/generated/adaptive-execution-overview.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/adaptive-heterogeneous-execution-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/adaptive-execution-overview.mmd)
 
 No tensor-sharding opera is hiding behind this diagram. The current system is
 purposefully narrower.
@@ -140,9 +140,9 @@ recovery semantics harder to reason about.
 The first concurrency optimization is therefore much less glamorous and much easier to
 prove:
 
-![Why bounded pipeline overlap comes before model sharding diagram](../diagrams/generated/docs/architecture/adaptive-heterogeneous-execution-2.svg)
+![Why bounded pipeline overlap comes before model sharding diagram](../diagrams/generated/bounded-pipeline-overlap.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/adaptive-heterogeneous-execution-2.mmd)
+[Diagram source (Mermaid)](../diagrams/src/bounded-pipeline-overlap.mmd)
 
 The invariants are:
 

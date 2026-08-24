@@ -86,9 +86,9 @@ An update check is network activity, but it is not behavioral telemetry. GitHub/
 
 ## The Scholion family portrait
 
-![The Scholion family portrait diagram](./diagrams/generated/docs/README-1.svg)
+![The Scholion family portrait diagram](./diagrams/generated/scholion-family-portrait.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/README-1.mmd)
+[Diagram source (Mermaid)](./diagrams/src/scholion-family-portrait.mmd)
 
 Text fallback: canonical evidence feeds rebuildable search; search resolves back to verified evidence; durable notes/tags/collections, speaker labels, and saved searches remain authoritative human knowledge; lifecycle and refresh reuse those identities; the desktop Processing, Library, transcript-tools, playback, Research, Storage, and Updates surfaces consume the same application authorities.
 

@@ -1,197 +1,165 @@
 {
-  "version": 1,
+  "version": 2,
   "diagrams": [
     {
+      "id": "adaptive-execution-overview",
       "document": "docs/architecture/adaptive-heterogeneous-execution.md",
-      "source": "docs/diagrams/src/docs/architecture/adaptive-heterogeneous-execution-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/adaptive-heterogeneous-execution-1.svg",
       "alt": "The human version diagram"
     },
     {
-      "document": "docs/architecture/adaptive-heterogeneous-execution.md",
-      "source": "docs/diagrams/src/docs/architecture/adaptive-heterogeneous-execution-2.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/adaptive-heterogeneous-execution-2.svg",
-      "alt": "Why bounded pipeline overlap comes before model sharding diagram"
-    },
-    {
-      "document": "docs/architecture/corpus-search.md",
-      "source": "docs/diagrams/src/docs/architecture/corpus-search-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/corpus-search-1.svg",
-      "alt": "The human version diagram"
-    },
-    {
-      "document": "docs/architecture/corpus-search.md",
-      "source": "docs/diagrams/src/docs/architecture/corpus-search-2.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/corpus-search-2.svg",
-      "alt": "Canonical hashing and stale-state refusal diagram"
-    },
-    {
+      "id": "anonymous-speaker-diarization",
       "document": "docs/architecture/diarization.md",
-      "source": "docs/diagrams/src/docs/architecture/diarization-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/diarization-1.svg",
       "alt": "Anonymous speaker diarization 👥 diagram"
     },
     {
-      "document": "docs/architecture/diarization.md",
-      "source": "docs/diagrams/src/docs/architecture/diarization-2.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/diarization-2.svg",
-      "alt": "User-assigned display labels without biometric identity diagram"
-    },
-    {
-      "document": "docs/architecture/library-locations.md",
-      "source": "docs/diagrams/src/docs/architecture/library-locations-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/library-locations-1.svg",
-      "alt": "Durable library locations and recording discovery diagram"
-    },
-    {
-      "document": "docs/architecture/media-and-timeline.md",
-      "source": "docs/diagrams/src/docs/architecture/media-and-timeline-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/media-and-timeline-1.svg",
-      "alt": "The human version diagram"
-    },
-    {
-      "document": "docs/architecture/media-and-timeline.md",
-      "source": "docs/diagrams/src/docs/architecture/media-and-timeline-2.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/media-and-timeline-2.svg",
-      "alt": "Word timing, evidence cursor, playback, and durable notes share one axis diagram"
-    },
-    {
-      "document": "docs/architecture/model-management.md",
-      "source": "docs/diagrams/src/docs/architecture/model-management-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/model-management-1.svg",
-      "alt": "The human version diagram"
-    },
-    {
-      "document": "docs/architecture/processing-capabilities.md",
-      "source": "docs/diagrams/src/docs/architecture/processing-capabilities-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/processing-capabilities-1.svg",
-      "alt": "What the user experiences now diagram"
-    },
-    {
-      "document": "docs/architecture/README.md",
-      "source": "docs/diagrams/src/docs/architecture/README-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/README-1.svg",
-      "alt": "The shape of the system diagram"
-    },
-    {
-      "document": "docs/architecture/research-state.md",
-      "source": "docs/diagrams/src/docs/architecture/research-state-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/research-state-1.svg",
-      "alt": "Durable research state architecture diagram"
-    },
-    {
-      "document": "docs/architecture/speech-enhancement.md",
-      "source": "docs/diagrams/src/docs/architecture/speech-enhancement-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/speech-enhancement-1.svg",
-      "alt": "The human version diagram"
-    },
-    {
-      "document": "docs/architecture/word-alignment.md",
-      "source": "docs/diagrams/src/docs/architecture/word-alignment-1.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/word-alignment-1.svg",
-      "alt": "The timeline stays the same diagram"
-    },
-    {
-      "document": "docs/architecture/word-alignment.md",
-      "source": "docs/diagrams/src/docs/architecture/word-alignment-2.mmd",
-      "output": "docs/diagrams/generated/docs/architecture/word-alignment-2.svg",
-      "alt": "Speaker handoffs get much better 💃 diagram"
-    },
-    {
+      "id": "benchmarking-measurements",
       "document": "docs/development/benchmarking.md",
-      "source": "docs/diagrams/src/docs/development/benchmarking-1.mmd",
-      "output": "docs/diagrams/generated/docs/development/benchmarking-1.svg",
       "alt": "What are we measuring now? diagram"
     },
     {
-      "document": "docs/development/semantic-retrieval-testing.md",
-      "source": "docs/diagrams/src/docs/development/semantic-retrieval-testing-1.mmd",
-      "output": "docs/diagrams/generated/docs/development/semantic-retrieval-testing-1.svg",
-      "alt": "Failure preservation: a bad rebuild must not destroy a good one diagram"
+      "id": "bounded-pipeline-overlap",
+      "document": "docs/architecture/adaptive-heterogeneous-execution.md",
+      "alt": "Why bounded pipeline overlap comes before model sharding diagram"
     },
     {
-      "document": "docs/documentation-style.md",
-      "source": "docs/diagrams/src/docs/documentation-style-1.mmd",
-      "output": "docs/diagrams/generated/docs/documentation-style-1.svg",
-      "alt": "Documentation Mermaid palette diagram"
+      "id": "canonical-hashing-stale-refusal",
+      "document": "docs/architecture/corpus-search.md",
+      "alt": "Canonical hashing and stale-state refusal diagram"
     },
     {
-      "document": "docs/evidence-navigation.md",
-      "source": "docs/diagrams/src/docs/evidence-navigation-1.mmd",
-      "output": "docs/diagrams/generated/docs/evidence-navigation-1.svg",
-      "alt": "🔎 From search result to the exact evidence diagram"
+      "id": "corpus-search-overview",
+      "document": "docs/architecture/corpus-search.md",
+      "alt": "The human version diagram"
     },
     {
-      "document": "docs/evidence-navigation.md",
-      "source": "docs/diagrams/src/docs/evidence-navigation-2.mmd",
-      "output": "docs/diagrams/generated/docs/evidence-navigation-2.svg",
-      "alt": "Durable research uses the same coordinate system 📝 diagram"
-    },
-    {
-      "document": "docs/library-discovery.md",
-      "source": "docs/diagrams/src/docs/library-discovery-1.mmd",
-      "output": "docs/diagrams/generated/docs/library-discovery-1.svg",
-      "alt": "The simple mental model diagram"
-    },
-    {
-      "document": "docs/README.md",
-      "source": "docs/diagrams/src/docs/README-1.mmd",
-      "output": "docs/diagrams/generated/docs/README-1.svg",
-      "alt": "The Scholion family portrait diagram"
-    },
-    {
-      "document": "docs/research-notes.md",
-      "source": "docs/diagrams/src/docs/research-notes-1.mmd",
-      "output": "docs/diagrams/generated/docs/research-notes-1.svg",
-      "alt": "The short version diagram"
-    },
-    {
-      "document": "docs/research-search.md",
-      "source": "docs/diagrams/src/docs/research-search-1.mmd",
-      "output": "docs/diagrams/generated/docs/research-search-1.svg",
-      "alt": "The typed intent underneath diagram"
-    },
-    {
-      "document": "docs/semantic-search.md",
-      "source": "docs/diagrams/src/docs/semantic-search-1.mmd",
-      "output": "docs/diagrams/generated/docs/semantic-search-1.svg",
-      "alt": "Semantic search, without the mystery box ✨ diagram"
-    },
-    {
-      "document": "docs/semantic-search.md",
-      "source": "docs/diagrams/src/docs/semantic-search-2.mmd",
-      "output": "docs/diagrams/generated/docs/semantic-search-2.svg",
-      "alt": "What is an embedding? diagram"
-    },
-    {
-      "document": "docs/semantic-search.md",
-      "source": "docs/diagrams/src/docs/semantic-search-3.mmd",
-      "output": "docs/diagrams/generated/docs/semantic-search-3.svg",
-      "alt": "What if a better model appears later? diagram"
-    },
-    {
+      "id": "declared-media-timecode",
       "document": "docs/time-navigation.md",
-      "source": "docs/diagrams/src/docs/time-navigation-1.mmd",
-      "output": "docs/diagrams/generated/docs/time-navigation-1.svg",
-      "alt": "What word timestamps add diagram"
-    },
-    {
-      "document": "docs/time-navigation.md",
-      "source": "docs/diagrams/src/docs/time-navigation-2.mmd",
-      "output": "docs/diagrams/generated/docs/time-navigation-2.svg",
       "alt": "What if the media already declares a timecode? diagram"
     },
     {
+      "id": "documentation-mermaid-palette",
+      "document": "docs/documentation-style.md",
+      "alt": "Documentation Mermaid palette diagram"
+    },
+    {
+      "id": "durable-research-coordinate-system",
+      "document": "docs/evidence-navigation.md",
+      "alt": "Durable research uses the same coordinate system 📝 diagram"
+    },
+    {
+      "id": "durable-research-state",
+      "document": "docs/architecture/research-state.md",
+      "alt": "Durable research state architecture diagram"
+    },
+    {
+      "id": "embedding-concept",
+      "document": "docs/semantic-search.md",
+      "alt": "What is an embedding? diagram"
+    },
+    {
+      "id": "library-discovery",
+      "document": "docs/library-discovery.md",
+      "alt": "The simple mental model diagram"
+    },
+    {
+      "id": "library-locations",
+      "document": "docs/architecture/library-locations.md",
+      "alt": "Durable library locations and recording discovery diagram"
+    },
+    {
+      "id": "media-timeline-overview",
+      "document": "docs/architecture/media-and-timeline.md",
+      "alt": "The human version diagram"
+    },
+    {
+      "id": "model-management",
+      "document": "docs/architecture/model-management.md",
+      "alt": "The human version diagram"
+    },
+    {
+      "id": "processing-capabilities",
+      "document": "docs/architecture/processing-capabilities.md",
+      "alt": "What the user experiences now diagram"
+    },
+    {
+      "id": "recording-to-useful-evidence",
       "document": "README.md",
-      "source": "docs/diagrams/src/README-1.mmd",
-      "output": "docs/diagrams/generated/README-1.svg",
       "alt": "From recording to useful evidence diagram"
     },
     {
+      "id": "research-notes",
+      "document": "docs/research-notes.md",
+      "alt": "The short version diagram"
+    },
+    {
+      "id": "research-search-intent",
+      "document": "docs/research-search.md",
+      "alt": "The typed intent underneath diagram"
+    },
+    {
+      "id": "scholion-family-portrait",
+      "document": "docs/README.md",
+      "alt": "The Scholion family portrait diagram"
+    },
+    {
+      "id": "scholion-roadmap",
       "document": "ROADMAP.md",
-      "source": "docs/diagrams/src/ROADMAP-1.mmd",
-      "output": "docs/diagrams/generated/ROADMAP-1.svg",
       "alt": "Scholion roadmap 🗺️✨ diagram"
+    },
+    {
+      "id": "search-to-evidence",
+      "document": "docs/evidence-navigation.md",
+      "alt": "🔎 From search result to the exact evidence diagram"
+    },
+    {
+      "id": "semantic-model-upgrade",
+      "document": "docs/semantic-search.md",
+      "alt": "What if a better model appears later? diagram"
+    },
+    {
+      "id": "semantic-rebuild-failure-preservation",
+      "document": "docs/development/semantic-retrieval-testing.md",
+      "alt": "Failure preservation: a bad rebuild must not destroy a good one diagram"
+    },
+    {
+      "id": "semantic-search-overview",
+      "document": "docs/semantic-search.md",
+      "alt": "Semantic search, without the mystery box ✨ diagram"
+    },
+    {
+      "id": "shared-evidence-time-axis",
+      "document": "docs/architecture/media-and-timeline.md",
+      "alt": "Word timing, evidence cursor, playback, and durable notes share one axis diagram"
+    },
+    {
+      "id": "speaker-display-labels",
+      "document": "docs/architecture/diarization.md",
+      "alt": "User-assigned display labels without biometric identity diagram"
+    },
+    {
+      "id": "speaker-handoffs",
+      "document": "docs/architecture/word-alignment.md",
+      "alt": "Speaker handoffs get much better 💃 diagram"
+    },
+    {
+      "id": "speech-enhancement",
+      "document": "docs/architecture/speech-enhancement.md",
+      "alt": "The human version diagram"
+    },
+    {
+      "id": "system-shape",
+      "document": "docs/architecture/README.md",
+      "alt": "The shape of the system diagram"
+    },
+    {
+      "id": "word-alignment-timeline",
+      "document": "docs/architecture/word-alignment.md",
+      "alt": "The timeline stays the same diagram"
+    },
+    {
+      "id": "word-timestamps",
+      "document": "docs/time-navigation.md",
+      "alt": "What word timestamps add diagram"
     }
   ]
 }

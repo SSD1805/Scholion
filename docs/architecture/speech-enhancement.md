@@ -16,9 +16,9 @@ It asks a narrower question:
 > Can a conservative, reproducible local transform improve downstream transcription
 > without changing source custody, timeline semantics, or resume behavior?
 
-![The human version diagram](../diagrams/generated/docs/architecture/speech-enhancement-1.svg)
+![The human version diagram](../diagrams/generated/speech-enhancement.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/speech-enhancement-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/speech-enhancement.mmd)
 
 ## User surface
 

@@ -25,9 +25,9 @@ positions:
 "problem"  → 4791.125 s → 01:19:51.125
 ```
 
-![What word timestamps add diagram](./diagrams/generated/docs/time-navigation-1.svg)
+![What word timestamps add diagram](./diagrams/generated/word-timestamps.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/time-navigation-1.mmd)
+[Diagram source (Mermaid)](./diagrams/src/word-timestamps.mmd)
 
 Text fallback: one canonical numeric time drives human clock display, verified search
 navigation, durable research anchors, the desktop evidence cursor, and verified local
@@ -123,9 +123,9 @@ with their format/stream origin. It does not silently decide that a device tag i
 Devices can have wrong clocks, copied metadata, conflicting tags, or SMPTE semantics that
 require more information before arithmetic is safe.
 
-![What if the media already declares a timecode? diagram](./diagrams/generated/docs/time-navigation-2.svg)
+![What if the media already declares a timecode? diagram](./diagrams/generated/declared-media-timecode.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/time-navigation-2.mmd)
+[Diagram source (Mermaid)](./diagrams/src/declared-media-timecode.mmd)
 
 **Elapsed time answers:** where is this inside the selected recording?
 

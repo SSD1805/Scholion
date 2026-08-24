@@ -26,9 +26,9 @@ explainable afterward.
 The next product layer is a dedicated Research workspace, then advanced Library controls
 and Tauri-owned media playback.
 
-![What the user experiences now diagram](../diagrams/generated/docs/architecture/processing-capabilities-1.svg)
+![What the user experiences now diagram](../diagrams/generated/processing-capabilities.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/processing-capabilities-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/processing-capabilities.mmd)
 
 Text fallback: local execution produces canonical transcript evidence; rebuildable search
 ranks it; verified navigation resolves results; authoritative research state attaches to

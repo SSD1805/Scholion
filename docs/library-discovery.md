@@ -26,9 +26,9 @@ Scholion keeps result types separate and useful.
 
 ## The simple mental model
 
-![The simple mental model diagram](./diagrams/generated/docs/library-discovery-1.svg)
+![The simple mental model diagram](./diagrams/generated/library-discovery.svg)
 
-[Diagram source (Mermaid)](./diagrams/src/docs/library-discovery-1.mmd)
+[Diagram source (Mermaid)](./diagrams/src/library-discovery.mmd)
 
 Text fallback: one human query fans out through existing typed capabilities and returns
 separate transcript, note, tag, and collection groups. CLI and desktop Library views share

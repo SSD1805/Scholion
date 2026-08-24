@@ -52,9 +52,9 @@ Model trust has two deliberately separate concepts. Provider/local custody prove
 
 ## From recording to useful evidence
 
-![From recording to useful evidence diagram](./docs/diagrams/generated/README-1.svg)
+![From recording to useful evidence diagram](./docs/diagrams/generated/recording-to-useful-evidence.svg)
 
-[Diagram source (Mermaid)](./docs/diagrams/src/README-1.mmd)
+[Diagram source (Mermaid)](./docs/diagrams/src/recording-to-useful-evidence.mmd)
 
 Text fallback: source media is inspected and transcribed locally into canonical JSON; rebuildable search finds passages; canonical verification turns results back into evidence; durable human research attaches to that evidence; custody planning keeps destructive work explicit.
 

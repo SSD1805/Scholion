@@ -9,9 +9,9 @@ transcript can say which anonymous voice most likely owns a passage.
 It does **not** mean “identify this human,” and Scholion does not infer that
 `speaker-01` in one recording is the same person as `speaker-01` in another.
 
-![Anonymous speaker diarization 👥 diagram](../diagrams/generated/docs/architecture/diarization-1.svg)
+![Anonymous speaker diarization 👥 diagram](../diagrams/generated/anonymous-speaker-diarization.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/diarization-1.mmd)
+[Diagram source (Mermaid)](../diagrams/src/anonymous-speaker-diarization.mmd)
 
 ## What the user would see
 
@@ -193,9 +193,9 @@ scholion library speakers forget-name TRANSCRIPT_ID speaker-01
 The design rule is that this is **display/user-authored state**, not a rewrite of the
 underlying anonymous diarization evidence.
 
-![User-assigned display labels without biometric identity diagram](../diagrams/generated/docs/architecture/diarization-2.svg)
+![User-assigned display labels without biometric identity diagram](../diagrams/generated/speaker-display-labels.svg)
 
-[Diagram source (Mermaid)](../diagrams/src/docs/architecture/diarization-2.mmd)
+[Diagram source (Mermaid)](../diagrams/src/speaker-display-labels.mmd)
 
 The label is meaningful user knowledge and does **not** share the deletion semantics of
 a rebuildable search index. It is written to private user state separately from lexical
