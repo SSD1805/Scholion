@@ -58,7 +58,6 @@ def _safe_failure_message(error_code: str | None) -> str | None:
 
 def _serialize_model(item: ModelInventoryItem) -> dict[str, object]:
     manifest = item.manifest
-    policy = None if manifest is None else manifest.policy_trust
     return {
         "model_id": item.spec.model_id,
         "engine": item.spec.engine,
@@ -68,16 +67,6 @@ def _serialize_model(item: ModelInventoryItem) -> dict[str, object]:
         "resolved_revision": None if manifest is None else manifest.resolved_revision,
         "installed_size_bytes": None if manifest is None else manifest.size_bytes,
         "verification": None if manifest is None else manifest.verification,
-        "policy_trusted": item.policy_trusted,
-        "policy_trust": None
-        if policy is None
-        else {
-            "catalog_schema_version": policy.catalog_schema_version,
-            "revision": policy.revision,
-            "verification": policy.verification,
-            "verified_files": policy.verified_files,
-            "total_bytes": policy.total_bytes,
-        },
     }
 
 
@@ -220,7 +209,10 @@ class ProcessingCenterService:
             None,
         )
         inventory = self.model_manager.inventory()
-        policy_enforced = self.model_manager.enforce_policy_trust
+        policy_enforced = getattr(self.model_manager, "enforce_policy_trust", False)
+        policy_trust = {
+            item.spec.model_id: item.policy_trusted for item in inventory
+        }
         speaker_labeling = diarization_runtime_status()
         recommended_model: str | None = None
         recommended_installed = False
@@ -281,6 +273,7 @@ class ProcessingCenterService:
             "strategies": [self._serialize_strategy(item) for item in assessments],
             "models": [_serialize_model(item) for item in inventory],
             "model_policy_enforced": policy_enforced,
+            "model_policy_trust": policy_trust,
             "recommended_model": recommended_model,
             "recommended_model_installed": recommended_installed,
             "recommended_model_ready": recommended_ready,
@@ -385,6 +378,4 @@ class ProcessingCenterService:
             "resolved_revision": None
             if manifest is None
             else manifest.resolved_revision,
-            "policy_trusted": item.policy_trusted,
-            "policy_enforced": self.model_manager.enforce_policy_trust,
         }
