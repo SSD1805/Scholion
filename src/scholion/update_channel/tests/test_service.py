@@ -97,11 +97,12 @@ def _payload(
     sequence: int = 7,
     version: str = "0.2.0",
     platform_id: str = "windows-x86_64",
+    channel: str = "stable",
 ) -> bytes:
     document = {
         "schema_version": 1,
         "sequence": sequence,
-        "channel": "stable",
+        "channel": channel,
         "version": version,
         "published_at": (_NOW - timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
         "expires_at": (_NOW + timedelta(days=7)).isoformat().replace("+00:00", "Z"),
@@ -210,6 +211,33 @@ def test_rollback_is_rejected_against_persisted_sequence(tmp_path: Path) -> None
         second.check(now=_NOW)
 
     assert second.state_store.load().highest_trusted_sequence == 8
+
+
+def test_same_sequence_cannot_authorize_different_signed_content(tmp_path: Path) -> None:
+    first_payload = _payload(sequence=8, version="0.3.0")
+    first, store, _, _ = _service(tmp_path, first_payload)
+    first.check(now=_NOW)
+
+    replacement_payload = _payload(sequence=8, version="0.4.0")
+    second, _, _, _ = _service(tmp_path, replacement_payload, store=store)
+
+    with pytest.raises(UpdateChannelError, match="different signed content"):
+        second.check(now=_NOW)
+
+    persisted = second.state_store.load()
+    assert persisted.last_version == "0.3.0"
+    assert persisted.trusted_manifest == _envelope(first_payload)
+
+
+def test_stable_endpoint_rejects_other_signed_channels(tmp_path: Path) -> None:
+    payload = _payload(channel="beta")
+    channel, _, verifier, _ = _service(tmp_path, payload)
+
+    with pytest.raises(UpdateChannelError, match="not stable"):
+        channel.check(now=_NOW)
+
+    assert verifier.calls == 1
+    assert channel.state_store.load().highest_trusted_sequence is None
 
 
 def test_untrusted_signature_does_not_advance_state(tmp_path: Path) -> None:
