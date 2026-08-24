@@ -26,6 +26,9 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/src-tauri/target/
 
+# Documentation tooling artifacts
+tools/mermaid/node_modules/
+
 # Editor/IDE files
 .vscode/
 .idea/
