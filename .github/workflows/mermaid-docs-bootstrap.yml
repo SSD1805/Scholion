@@ -1,8 +1,7 @@
 name: Mermaid docs bootstrap
 
 on:
-  push:
-    branches: [docs/deterministic-mermaid-svg]
+  pull_request:
 
 permissions:
   contents: write
@@ -13,29 +12,48 @@ concurrency:
 
 jobs:
   bootstrap:
-    if: github.actor != 'github-actions[bot]'
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.head.ref == 'docs/deterministic-mermaid-svg'
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
       - name: Check out migration branch
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: Detect completed bootstrap
+        id: state
+        shell: bash
+        run: |
+          if test -f docs/diagrams/manifest.json; then
+            echo 'needed=false' >> "$GITHUB_OUTPUT"
+          else
+            echo 'needed=true' >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Verify Node runtime
+        if: steps.state.outputs.needed == 'true'
         run: node --version && npm --version
 
       - name: Generate the docs-tooling lockfile
+        if: steps.state.outputs.needed == 'true'
         working-directory: tools/mermaid
         run: npm install --package-lock-only --ignore-scripts --no-fund --no-audit
 
       - name: Install locked Mermaid renderer
+        if: steps.state.outputs.needed == 'true'
         working-directory: tools/mermaid
         run: npm ci --no-fund --no-audit
 
       - name: Migrate inline Mermaid and render deterministic SVGs
+        if: steps.state.outputs.needed == 'true'
         run: node tools/mermaid/render.mjs --migrate-inline
 
       - name: Commit generated migration state
+        if: steps.state.outputs.needed == 'true'
         shell: bash
         run: |
           git config user.name 'github-actions[bot]'
@@ -46,4 +64,4 @@ jobs:
             exit 0
           fi
           git commit -m 'Generate deterministic Mermaid documentation'
-          git push origin "HEAD:${GITHUB_REF_NAME}"
+          git push origin "HEAD:${{ github.event.pull_request.head.ref }}"
