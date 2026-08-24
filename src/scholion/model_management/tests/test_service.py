@@ -1,4 +1,5 @@
 import json
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,10 @@ from scholion.model_management.catalog import ModelCatalog
 from scholion.model_management.errors import ModelManagementError
 from scholion.model_management.models import InstalledSnapshot, ModelSpec
 from scholion.model_management.service import ModelManager
+from scholion.supply_chain import ModelTrustCatalog, TrustedModelFile, TrustedModelSpec
+
+_TRUSTED_REVISION = "a" * 40
+_TRUSTED_BYTES = b"trusted faster-whisper model bytes"
 
 
 class MemoryStore:
@@ -39,6 +44,8 @@ class MemoryStore:
 class FakeProvider:
     def __init__(self, snapshot_path: Path) -> None:
         self.snapshot_path = snapshot_path
+        self.resolved_revision = snapshot_path.name
+        self.size_bytes = 1234
         self.installs: list[tuple[str, str | None]] = []
         self.validations: list[str] = []
         self.removals: list[str] = []
@@ -54,9 +61,9 @@ class FakeProvider:
     ) -> InstalledSnapshot:
         self.installs.append((spec.model_id, revision))
         return InstalledSnapshot(
-            resolved_revision="resolved-abc",
+            resolved_revision=self.resolved_revision,
             snapshot_path=self.snapshot_path,
-            size_bytes=1234,
+            size_bytes=self.size_bytes,
             verification="fake_verified_v1",
         )
 
@@ -99,6 +106,30 @@ def _catalog() -> ModelCatalog:
     )
 
 
+def _trust_catalog() -> ModelTrustCatalog:
+    return ModelTrustCatalog(
+        schema_version=1,
+        models=(
+            TrustedModelSpec(
+                model_id="small",
+                engine="faster-whisper",
+                repository_id="Systran/faster-whisper-small",
+                revision=_TRUSTED_REVISION,
+                source_url="https://huggingface.co/Systran/faster-whisper-small",
+                license_id="test-license",
+                license_url="https://example.test/license",
+                files=(
+                    TrustedModelFile(
+                        path="model.bin",
+                        size_bytes=len(_TRUSTED_BYTES),
+                        sha256_hex=sha256(_TRUSTED_BYTES).hexdigest(),
+                    ),
+                ),
+            ),
+        ),
+    )
+
+
 def _manager(tmp_path: Path) -> tuple[ModelManager, MemoryStore, FakeProvider]:
     model_root = tmp_path / "models"
     provider = FakeProvider(
@@ -117,6 +148,33 @@ def _manager(tmp_path: Path) -> tuple[ModelManager, MemoryStore, FakeProvider]:
     )
 
 
+def _trusted_manager(
+    tmp_path: Path, *, enforce_policy_trust: bool = True
+) -> tuple[ModelManager, MemoryStore, FakeProvider, Path]:
+    model_root = tmp_path / "models"
+    snapshot_path = (
+        model_root
+        / "faster-whisper"
+        / "models--Systran--faster-whisper-small"
+        / "snapshots"
+        / _TRUSTED_REVISION
+    )
+    snapshot_path.mkdir(parents=True)
+    (snapshot_path / "model.bin").write_bytes(_TRUSTED_BYTES)
+    provider = FakeProvider(snapshot_path)
+    provider.size_bytes = len(_TRUSTED_BYTES)
+    store = MemoryStore()
+    manager = ModelManager(
+        catalog=_catalog(),
+        provider=provider,
+        file_store=store,
+        model_root=model_root,
+        trust_catalog=_trust_catalog(),
+        enforce_policy_trust=enforce_policy_trust,
+    )
+    return manager, store, provider, snapshot_path
+
+
 def test_inventory_is_offline_read_only_and_reports_uninstalled_model(
     tmp_path: Path,
 ) -> None:
@@ -127,6 +185,7 @@ def test_inventory_is_offline_read_only_and_reports_uninstalled_model(
     assert len(inventory) == 1
     assert inventory[0].spec.model_id == "small"
     assert inventory[0].installed is False
+    assert inventory[0].policy_trusted is False
     assert provider.installs == []
     assert provider.validations == []
     assert store.directories == set()
@@ -149,15 +208,80 @@ def test_install_records_requested_resolved_and_verification(tmp_path: Path) -> 
     assert manifest.requested_revision == "release-v1"
     assert manifest.resolved_revision == "resolved-abc"
     assert manifest.verification == "fake_verified_v1"
+    assert manifest.policy_trust is None
     assert manifest.size_bytes == 1234
     assert provider.installs == [("small", "release-v1")]
     document = json.loads(store.files[manager._manifest_path("small")])
     assert document["repository_id"] == "Systran/faster-whisper-small"
     assert document["resolved_revision"] == "resolved-abc"
     assert document["verification"] == "fake_verified_v1"
+    assert document["policy_trust"] is None
     assert manager.resolved_revision("small") == "resolved-abc"
     assert manager.is_installed("small") is True
-    assert provider.validations == ["small", "small"]
+    assert manager.is_policy_trusted("small") is False
+    assert provider.validations == ["small", "small", "small"]
+
+
+def test_policy_install_pins_revision_and_persists_exact_trust(tmp_path: Path) -> None:
+    manager, store, provider, _ = _trusted_manager(tmp_path)
+
+    manifest = manager.install("small")
+
+    assert provider.installs == [("small", _TRUSTED_REVISION)]
+    assert manifest.requested_revision == _TRUSTED_REVISION
+    assert manifest.resolved_revision == _TRUSTED_REVISION
+    assert manifest.policy_trust is not None
+    assert manifest.policy_trust.model_id == "small"
+    assert manifest.policy_trust.revision == _TRUSTED_REVISION
+    assert manifest.policy_trust.verification == "scholion_curated_sha256_v1"
+    assert manifest.policy_trust.verified_files == 1
+    assert manifest.policy_trust.total_bytes == len(_TRUSTED_BYTES)
+    document = json.loads(store.files[manager._manifest_path("small")])
+    assert document["policy_trust"]["revision"] == _TRUSTED_REVISION
+    assert manager.is_policy_trusted("small") is True
+
+
+def test_policy_rejects_revision_override_before_provider_call(tmp_path: Path) -> None:
+    manager, _, provider, _ = _trusted_manager(tmp_path)
+
+    with pytest.raises(ValueError, match="does not match Scholion model policy"):
+        manager.install("small", revision="b" * 40)
+
+    assert provider.installs == []
+
+
+def test_policy_hash_failure_does_not_register_model(tmp_path: Path) -> None:
+    manager, store, provider, snapshot_path = _trusted_manager(tmp_path)
+    (snapshot_path / "model.bin").write_bytes(b"tampered model bytes")
+
+    with pytest.raises(ModelManagementError, match="downloaded and locally validated"):
+        manager.install("small")
+
+    assert provider.installs == [("small", _TRUSTED_REVISION)]
+    assert manager._manifest_path("small") not in store.files
+
+
+def test_policy_tamper_after_install_invalidates_registry(tmp_path: Path) -> None:
+    manager, _, _, snapshot_path = _trusted_manager(tmp_path)
+    manager.install("small")
+    (snapshot_path / "model.bin").write_bytes(b"x" * len(_TRUSTED_BYTES))
+
+    with pytest.raises(ModelManagementError, match="registry is invalid"):
+        manager.is_policy_trusted("small")
+
+
+def test_policy_enforcement_requires_catalog(tmp_path: Path) -> None:
+    model_root = tmp_path / "models"
+    provider = FakeProvider(model_root / "faster-whisper" / "snapshots" / "abc")
+
+    with pytest.raises(ValueError, match="requires a trust catalog"):
+        ModelManager(
+            catalog=_catalog(),
+            provider=provider,
+            file_store=MemoryStore(),
+            model_root=model_root,
+            enforce_policy_trust=True,
+        )
 
 
 def test_install_rejects_empty_revision(tmp_path: Path) -> None:
