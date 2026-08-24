@@ -48,6 +48,10 @@ jobs:
         working-directory: tools/mermaid
         run: npm ci --no-fund --no-audit
 
+      - name: Enable Chromium user-namespace sandbox
+        if: steps.state.outputs.needed == 'true'
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Migrate inline Mermaid and render deterministic SVGs
         if: steps.state.outputs.needed == 'true'
         run: node tools/mermaid/render.mjs --migrate-inline
