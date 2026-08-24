@@ -11,12 +11,18 @@ from scholion.supply_chain.release_tools import (
     build_sha256sums,
     build_update_payload_bytes,
 )
-from scholion.supply_chain.update_manifest import SignedUpdateEnvelope, UpdateManifestPayload
+from scholion.supply_chain.update_manifest import (
+    SignedUpdateEnvelope,
+    UpdateManifestPayload,
+    UpdateTrustError,
+)
 
 _NOW = datetime(2026, 8, 24, 1, 0, tzinfo=UTC)
 
 
-def _artifact(tmp_path: Path, platform: str, name: str, content: bytes) -> ReleaseArtifactInput:
+def _artifact(
+    tmp_path: Path, platform: str, name: str, content: bytes
+) -> ReleaseArtifactInput:
     path = tmp_path / name
     path.write_bytes(content)
     return ReleaseArtifactInput(
@@ -58,11 +64,13 @@ def test_payload_is_deterministic_sorted_and_runtime_parseable(tmp_path: Path) -
     assert parsed.artifact_for("windows-x86_64").size_bytes == 7
 
 
-def test_payload_rejects_duplicate_platforms_through_runtime_schema(tmp_path: Path) -> None:
+def test_payload_rejects_duplicate_platforms_through_runtime_schema(
+    tmp_path: Path,
+) -> None:
     first = _artifact(tmp_path, "windows-x86_64", "a.bin", b"a")
     second = _artifact(tmp_path, "windows-x86_64", "b.bin", b"b")
 
-    with pytest.raises(Exception, match="platforms must be unique"):
+    with pytest.raises(UpdateTrustError, match="platforms must be unique"):
         build_update_payload_bytes(
             sequence=1,
             channel="stable",
@@ -112,7 +120,7 @@ def test_envelope_rejects_wrong_signature_length(tmp_path: Path) -> None:
         artifacts=(artifact,),
     )
 
-    with pytest.raises(Exception, match="invalid length"):
+    with pytest.raises(UpdateTrustError, match="invalid length"):
         assemble_signed_update_envelope(
             payload,
             key_id="release-2026",
