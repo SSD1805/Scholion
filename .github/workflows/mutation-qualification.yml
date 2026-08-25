@@ -1,0 +1,233 @@
+name: Mutation Qualification
+
+# Mutation testing is a targeted qualification tool, not a routine PR tax.
+# Run a focused suite manually when the corresponding decision-heavy behavior changes.
+# Playback also remains an automatic PR qualification when its authorization surface changes.
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: Mutation suite to run
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - adaptive-execution
+          - transcript-library
+          - playback
+          - transcript-tools
+  pull_request:
+    paths:
+      - "src/scholion/library/playback.py"
+      - "src/scholion/library/tests/test_playback*.py"
+      - "src/scholion/desktop/playback_bridge.py"
+      - "src/scholion/desktop/tests/test_playback_bridge.py"
+      - ".github/workflows/mutation-qualification.yml"
+      - "pyproject.toml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: mutation-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  adaptive-execution:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.suite == 'all' || inputs.suite == 'adaptive-execution')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.33"
+          enable-cache: true
+
+      - name: Install locked development dependencies
+        run: uv sync --locked --all-groups --extra transcription
+
+      - name: Install native media tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes ffmpeg
+
+      - name: Establish mutation baseline
+        run: >-
+          uv run pytest
+          src/scholion/runner/tests/test_topology.py
+          src/scholion/transcription/tests/test_capabilities.py
+          src/scholion/transcription/tests/test_heterogeneous_strategy.py
+          src/scholion/transcription/tests/test_pipeline.py
+          --cov=scholion
+          --cov-context=test
+          --cov-report=
+          --cov-fail-under=0
+
+      - name: Mutate adaptive decision primitives
+        run: >-
+          uv run poodle
+          -w 4
+          --only src/scholion/runner/topology.py
+          --only src/scholion/transcription/capabilities.py
+          --only src/scholion/transcription/strategy.py
+          --only src/scholion/transcription/pipeline.py
+
+  transcript-library:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.suite == 'all' || inputs.suite == 'transcript-library')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.33"
+          enable-cache: true
+
+      - name: Install locked development dependencies
+        run: uv sync --locked --all-groups --extra transcription
+
+      - name: Establish retrieval qualification baseline
+        run: >-
+          uv run pytest
+          src/scholion/library/tests/test_semantic.py
+          src/scholion/library/tests/test_duckdb_semantic.py
+          src/scholion/library/tests/test_retrieval.py
+          src/scholion/library/tests/test_service_semantic.py
+          src/scholion/tests/test_cli_library.py
+          --cov=scholion
+          --cov-context=test
+          --cov-report=
+          --cov-fail-under=0
+
+      - name: Mutate semantic retrieval decisions
+        run: >-
+          uv run poodle
+          -w 4
+          --only src/scholion/library/semantic.py
+          --only src/scholion/library/duckdb_semantic.py
+          --only src/scholion/library/retrieval.py
+          --only src/scholion/library/service.py
+
+  playback:
+    if: >-
+      github.event_name == 'pull_request' ||
+      (github.event_name == 'workflow_dispatch' &&
+       (inputs.suite == 'all' || inputs.suite == 'playback'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.33"
+          enable-cache: true
+
+      - name: Install locked development dependencies
+        run: uv sync --locked --all-groups --extra transcription
+
+      - name: Establish playback qualification baseline
+        run: >-
+          uv run pytest
+          src/scholion/library/tests/test_playback.py
+          src/scholion/library/tests/test_playback_edges.py
+          src/scholion/desktop/tests/test_playback_bridge.py
+          src/scholion/media/tests/test_probe.py
+          --cov=scholion
+          --cov-context=test
+          --cov-report=
+          --cov-fail-under=0
+
+      - name: Mutate playback authorization decisions
+        run: >-
+          uv run poodle
+          -w 4
+          --only src/scholion/library/playback.py
+          --only src/scholion/desktop/playback_bridge.py
+
+  transcript-tools:
+    if: >-
+      github.event_name == 'workflow_dispatch' &&
+      (inputs.suite == 'all' || inputs.suite == 'transcript-tools')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.33"
+          enable-cache: true
+
+      - name: Install locked development dependencies
+        run: uv sync --locked --all-groups --extra transcription
+
+      - name: Establish transcript-tools qualification baseline
+        run: >-
+          uv run pytest
+          src/scholion/library/tests/test_transcript_tools.py
+          src/scholion/library/tests/test_speaker_labels.py
+          src/scholion/library/tests/test_speaker_presentation.py
+          src/scholion/transcription/tests/test_export.py
+          src/scholion/desktop/tests/test_transcript_tools_bridge.py
+          --cov=scholion
+          --cov-context=test
+          --cov-report=
+          --cov-fail-under=0
+
+      - name: Mutate transcript-tooling decisions
+        run: >-
+          uv run poodle
+          -w 4
+          --only src/scholion/library/transcript_tools.py
+          --only src/scholion/library/speaker_label_service.py
+          --only src/scholion/transcription/export.py
+          --only src/scholion/desktop/transcript_tools_bridge.py
