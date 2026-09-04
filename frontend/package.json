@@ -15,6 +15,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test:e2e": "playwright test",
+    "docs:theme-gallery": "playwright test --config=playwright.gallery.config.ts",
     "tauri": "tauri"
   },
   "dependencies": {
