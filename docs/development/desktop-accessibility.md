@@ -39,6 +39,33 @@ Pride's rainbow is decoration only. Status, selection, errors, readiness, speake
 
 Theme choice is browser-local presentation preference. Failure to read or write it falls back to Archive and must never block the evidence workspace.
 
+## Rendered theme gallery
+
+These screenshots are generated from the real browser development shell, at a fixed desktop viewport, using the same `THEMES` registry that drives the product picker. Each capture opens **Research** and expands **Search options** so the gallery includes ordinary surfaces, navigation, text, buttons, and a native select control rather than an empty color swatch.
+
+| Archive | Midnight |
+|---|---|
+| ![Archive skin in the Scholion Research workspace](../images/themes/archive.png) | ![Midnight skin in the Scholion Research workspace](../images/themes/midnight.png) |
+| Paper | Moss |
+| ![Paper skin in the Scholion Research workspace](../images/themes/paper.png) | ![Moss skin in the Scholion Research workspace](../images/themes/moss.png) |
+| Plum | Ember |
+| ![Plum skin in the Scholion Research workspace](../images/themes/plum.png) | ![Ember skin in the Scholion Research workspace](../images/themes/ember.png) |
+| Pride | Monochrome |
+| ![Pride skin in the Scholion Research workspace](../images/themes/pride.png) | ![Monochrome skin in the Scholion Research workspace](../images/themes/monochrome.png) |
+
+The gallery is documentation, not a pixel-golden correctness test. Browser/font rendering can legitimately move while the semantic contract remains correct. Contrast, accessible naming, control behavior, and axe checks remain the actual CI invariants.
+
+To regenerate the checked-in gallery after an intentional visual/theme change:
+
+```bash
+cd frontend
+npm ci
+npx playwright install chromium
+npm run docs:theme-gallery
+```
+
+`frontend/playwright.gallery.config.ts` keeps this capture lane separate from ordinary Playwright test discovery. `frontend/gallery/theme-gallery.spec.ts` iterates `THEMES`, so a newly registered skin automatically becomes part of the capture set without maintaining a second list of theme IDs. Review regenerated images as documentation changes before committing them.
+
 ## Contrast is a product invariant
 
 `frontend/tests/theme-accessibility.spec.ts` iterates the registry, so a newly registered skin automatically enters the same qualification matrix. It checks:
