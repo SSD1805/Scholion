@@ -25,6 +25,8 @@ on:
       - ".github/workflows/acceptance.yml"
       - "scripts/verify_engine_acceptance.py"
       - "scripts/verify_cross_platform_media_acceptance.py"
+      - "scripts/fetch_diarization_fixture.py"
+      - "scripts/verify_diarization_acceptance.py"
       - "src/scholion/app/**"
       - "src/scholion/interfaces/**"
       - "src/scholion/media/**"
@@ -38,6 +40,8 @@ on:
       - ".github/workflows/acceptance.yml"
       - "scripts/verify_engine_acceptance.py"
       - "scripts/verify_cross_platform_media_acceptance.py"
+      - "scripts/fetch_diarization_fixture.py"
+      - "scripts/verify_diarization_acceptance.py"
       - "src/scholion/app/**"
       - "src/scholion/interfaces/**"
       - "src/scholion/media/**"
@@ -248,20 +252,14 @@ jobs:
       - name: Install diarization runtime
         run: uv sync --locked --extra diarization
 
-      - name: Install local speech synthesizer
-        run: |
-          sudo apt-get update
-          sudo apt-get install --yes espeak-ng
-
-      - name: Generate non-sensitive local speech
-        shell: bash
+      - name: Fetch pinned two-speaker ground-truth fixture
         run: >-
-          espeak-ng
-          -w "${{ runner.temp }}/diarization-acceptance.wav"
-          "Scholion is running a local speaker diarization acceptance test. The recording stays on this runner."
+          uv run python scripts/fetch_diarization_fixture.py
+          --output-dir "${{ runner.temp }}/diarization-fixture"
 
-      - name: Run real Community-1 inference twice
+      - name: Run real Community-1 inference twice against ground truth
         run: >-
           uv run python scripts/verify_diarization_acceptance.py
-          "${{ runner.temp }}/diarization-acceptance.wav"
+          "${{ runner.temp }}/diarization-fixture/dev00.wav"
+          --reference-rttm "${{ runner.temp }}/diarization-fixture/debug.development.rttm"
           --cache-dir "${{ runner.temp }}/pyannote-cache"
