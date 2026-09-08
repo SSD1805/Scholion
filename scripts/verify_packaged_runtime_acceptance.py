@@ -7,9 +7,9 @@ import os
 import re
 import subprocess
 import tempfile
-from contextlib import nullcontext
+from contextlib import AbstractContextManager, nullcontext
 from pathlib import Path
-from typing import Any, ContextManager
+from typing import Any
 
 from verify_cross_platform_media_acceptance import _fetch_public_fixture
 
@@ -162,7 +162,9 @@ def _validate_canonical(
     _validate_privacy(raw, (input_path.parent, state_dir, model_dir))
 
 
-def _workspace_context(workspace_root: Path | None) -> ContextManager[str | Path]:
+def _workspace_context(
+    workspace_root: Path | None,
+) -> AbstractContextManager[str | Path]:
     if workspace_root is None:
         return tempfile.TemporaryDirectory(prefix="scholion-packaged-acceptance-")
     resolved = workspace_root.expanduser().resolve(strict=False)
