@@ -40,16 +40,18 @@ def _qualified_preview(
     commit: str = _COMMIT,
     runner_os: str = _RUNNER_OS,
     release_ready: bool = False,
-) -> tuple[Path, Path]:
+) -> tuple[Path, Path, Path]:
     bundle_root = tmp_path / "bundle"
     bundle_root.mkdir()
     artifact = bundle_root / "nsis" / "Scholion.exe"
     artifact.parent.mkdir()
     artifact.write_bytes(b"exact-package-bytes")
+    digest = sha256_file(artifact)
 
-    evidence = tmp_path / "release-preview" / "qualification.json"
-    evidence.parent.mkdir()
-    evidence.write_text(
+    evidence_dir = tmp_path / "release-preview"
+    evidence_dir.mkdir()
+    qualification = evidence_dir / "qualification.json"
+    qualification.write_text(
         json.dumps(
             {
                 "schema_version": 1,
@@ -61,13 +63,15 @@ def _qualified_preview(
                     {
                         "path": "nsis/Scholion.exe",
                         "size_bytes": artifact.stat().st_size,
-                        "sha256": sha256_file(artifact),
+                        "sha256": digest,
                     }
                 ],
             }
         )
     )
-    return bundle_root, evidence
+    sha256sums = evidence_dir / "SHA256SUMS"
+    sha256sums.write_text(f"{digest}  nsis/Scholion.exe\n")
+    return bundle_root, qualification, sha256sums
 
 
 def _inputs() -> tuple[str, ...]:
@@ -80,27 +84,43 @@ def _inputs() -> tuple[str, ...]:
     )
 
 
+def _build(
+    *,
+    repository: Path,
+    bundle_root: Path,
+    qualification: Path,
+    sha256sums: Path,
+    inputs: tuple[str, ...] | None = None,
+    toolchain: dict[str, str] | None = None,
+) -> bytes:
+    return build_release_provenance(
+        repository_root=repository,
+        qualification_path=qualification,
+        sha256sums_path=sha256sums,
+        bundle_root=bundle_root,
+        commit=_COMMIT,
+        runner_os=_RUNNER_OS,
+        runner_arch=_RUNNER_ARCH,
+        inputs=_inputs() if inputs is None else inputs,
+        toolchain=_TOOLCHAIN if toolchain is None else toolchain,
+    )
+
+
 def test_provenance_is_deterministic_and_binds_exact_evidence(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
-    bundle_root, qualification = _qualified_preview(tmp_path)
+    bundle_root, qualification, sha256sums = _qualified_preview(tmp_path)
 
-    first = build_release_provenance(
-        repository_root=repository,
-        qualification_path=qualification,
+    first = _build(
+        repository=repository,
         bundle_root=bundle_root,
-        commit=_COMMIT,
-        runner_os=_RUNNER_OS,
-        runner_arch=_RUNNER_ARCH,
-        inputs=_inputs(),
-        toolchain=_TOOLCHAIN,
+        qualification=qualification,
+        sha256sums=sha256sums,
     )
-    second = build_release_provenance(
-        repository_root=repository,
-        qualification_path=qualification,
+    second = _build(
+        repository=repository,
         bundle_root=bundle_root,
-        commit=_COMMIT,
-        runner_os=_RUNNER_OS,
-        runner_arch=_RUNNER_ARCH,
+        qualification=qualification,
+        sha256sums=sha256sums,
         inputs=tuple(reversed(_inputs())),
         toolchain=dict(reversed(tuple(_TOOLCHAIN.items()))),
     )
@@ -110,6 +130,7 @@ def test_provenance_is_deterministic_and_binds_exact_evidence(tmp_path: Path) ->
     assert document["commit"] == _COMMIT
     assert document["runner"] == {"arch": _RUNNER_ARCH, "os": _RUNNER_OS}
     assert document["qualification_sha256"] == sha256_file(qualification)
+    assert document["sha256sums_sha256"] == sha256_file(sha256sums)
     assert document["artifacts"][0]["path"] == "nsis/Scholion.exe"
     assert document["artifacts"][0]["sha256"] == sha256_file(
         bundle_root / "nsis" / "Scholion.exe"
@@ -119,125 +140,118 @@ def test_provenance_is_deterministic_and_binds_exact_evidence(tmp_path: Path) ->
 
 def test_provenance_rejects_mutated_package_after_qualification(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
-    bundle_root, qualification = _qualified_preview(tmp_path)
+    bundle_root, qualification, sha256sums = _qualified_preview(tmp_path)
     (bundle_root / "nsis" / "Scholion.exe").write_bytes(b"different")
 
     with pytest.raises(ReleaseProvenanceError, match="no longer match"):
-        build_release_provenance(
-            repository_root=repository,
-            qualification_path=qualification,
+        _build(
+            repository=repository,
             bundle_root=bundle_root,
-            commit=_COMMIT,
-            runner_os=_RUNNER_OS,
-            runner_arch=_RUNNER_ARCH,
-            inputs=_inputs(),
-            toolchain=_TOOLCHAIN,
+            qualification=qualification,
+            sha256sums=sha256sums,
+        )
+
+
+def test_provenance_rejects_checksum_file_disagreement(tmp_path: Path) -> None:
+    repository = _repository(tmp_path)
+    bundle_root, qualification, sha256sums = _qualified_preview(tmp_path)
+    sha256sums.write_text(f"{'0' * 64}  nsis/Scholion.exe\n")
+
+    with pytest.raises(ReleaseProvenanceError, match="exact qualified artifact set"):
+        _build(
+            repository=repository,
+            bundle_root=bundle_root,
+            qualification=qualification,
+            sha256sums=sha256sums,
         )
 
 
 def test_provenance_rejects_qualification_commit_mismatch(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
-    bundle_root, qualification = _qualified_preview(tmp_path, commit="b" * 40)
+    bundle_root, qualification, sha256sums = _qualified_preview(
+        tmp_path, commit="b" * 40
+    )
 
     with pytest.raises(ReleaseProvenanceError, match="commit does not match"):
-        build_release_provenance(
-            repository_root=repository,
-            qualification_path=qualification,
+        _build(
+            repository=repository,
             bundle_root=bundle_root,
-            commit=_COMMIT,
-            runner_os=_RUNNER_OS,
-            runner_arch=_RUNNER_ARCH,
-            inputs=_inputs(),
-            toolchain=_TOOLCHAIN,
+            qualification=qualification,
+            sha256sums=sha256sums,
         )
 
 
 def test_provenance_rejects_qualification_runner_mismatch(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
-    bundle_root, qualification = _qualified_preview(tmp_path, runner_os="macOS")
+    bundle_root, qualification, sha256sums = _qualified_preview(
+        tmp_path, runner_os="macOS"
+    )
 
     with pytest.raises(ReleaseProvenanceError, match="runner OS does not match"):
-        build_release_provenance(
-            repository_root=repository,
-            qualification_path=qualification,
+        _build(
+            repository=repository,
             bundle_root=bundle_root,
-            commit=_COMMIT,
-            runner_os=_RUNNER_OS,
-            runner_arch=_RUNNER_ARCH,
-            inputs=_inputs(),
-            toolchain=_TOOLCHAIN,
+            qualification=qualification,
+            sha256sums=sha256sums,
         )
 
 
 def test_preview_provenance_cannot_relabel_release_ready_artifact(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
-    bundle_root, qualification = _qualified_preview(tmp_path, release_ready=True)
+    bundle_root, qualification, sha256sums = _qualified_preview(
+        tmp_path, release_ready=True
+    )
 
     with pytest.raises(ReleaseProvenanceError, match="must not relabel"):
-        build_release_provenance(
-            repository_root=repository,
-            qualification_path=qualification,
+        _build(
+            repository=repository,
             bundle_root=bundle_root,
-            commit=_COMMIT,
-            runner_os=_RUNNER_OS,
-            runner_arch=_RUNNER_ARCH,
-            inputs=_inputs(),
-            toolchain=_TOOLCHAIN,
+            qualification=qualification,
+            sha256sums=sha256sums,
         )
 
 
 def test_provenance_rejects_package_path_escape(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
-    bundle_root, qualification = _qualified_preview(tmp_path)
+    bundle_root, qualification, sha256sums = _qualified_preview(tmp_path)
     document = json.loads(qualification.read_text())
     document["artifacts"][0]["path"] = "../outside.bin"
     qualification.write_text(json.dumps(document))
 
     with pytest.raises(ReleaseProvenanceError, match="normalized relative path"):
-        build_release_provenance(
-            repository_root=repository,
-            qualification_path=qualification,
+        _build(
+            repository=repository,
             bundle_root=bundle_root,
-            commit=_COMMIT,
-            runner_os=_RUNNER_OS,
-            runner_arch=_RUNNER_ARCH,
-            inputs=_inputs(),
-            toolchain=_TOOLCHAIN,
+            qualification=qualification,
+            sha256sums=sha256sums,
         )
 
 
 def test_provenance_rejects_malformed_qualification_digest(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
-    bundle_root, qualification = _qualified_preview(tmp_path)
+    bundle_root, qualification, sha256sums = _qualified_preview(tmp_path)
     document = json.loads(qualification.read_text())
     document["artifacts"][0]["sha256"] = "nope"
     qualification.write_text(json.dumps(document))
 
     with pytest.raises(ReleaseProvenanceError, match="lowercase SHA-256"):
-        build_release_provenance(
-            repository_root=repository,
-            qualification_path=qualification,
+        _build(
+            repository=repository,
             bundle_root=bundle_root,
-            commit=_COMMIT,
-            runner_os=_RUNNER_OS,
-            runner_arch=_RUNNER_ARCH,
-            inputs=_inputs(),
-            toolchain=_TOOLCHAIN,
+            qualification=qualification,
+            sha256sums=sha256sums,
         )
 
 
 def test_provenance_rejects_duplicate_repository_inputs(tmp_path: Path) -> None:
     repository = _repository(tmp_path)
-    bundle_root, qualification = _qualified_preview(tmp_path)
+    bundle_root, qualification, sha256sums = _qualified_preview(tmp_path)
 
     with pytest.raises(ReleaseProvenanceError, match="inputs must be unique"):
-        build_release_provenance(
-            repository_root=repository,
-            qualification_path=qualification,
+        _build(
+            repository=repository,
             bundle_root=bundle_root,
-            commit=_COMMIT,
-            runner_os=_RUNNER_OS,
-            runner_arch=_RUNNER_ARCH,
+            qualification=qualification,
+            sha256sums=sha256sums,
             inputs=("uv.lock", "uv.lock"),
-            toolchain=_TOOLCHAIN,
         )
