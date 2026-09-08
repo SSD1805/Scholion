@@ -9,6 +9,7 @@ on:
       - "frontend/package.json"
       - "frontend/package-lock.json"
       - "scripts/build_desktop_runtime.py"
+      - "scripts/build_release_provenance.py"
       - "scripts/scholion_runtime_entry.py"
       - "scripts/verify_packaged_runtime_acceptance.py"
       - "scripts/verify_cross_platform_media_acceptance.py"
@@ -23,6 +24,7 @@ on:
       - "frontend/package.json"
       - "frontend/package-lock.json"
       - "scripts/build_desktop_runtime.py"
+      - "scripts/build_release_provenance.py"
       - "scripts/scholion_runtime_entry.py"
       - "scripts/verify_packaged_runtime_acceptance.py"
       - "scripts/verify_cross_platform_media_acceptance.py"
@@ -209,7 +211,7 @@ jobs:
           hdiutil detach "$mount_point"
           trap - EXIT
 
-      - name: Install exact NSIS artifact and qualify installed runtime
+      - name: Qualify exact NSIS install, uninstall, and reinstall lifecycle
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
@@ -217,22 +219,95 @@ jobs:
           if (-not $installer) {
             throw "Tauri did not produce an NSIS installer"
           }
+
           $installDir = Join-Path $env:RUNNER_TEMP "scholion-preview-install"
-          $process = Start-Process -FilePath $installer.FullName -ArgumentList @("/S", "/D=$installDir") -Wait -PassThru
-          if ($process.ExitCode -ne 0) {
-            throw "NSIS preview install failed with exit code $($process.ExitCode)"
+          $retainedWorkspace = Join-Path $env:RUNNER_TEMP "scholion-retained-user-workspace"
+          $reinstallWorkspace = Join-Path $env:RUNNER_TEMP "scholion-reinstall-acceptance"
+
+          function Install-ScholionPreview {
+            $process = Start-Process -FilePath $installer.FullName -ArgumentList @("/S", "/D=$installDir") -Wait -PassThru
+            if ($process.ExitCode -ne 0) {
+              throw "NSIS preview install failed with exit code $($process.ExitCode)"
+            }
+            $runtime = Join-Path $installDir "runtime\scholion-runtime.exe"
+            if (-not (Test-Path $runtime -PathType Leaf)) {
+              throw "Installed Scholion runtime is missing"
+            }
+            return $runtime
           }
-          $runtime = Join-Path $installDir "runtime\scholion-runtime.exe"
-          if (-not (Test-Path $runtime -PathType Leaf)) {
-            throw "Installed Scholion runtime is missing"
-          }
-          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py $runtime
-          $uninstaller = Join-Path $installDir "uninstall.exe"
-          if (Test-Path $uninstaller -PathType Leaf) {
+
+          function Uninstall-ScholionPreview {
+            $uninstaller = Join-Path $installDir "uninstall.exe"
+            if (-not (Test-Path $uninstaller -PathType Leaf)) {
+              throw "Installed Scholion uninstaller is missing"
+            }
             $uninstall = Start-Process -FilePath $uninstaller -ArgumentList "/S" -Wait -PassThru
             if ($uninstall.ExitCode -ne 0) {
               throw "NSIS preview uninstall failed with exit code $($uninstall.ExitCode)"
             }
+            $runtime = Join-Path $installDir "runtime\scholion-runtime.exe"
+            for ($attempt = 1; $attempt -le 20 -and (Test-Path $runtime -PathType Leaf); $attempt++) {
+              Start-Sleep -Milliseconds 500
+            }
+            if (Test-Path $runtime -PathType Leaf) {
+              throw "NSIS preview uninstall left the installed Scholion runtime behind"
+            }
+          }
+
+          function Assert-PreservedUserState {
+            param(
+              [string]$CanonicalPath,
+              [string]$CanonicalHash,
+              [string]$CanaryPath,
+              [string]$CanaryHash
+            )
+            if (-not (Test-Path $CanonicalPath -PathType Leaf)) {
+              throw "NSIS lifecycle removed canonical transcript evidence outside the install directory"
+            }
+            if ((Get-FileHash -Algorithm SHA256 $CanonicalPath).Hash -ne $CanonicalHash) {
+              throw "NSIS lifecycle modified canonical transcript evidence outside the install directory"
+            }
+            if (-not (Test-Path $CanaryPath -PathType Leaf)) {
+              throw "NSIS lifecycle removed Scholion state outside the install directory"
+            }
+            if ((Get-FileHash -Algorithm SHA256 $CanaryPath).Hash -ne $CanaryHash) {
+              throw "NSIS lifecycle modified Scholion state outside the install directory"
+            }
+          }
+
+          $runtime = Install-ScholionPreview
+          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py $runtime --workspace-root $retainedWorkspace
+          if ($LASTEXITCODE -ne 0) {
+            throw "Installed Scholion runtime acceptance failed"
+          }
+
+          $canonical = Get-ChildItem (Join-Path $retainedWorkspace "output\*.json") | Select-Object -First 1
+          if (-not $canonical) {
+            throw "Retained packaged acceptance did not create canonical transcript evidence"
+          }
+          $canonicalHash = (Get-FileHash -Algorithm SHA256 $canonical.FullName).Hash
+          $canary = Join-Path $retainedWorkspace "state\lifecycle-preservation-canary.txt"
+          Set-Content -Path $canary -Value "scholion-user-state-preservation-v1" -NoNewline
+          $canaryHash = (Get-FileHash -Algorithm SHA256 $canary).Hash
+
+          Uninstall-ScholionPreview
+          Assert-PreservedUserState $canonical.FullName $canonicalHash $canary $canaryHash
+
+          $runtime = Install-ScholionPreview
+          Assert-PreservedUserState $canonical.FullName $canonicalHash $canary $canaryHash
+          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py $runtime --workspace-root $reinstallWorkspace
+          if ($LASTEXITCODE -ne 0) {
+            throw "Reinstalled Scholion runtime acceptance failed"
+          }
+          $reinstallCanonical = Get-ChildItem (Join-Path $reinstallWorkspace "output\*.json") | Select-Object -First 1
+          if (-not $reinstallCanonical) {
+            throw "Reinstalled packaged acceptance did not create canonical transcript evidence"
+          }
+
+          Uninstall-ScholionPreview
+          Assert-PreservedUserState $canonical.FullName $canonicalHash $canary $canaryHash
+          if (-not (Test-Path $reinstallCanonical.FullName -PathType Leaf)) {
+            throw "Final NSIS uninstall removed canonical evidence created after reinstall"
           }
 
       - name: Record preview artifact identity and unresolved release gates
@@ -269,11 +344,17 @@ jobs:
                   }
               )
           (report_dir / "SHA256SUMS").write_text("\n".join(checksums) + "\n")
+          platform_lifecycle = (
+              "windows-install-uninstall-reinstall-preserves-user-state"
+              if os.environ["RUNNER_OS"] == "Windows"
+              else "macos-dmg-mount-runtime-unmount"
+          )
           report = {
               "schema_version": 1,
               "qualification": "unsigned-preview",
               "commit": os.environ["GITHUB_SHA"],
               "runner_os": os.environ["RUNNER_OS"],
+              "platform_lifecycle": platform_lifecycle,
               "release_ready": False,
               "qualified": {
                   "managed_scholion_runtime": True,
@@ -302,6 +383,20 @@ jobs:
               json.dumps(report, indent=2, sort_keys=True) + "\n"
           )
 
+      - name: Build deterministic provenance for exact qualified package
+        shell: bash
+        env:
+          SCHOLION_RUNNER_ARCH: ${{ runner.arch }}
+        run: >-
+          uv run --no-sync python scripts/build_release_provenance.py
+          --qualification release-preview/qualification.json
+          --sha256sums release-preview/SHA256SUMS
+          --bundle-root frontend/src-tauri/target/release/bundle
+          --commit "${GITHUB_SHA}"
+          --runner-os "${RUNNER_OS}"
+          --runner-arch "${SCHOLION_RUNNER_ARCH}"
+          --output release-preview/provenance.json
+
       - name: Upload exact preview package and qualification evidence
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -311,6 +406,7 @@ jobs:
             frontend/src-tauri/target/release/bundle/**/*.exe
             release-preview/SHA256SUMS
             release-preview/qualification.json
+            release-preview/provenance.json
           if-no-files-found: error
           compression-level: 0
           retention-days: 14
