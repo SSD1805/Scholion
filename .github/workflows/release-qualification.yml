@@ -102,11 +102,28 @@ jobs:
           missing=[name for name in ('ffmpeg','ffprobe') if shutil.which(name) is None];
           assert not missing, f'Missing qualification media tools: {missing}'"
 
-      - name: Install locked Scholion transcription graph
-        run: uv sync --locked --extra transcription
+      - name: Install locked Scholion transcription and packaging graph
+        run: uv sync --locked --no-dev --extra transcription --group packaging
 
-      - name: Install exact packaging tool
-        run: uv pip install "pyinstaller==6.22.2"
+      - name: Export exact qualification dependency graph
+        run: >-
+          uv export
+          --locked
+          --no-dev
+          --extra transcription
+          --group packaging
+          --no-emit-project
+          --no-hashes
+          --format requirements-txt
+          --output-file "${{ runner.temp }}/scholion-packaging-requirements.txt"
+
+      - name: Audit exact qualification dependency graph
+        run: >-
+          uvx --from pip-audit==2.10.1 pip-audit
+          --requirement "${{ runner.temp }}/scholion-packaging-requirements.txt"
+          --no-deps
+          --disable-pip
+          --progress-spinner off
 
       - name: Build managed Scholion runtime
         run: uv run python scripts/build_desktop_runtime.py
@@ -136,10 +153,24 @@ jobs:
       - name: Build unsigned Windows preview package
         if: runner.os == 'Windows'
         working-directory: frontend
-        run: >-
-          npm run tauri -- build
-          --config src-tauri/tauri.release.conf.json
-          --bundles nsis
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP "scholion-nsis-build.log"
+          npm run tauri -- build --config src-tauri/tauri.release.conf.json --bundles nsis *>&1 |
+            Tee-Object -FilePath $log
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) {
+            exit $exitCode
+          }
+
+      - name: Upload Windows packaging diagnostics on failure
+        if: failure() && runner.os == 'Windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scholion-nsis-diagnostics-${{ github.sha }}
+          path: ${{ runner.temp }}/scholion-nsis-build.log
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Mount exact DMG and qualify installed runtime
         if: runner.os == 'macOS'
@@ -228,13 +259,14 @@ jobs:
                   "real_jfk_transcription_through_frozen_runtime": True,
                   "offline_inference_after_model_install": True,
                   "canonical_evidence_and_exports": True,
+                  "locked_and_audited_packaging_toolchain": True,
+                  "pyinstaller_exact_6_22_2": True,
                   "tauri_package_build": True,
                   "exact_package_install_or_mount": True,
                   "artifact_sha256": True,
               },
               "remaining_release_gates": [
                   "bundle reviewed current FFmpeg and FFprobe instead of relying on host PATH",
-                  "lock/audit the complete packaging toolchain rather than only exact-pin PyInstaller",
                   "bundle the reviewed faster-whisper model-trust catalog",
                   "wire the production Ed25519 verifier and approved public update-key set",
                   "implement and qualify native update activation",
