@@ -122,12 +122,11 @@ The architecture/redundancy audit remains closed after a post-#144 re-audit. The
 
 ## What comes next
 
-The Scholion identity migration and application-side update/model-trust mechanics are complete. The current milestone is issue #145:
+The Scholion identity migration, application-side update/model-trust mechanics, and pre-packaging milestone #145 are complete. The current milestone is packaging and exact-artifact qualification:
 
-1. finish the pre-packaging redundancy/trust-input/documentation cleanup and final product icon;
-2. **then** package Windows/macOS with the managed runtime/native dependencies, real public verification keys, reviewed model catalog, OS signing/notarization, update activation, first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;
-3. qualify the real packages on representative devices, including #114's remaining CPU-only/accelerator task-transport evidence; and
-4. release the MVP.
+1. freeze/package the managed runtime and native dependencies, build Windows/macOS preview installers, and qualify the exact artifact bytes with real media;
+2. provision production update verification material, reviewed model trust, signing/notarization, native update activation, and representative-device evidence; official Linux binary packaging remains blocked by #135; and
+3. release the MVP when those gates pass.
 
 Backup/restore + selected research portability, packaged semantic custody, and broader research-native features are useful **post-MVP** work. They are not reasons to hold the first packaged Scholion build hostage.
 

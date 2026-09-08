@@ -163,17 +163,11 @@ Issue #114 tracks representative native task-transport qualification. Issue #135
 
 ## Current milestone boundary
 
-Issue #145 owns the last pre-packaging cleanup:
+Issue #145 is complete: the post-#144 redundancy re-audit, production verifier/key-rotation decision, real-model review procedure, signing-input validation, documentation truth-sync, and final product mark were frozen before packaging began.
 
-1. complete the post-#144 redundancy re-audit;
-2. freeze production verifier/key-rotation and real-model review procedure;
-3. keep invalid release-signing inputs out of the offline-signing path;
-4. truth-sync the docs/trackers; and
-5. replace the placeholder application icon/master asset.
+The current milestone is Windows/macOS packaging plus exact-artifact Release Qualification. The repository now has a closed managed desktop-runtime boundary and an unsigned preview-package qualification path, but `release_ready` remains false until current self-contained FFmpeg/FFprobe, reviewed model/update trust inputs, native activation, OS signing/notarization, and representative-device evidence are present.
 
-Packaging itself intentionally waits until that milestone closes.
-
-## Ordered residual work after #145
+## Ordered residual release work after #145
 
 The remaining **MVP release gates** are narrow and concrete:
 

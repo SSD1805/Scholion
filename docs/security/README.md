@@ -12,7 +12,7 @@ See **[Pre-release security hardening roadmap](release-hardening.md)** for the c
 - hostile-media parser containment and the boundary between current controls and a real OS sandbox; and
 - deliberately deferred keychain/application-layer encryption work that requires a concrete threat/recovery model.
 
-The application-side update/model-trust mechanics were completed in merged PR #144. Issue #145 is the current **pre-packaging** milestone: production trust-input decisions, post-update redundancy cleanup, documentation truth-sync, and final product icon/brand assets. Packaging itself follows after #145.
+The application-side update/model-trust mechanics were completed in merged PR #144, and issue #145 completed the pre-packaging trust-input/redundancy/documentation/icon freeze. Windows/macOS packaging and exact-artifact Release Qualification are now the current milestone; production trust material, managed native media tools, signing/notarization, and representative-device evidence remain explicit release gates.
 
 See **[Signed update and model trust channel](update-model-trust.md)** for the implemented exact-byte signed update envelope, anti-rollback/expiry/equivocation semantics, privacy-preserving update behavior, and project-owned pinned model metadata with complete file-set/size/SHA-256 verification.
 

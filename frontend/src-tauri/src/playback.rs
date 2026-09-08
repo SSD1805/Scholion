@@ -285,6 +285,7 @@ fn bridge_error(response: &BridgeResponse) -> String {
 pub async fn playback_prepare(
     request: PlaybackPrepareRequest,
     sessions: State<'_, PlaybackSessions>,
+    runtime: State<'_, backend::DesktopRuntime>,
 ) -> Result<PlaybackPrepared, String> {
     let payload = json!({
         "protocol_version": 1,
@@ -296,7 +297,7 @@ pub async fn playback_prepare(
             "seek_seconds": request.seek_seconds,
         }
     });
-    let raw = backend::playback_authorization_request(payload).await?;
+    let raw = backend::playback_authorization_request(payload, runtime.inner().clone()).await?;
     let response: BridgeResponse = serde_json::from_value(raw)
         .map_err(|_| "Scholion's playback authorization response was invalid".to_string())?;
     if !response.ok {

@@ -2,7 +2,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
 use std::io::{Read, Write};
-use std::process::{Child, Command, ExitStatus, Stdio};
+use std::process::{Child, ExitStatus, Stdio};
 use std::sync::Mutex;
 use tauri::State;
 
@@ -205,12 +205,12 @@ fn validate_envelope(task: &Value) -> Result<TaskEnvelope, String> {
     Ok(envelope)
 }
 
-fn python_unavailable_message() -> String {
+fn runtime_unavailable_message() -> String {
     if cfg!(debug_assertions) {
         "Scholion's local Python worker is unavailable. From the repository root run `python3.12 scripts/bootstrap_python.py`, or set SCHOLION_PYTHON to a compatible repository virtual-environment interpreter."
             .to_string()
     } else {
-        "Scholion's local Python worker is unavailable".to_string()
+        "Scholion's packaged local worker is unavailable".to_string()
     }
 }
 
@@ -218,6 +218,7 @@ fn python_unavailable_message() -> String {
 pub async fn processing_start_task(
     task: Value,
     processes: State<'_, ProcessingProcesses>,
+    runtime: State<'_, crate::backend::DesktopRuntime>,
 ) -> Result<TaskStatus, String> {
     let encoded = serde_json::to_vec(&task)
         .map_err(|_| "Could not encode local processing task".to_string())?;
@@ -235,13 +236,13 @@ pub async fn processing_start_task(
     }
     ensure_no_running_task(&mut entries)?;
 
-    let mut child = Command::new(crate::backend::configured_python())
-        .args(["-m", "scholion.desktop.processing_worker"])
+    let mut child = runtime
+        .command(crate::backend::RuntimeMode::ProcessingWorker)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
-        .map_err(|_| python_unavailable_message())?;
+        .map_err(|_| runtime_unavailable_message())?;
 
     let write_result = child
         .stdin

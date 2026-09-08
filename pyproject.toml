@@ -29,6 +29,9 @@ diarization = [
 ]
 
 [dependency-groups]
+packaging = [
+    "pyinstaller==6.22.2",
+]
 dev = [
     "hypothesis>=6.167.1,<7",
     "mypy>=2.3.1,<3",

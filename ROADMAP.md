@@ -4,13 +4,13 @@ Scholion is a **private, local-first workspace for recorded evidence**. Its job 
 
 Modern Scholion restarted on August 2, 2026. The MVP product foundation is now substantially built: import, local processing, explicit embedded-audio-track choice, canonical evidence, lexical/semantic/hybrid retrieval, verified navigation, durable notes/tags/collections/saved searches, transcript and speaker tools, native source playback, lifecycle/retention controls, contextual guidance, accessibility themes, and signed update/model-trust mechanics all exist in repository code.
 
-The project is now in **pre-packaging release readiness**. Packaging itself is deliberately the next milestone after issue #145, not part of the current branch.
+Issue #145 is complete. The project is now in the **Windows/macOS packaging and artifact-qualification milestone**: Scholion is freezing its managed desktop runtime, building unsigned preview packages, and proving those exact package bytes before production signing/release inputs are provisioned.
 
 ![Scholion roadmap 🗺️✨ diagram](./docs/diagrams/generated/scholion-roadmap.svg)
 
 [Diagram source (Mermaid)](./docs/diagrams/src/scholion-roadmap.mmd)
 
-Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, and signed update/model-trust mechanics. The current milestone is pre-packaging release readiness, followed by Windows/macOS packaging and representative release qualification. Official Linux binary distribution remains separately blocked by issue #135.
+Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, signed update/model-trust mechanics, hosted cross-platform real-media acceptance, and completed pre-packaging readiness. The current milestone is Windows/macOS packaging plus artifact-level release qualification, followed by representative physical-device qualification. Official Linux binary distribution remains separately blocked by issue #135.
 
 # MVP foundation now
 
@@ -22,7 +22,7 @@ Scholion inspects effective CPU/memory and accelerator topology before admitting
 
 Project-owned model policy trust is now implemented. When a reviewed `model-trust.json` is bundled, `ModelManager` pins the exact approved upstream revision, verifies the complete file set/size/SHA-256 before registration and admission, records policy evidence separately from provider-local validation, and re-verifies current trust later. Legacy locally valid models remain visible/removable but cannot authorize new transcription under enforcement until a trusted reinstall succeeds.
 
-The repository intentionally still contains **no guessed production faster-whisper trust entries**. Issue #145 owns the review procedure; the real immutable revisions, licenses, regression evidence, and measured entries remain deliberate release inputs.
+The repository intentionally still contains **no guessed production faster-whisper trust entries**. Issue #145 froze the review procedure; the real immutable revisions, licenses, regression evidence, and measured entries remain deliberate release inputs for packaging.
 
 The Processing Center presents readiness, model state, preflight, supervised start/cancel, durable job status, checkpoint resume, fresh retry, private execution-state discard, bounded public task failures, in-place model task activity, and speaker-labeling capability gating. Python remains authoritative for planning, admission, model custody, stream-selection validation, resume compatibility, and transcript correctness. Tauri owns allowlisted long-running child-process lifetime. React submits intent and presents state.
 
@@ -66,7 +66,7 @@ The desktop now also has an explicit **Updates** workspace. Manual checks use on
 | Capability | Authority | Desktop status | Remaining MVP/release work |
 |---|---|---|---|
 | Machine/resource policy | Python runner/admission | implemented | representative-device calibration |
-| Model custody | managed revision + project policy verification | implemented mechanics | deliberate real catalog review/provisioning under #145 |
+| Model custody | managed revision + project policy verification | implemented mechanics | deliberate real catalog review/provisioning for release |
 | Import/locations | durable permissions/discovery | implemented | optional settings polish |
 | Processing | plan, execute, checkpoint, resume/retry | implemented | representative native task qualification under #114 |
 | Embedded audio tracks | Python probe/selector/planner + FFmpeg exact map | implemented | future proven multi-track playback; separate-file sync remains out of scope |
@@ -84,7 +84,7 @@ The desktop now also has an explicit **Updates** workspace. Manual checks use on
 | Architecture/redundancy | capability-blind transport + app-layer composition + one Research contract | re-audited after #144 | no known duplicate authority remains in current milestone |
 | Frontend tests | strict TS/build + Playwright/axe | primary surfaces including Updates covered | grow with features, avoid duplicated backend policy |
 | Update trust | exact-byte signed manifest + fixed endpoint + rollback/expiry/equivocation + staging + UI | implemented mechanics | production public key/native verifier wiring and OS activation during packaging |
-| Packaging | Python wheel + source Tauri | development only | managed runtime/installers/update activation/uninstall; Linux public package blocked by #135 |
+| Packaging | Python wheel + Tauri + managed frozen runtime | Windows/macOS preview packaging + artifact qualification in progress | managed FFmpeg, production trust inputs, update activation, signing/notarization, uninstall qualification; Linux public package blocked by #135 |
 | Backup/restore | authority boundaries known | not implemented | **post-MVP** portability/data-safety feature |
 | Representative hardware | platform CI + policy contracts | partial | real devices; #114 owns current task-transport evidence |
 
@@ -113,9 +113,9 @@ Merged PR #144 completed the application-side trust mechanics:
 
 A staged update is deliberately **not** called installed. Native activation plus OS package signing/notarization remains a later packaging boundary.
 
-## 3. Pre-packaging release readiness ← current milestone (#145)
+## 3. Pre-packaging release readiness complete (#145)
 
-Before turning Tauri bundling on, finish the narrow cleanup that should be frozen before installer/update compatibility becomes real:
+Issue #145 closed the narrow cleanup that needed to be frozen before installer/update compatibility became real:
 
 - complete the post-#144 redundancy re-audit;
 - keep application-service construction out of desktop adapters;
@@ -128,9 +128,9 @@ Before turning Tauri bundling on, finish the narrow cleanup that should be froze
 
 The verifier decision is documented in **[Production trust inputs](docs/security/production-trust-inputs.md)**: packaging will exact-pin reviewed `ed25519-dalek` 3.0.0 at the native boundary and bundle approved public verification material. The actual Cargo lockfile change belongs to packaging, where Cargo can generate and audit the dependency graph correctly.
 
-## 4. Packaging and first-run/update/uninstall ← next milestone, deliberately waiting
+## 4. Packaging and first-run/update/uninstall ← current milestone
 
-After #145, package the real application rather than extending feature scope:
+With #145 complete, package the real application rather than extending feature scope. The current tranche has started the closed managed runtime, Windows/macOS preview bundles, and exact-artifact Release Qualification workflow; the remaining bullets are still release gates until explicitly qualified:
 
 - managed Python runtime/sidecar;
 - FFmpeg/native dependencies;
@@ -149,7 +149,7 @@ Public **Linux** binary packaging remains blocked by issue #135 while the suppor
 
 ## 5. Representative release qualification
 
-Once real packages exist, qualify what users will actually run:
+Hosted Release Qualification now proves the frozen runtime and exact unsigned Windows/macOS preview package can process pinned real JFK media. That is artifact-level CI evidence, not representative-device evidence. Continue by qualifying what users will actually run:
 
 - Windows 8 GB CPU-only;
 - ordinary 16 GB systems;
@@ -196,6 +196,6 @@ A future notebook page should live in authoritative SQLite as its own research-d
 
 The rule is now intentionally boring:
 
-**finish #145 → package Windows/macOS → qualify real packages → release the MVP.**
+**package and artifact-qualify Windows/macOS → provision production trust/signing/native dependencies → qualify representative devices → release the MVP.**
 
 Do not reopen completed product tranches merely because later research or portability features are interesting. Do not call production secrets, real upstream trust decisions, OS signing, or representative-device evidence “implemented” until they actually exist.

@@ -1,0 +1,316 @@
+name: Release Qualification
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - ".github/workflows/release-qualification.yml"
+      - "frontend/src-tauri/**"
+      - "frontend/package.json"
+      - "frontend/package-lock.json"
+      - "scripts/build_desktop_runtime.py"
+      - "scripts/scholion_runtime_entry.py"
+      - "scripts/verify_packaged_runtime_acceptance.py"
+      - "scripts/verify_cross_platform_media_acceptance.py"
+      - "src/scholion/**"
+      - "pyproject.toml"
+      - "uv.lock"
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/release-qualification.yml"
+      - "frontend/src-tauri/**"
+      - "frontend/package.json"
+      - "frontend/package-lock.json"
+      - "scripts/build_desktop_runtime.py"
+      - "scripts/scholion_runtime_entry.py"
+      - "scripts/verify_packaged_runtime_acceptance.py"
+      - "scripts/verify_cross_platform_media_acceptance.py"
+      - "src/scholion/**"
+      - "pyproject.toml"
+      - "uv.lock"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-qualification-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  preview-package:
+    name: preview-package (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+
+    steps:
+      - name: Check out repository without persisting credentials
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.33"
+          enable-cache: true
+
+      - name: Pin native Rust toolchain
+        shell: bash
+        run: |
+          rustup toolchain install 1.90.0 --profile minimal
+          rustup default 1.90.0
+          rustc --version
+          cargo --version
+
+      - name: Install qualification FFmpeg (macOS host prerequisite)
+        if: runner.os == 'macOS'
+        run: brew install ffmpeg
+
+      - name: Install qualification FFmpeg (Windows host prerequisite)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          if ((Get-Command ffmpeg -ErrorAction SilentlyContinue) -and
+              (Get-Command ffprobe -ErrorAction SilentlyContinue)) {
+            Write-Host "ffmpeg and ffprobe are already available"
+            exit 0
+          }
+          for ($attempt = 1; $attempt -le 3; $attempt++) {
+            choco install ffmpeg --yes --no-progress
+            if ($LASTEXITCODE -eq 0) {
+              exit 0
+            }
+            if ($attempt -lt 3) {
+              Start-Sleep -Seconds (10 * $attempt)
+            }
+          }
+          throw "Could not install qualification ffmpeg on the Windows runner"
+
+      - name: Verify qualification media tools
+        run: >-
+          python -c "import shutil;
+          missing=[name for name in ('ffmpeg','ffprobe') if shutil.which(name) is None];
+          assert not missing, f'Missing qualification media tools: {missing}'"
+
+      - name: Install locked Scholion transcription and packaging graph
+        run: uv sync --locked --no-dev --extra transcription --group packaging
+
+      - name: Export exact qualification dependency graph
+        run: >-
+          uv export
+          --locked
+          --no-dev
+          --extra transcription
+          --group packaging
+          --no-emit-project
+          --no-hashes
+          --format requirements-txt
+          --output-file "${{ runner.temp }}/scholion-packaging-requirements.txt"
+
+      - name: Audit exact qualification dependency graph
+        run: >-
+          uvx --from pip-audit==2.10.1 pip-audit
+          --requirement "${{ runner.temp }}/scholion-packaging-requirements.txt"
+          --no-deps
+          --disable-pip
+          --progress-spinner off
+
+      - name: Build managed Scholion runtime without dependency resync
+        run: uv run --no-sync python scripts/build_desktop_runtime.py
+
+      - name: Reject development tooling from frozen runtime
+        shell: python
+        run: |
+          from pathlib import Path
+
+          internal = Path("frontend/src-tauri/resources/runtime/_internal")
+          forbidden = [internal / name for name in ("mypy", "pytest", "_pytest")]
+          present = [path.as_posix() for path in forbidden if path.exists()]
+          if present:
+              raise SystemExit(
+                  "development-only packages leaked into the frozen runtime: "
+                  + ", ".join(present)
+              )
+
+      - name: Prove frozen runtime before bundling
+        shell: bash
+        run: |
+          if [[ "${RUNNER_OS}" == "Windows" ]]; then
+            runtime="frontend/src-tauri/resources/runtime/scholion-runtime.exe"
+          else
+            runtime="frontend/src-tauri/resources/runtime/scholion-runtime"
+          fi
+          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py "$runtime"
+
+      - name: Install locked frontend dependencies
+        working-directory: frontend
+        run: npm ci --no-fund --no-audit
+
+      - name: Generate native application icons from reviewed master
+        working-directory: frontend
+        run: >-
+          npm run tauri -- icon
+          src-tauri/icons/scholion-master.svg
+          --output src-tauri/icons
+
+      - name: Build unsigned macOS preview package
+        if: runner.os == 'macOS'
+        working-directory: frontend
+        run: >-
+          npm run tauri -- build
+          --config src-tauri/tauri.release.conf.json
+          --bundles dmg
+
+      - name: Build unsigned Windows preview package
+        if: runner.os == 'Windows'
+        working-directory: frontend
+        shell: pwsh
+        run: |
+          $log = Join-Path $env:RUNNER_TEMP "scholion-nsis-build.log"
+          npm run tauri -- build --config src-tauri/tauri.release.conf.json --bundles nsis *>&1 |
+            Tee-Object -FilePath $log
+          $exitCode = $LASTEXITCODE
+          if ($exitCode -ne 0) {
+            exit $exitCode
+          }
+
+      - name: Upload Windows packaging diagnostics on failure
+        if: failure() && runner.os == 'Windows'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scholion-nsis-diagnostics-${{ github.sha }}
+          path: ${{ runner.temp }}/scholion-nsis-build.log
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Mount exact DMG and qualify installed runtime
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          dmg="$(find frontend/src-tauri/target/release/bundle/dmg -maxdepth 1 -name '*.dmg' -print -quit)"
+          test -n "$dmg"
+          mount_point="${RUNNER_TEMP}/scholion-preview-dmg"
+          mkdir -p "$mount_point"
+          hdiutil attach "$dmg" -nobrowse -readonly -mountpoint "$mount_point"
+          trap 'hdiutil detach "$mount_point" >/dev/null 2>&1 || true' EXIT
+          runtime="$mount_point/Scholion.app/Contents/Resources/runtime/scholion-runtime"
+          test -x "$runtime"
+          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py "$runtime"
+          hdiutil detach "$mount_point"
+          trap - EXIT
+
+      - name: Install exact NSIS artifact and qualify installed runtime
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "frontend/src-tauri/target/release/bundle/nsis/*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "Tauri did not produce an NSIS installer"
+          }
+          $installDir = Join-Path $env:RUNNER_TEMP "scholion-preview-install"
+          $process = Start-Process -FilePath $installer.FullName -ArgumentList @("/S", "/D=$installDir") -Wait -PassThru
+          if ($process.ExitCode -ne 0) {
+            throw "NSIS preview install failed with exit code $($process.ExitCode)"
+          }
+          $runtime = Join-Path $installDir "runtime\scholion-runtime.exe"
+          if (-not (Test-Path $runtime -PathType Leaf)) {
+            throw "Installed Scholion runtime is missing"
+          }
+          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py $runtime
+          $uninstaller = Join-Path $installDir "uninstall.exe"
+          if (Test-Path $uninstaller -PathType Leaf) {
+            $uninstall = Start-Process -FilePath $uninstaller -ArgumentList "/S" -Wait -PassThru
+            if ($uninstall.ExitCode -ne 0) {
+              throw "NSIS preview uninstall failed with exit code $($uninstall.ExitCode)"
+            }
+          }
+
+      - name: Record preview artifact identity and unresolved release gates
+        shell: python
+        run: |
+          import hashlib
+          import json
+          import os
+          from pathlib import Path
+
+          bundle_root = Path("frontend/src-tauri/target/release/bundle")
+          suffix = ".dmg" if os.environ["RUNNER_OS"] == "macOS" else ".exe"
+          artifacts = sorted(
+              path
+              for path in bundle_root.rglob(f"*{suffix}")
+              if path.is_file()
+          )
+          if not artifacts:
+              raise SystemExit("no preview package artifact was produced")
+
+          report_dir = Path("release-preview")
+          report_dir.mkdir(parents=True, exist_ok=True)
+          checksums = []
+          artifact_records = []
+          for artifact in artifacts:
+              digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+              relative = artifact.relative_to(bundle_root).as_posix()
+              checksums.append(f"{digest}  {relative}")
+              artifact_records.append(
+                  {
+                      "path": relative,
+                      "size_bytes": artifact.stat().st_size,
+                      "sha256": digest,
+                  }
+              )
+          (report_dir / "SHA256SUMS").write_text("\n".join(checksums) + "\n")
+          report = {
+              "schema_version": 1,
+              "qualification": "unsigned-preview",
+              "commit": os.environ["GITHUB_SHA"],
+              "runner_os": os.environ["RUNNER_OS"],
+              "release_ready": False,
+              "qualified": {
+                  "managed_scholion_runtime": True,
+                  "real_jfk_transcription_through_frozen_runtime": True,
+                  "offline_inference_after_model_install": True,
+                  "canonical_evidence_and_exports": True,
+                  "locked_and_audited_packaging_toolchain": True,
+                  "runtime_excludes_development_tooling": True,
+                  "reviewed_master_native_icon_generation": True,
+                  "pyinstaller_exact_6_22_2": True,
+                  "tauri_package_build": True,
+                  "exact_package_install_or_mount": True,
+                  "artifact_sha256": True,
+              },
+              "remaining_release_gates": [
+                  "bundle reviewed current FFmpeg and FFprobe instead of relying on host PATH",
+                  "bundle the reviewed faster-whisper model-trust catalog",
+                  "wire the production Ed25519 verifier and approved public update-key set",
+                  "implement and qualify native update activation",
+                  "apply and verify Windows code signing and macOS signing/notarization",
+                  "complete representative-device qualification under issue #114",
+              ],
+              "artifacts": artifact_records,
+          }
+          (report_dir / "qualification.json").write_text(
+              json.dumps(report, indent=2, sort_keys=True) + "\n"
+          )
+
+      - name: Upload exact preview package and qualification evidence
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: scholion-preview-${{ runner.os }}-${{ github.sha }}
+          path: |
+            frontend/src-tauri/target/release/bundle/**/*.dmg
+            frontend/src-tauri/target/release/bundle/**/*.exe
+            release-preview/SHA256SUMS
+            release-preview/qualification.json
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
