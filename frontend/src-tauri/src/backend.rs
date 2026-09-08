@@ -4,6 +4,7 @@ use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 use std::sync::Mutex;
+use tauri::{AppHandle, Manager, State};
 
 const MAX_REQUEST_BYTES: usize = 128 * 1024;
 
@@ -14,43 +15,137 @@ const MAX_REQUEST_BYTES: usize = 128 * 1024;
 // this lock.
 static BRIDGE_PROCESS_LOCK: Mutex<()> = Mutex::new(());
 
-pub(crate) fn configured_python() -> PathBuf {
-    if let Ok(value) = env::var("SCHOLION_PYTHON") {
-        if !value.trim().is_empty() {
-            return PathBuf::from(value);
-        }
-    }
-
-    if cfg!(debug_assertions) {
-        let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
-        let candidate = if cfg!(windows) {
-            repo_root.join(".venv").join("Scripts").join("python.exe")
-        } else {
-            repo_root.join(".venv").join("bin").join("python")
-        };
-        if candidate.is_file() {
-            return candidate;
-        }
-    }
-
-    PathBuf::from("python")
+#[derive(Clone, Copy)]
+pub(crate) enum RuntimeMode {
+    DesktopBridge,
+    CustodyBridge,
+    PlaybackBridge,
+    ProcessingWorker,
+    TranscriptToolsBridge,
+    UpdateBridge,
 }
 
-fn python_unavailable_message() -> String {
+impl RuntimeMode {
+    fn frozen_argument(self) -> &'static str {
+        match self {
+            Self::DesktopBridge => "bridge",
+            Self::CustodyBridge => "custody",
+            Self::PlaybackBridge => "playback",
+            Self::ProcessingWorker => "processing-worker",
+            Self::TranscriptToolsBridge => "transcript-tools",
+            Self::UpdateBridge => "update",
+        }
+    }
+
+    fn python_module(self) -> &'static str {
+        match self {
+            Self::DesktopBridge => "scholion.desktop.bridge",
+            Self::CustodyBridge => "scholion.desktop.custody_bridge",
+            Self::PlaybackBridge => "scholion.desktop.playback_bridge",
+            Self::ProcessingWorker => "scholion.desktop.processing_worker",
+            Self::TranscriptToolsBridge => "scholion.desktop.transcript_tools_bridge",
+            Self::UpdateBridge => "scholion.desktop.update_bridge",
+        }
+    }
+}
+
+#[derive(Clone, Copy)]
+enum RuntimeKind {
+    Python,
+    Frozen,
+}
+
+#[derive(Clone)]
+pub(crate) struct DesktopRuntime {
+    executable: PathBuf,
+    kind: RuntimeKind,
+}
+
+impl DesktopRuntime {
+    pub(crate) fn discover(app: &AppHandle) -> Result<Self, String> {
+        if let Ok(value) = env::var("SCHOLION_RUNTIME") {
+            if !value.trim().is_empty() {
+                return Ok(Self {
+                    executable: PathBuf::from(value),
+                    kind: RuntimeKind::Frozen,
+                });
+            }
+        }
+
+        if let Ok(value) = env::var("SCHOLION_PYTHON") {
+            if !value.trim().is_empty() {
+                return Ok(Self {
+                    executable: PathBuf::from(value),
+                    kind: RuntimeKind::Python,
+                });
+            }
+        }
+
+        if cfg!(debug_assertions) {
+            let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+            let candidate = if cfg!(windows) {
+                repo_root.join(".venv").join("Scripts").join("python.exe")
+            } else {
+                repo_root.join(".venv").join("bin").join("python")
+            };
+            return Ok(Self {
+                executable: if candidate.is_file() {
+                    candidate
+                } else {
+                    PathBuf::from("python")
+                },
+                kind: RuntimeKind::Python,
+            });
+        }
+
+        let resource_dir = app
+            .path()
+            .resource_dir()
+            .map_err(|_| "Scholion could not resolve its packaged runtime directory".to_string())?;
+        let executable_name = if cfg!(windows) {
+            "scholion-runtime.exe"
+        } else {
+            "scholion-runtime"
+        };
+        let candidate = resource_dir.join("runtime").join(executable_name);
+        if !candidate.is_file() {
+            return Err("Scholion's packaged local runtime is missing".to_string());
+        }
+        Ok(Self {
+            executable: candidate,
+            kind: RuntimeKind::Frozen,
+        })
+    }
+
+    pub(crate) fn command(&self, mode: RuntimeMode) -> Command {
+        let mut command = Command::new(&self.executable);
+        match self.kind {
+            RuntimeKind::Python => {
+                command.args(["-m", mode.python_module()]);
+            }
+            RuntimeKind::Frozen => {
+                command.arg(mode.frozen_argument());
+            }
+        }
+        command
+    }
+}
+
+fn runtime_unavailable_message() -> String {
     if cfg!(debug_assertions) {
         "Scholion's local Python service is unavailable. From the repository root run `python3.12 scripts/bootstrap_python.py`, or set SCHOLION_PYTHON to a compatible interpreter."
             .to_string()
     } else {
-        "Scholion's local Python service is unavailable".to_string()
+        "Scholion's packaged local service is unavailable".to_string()
     }
 }
 
-fn python_exit_message() -> String {
+fn runtime_exit_message() -> String {
     if cfg!(debug_assertions) {
         "Scholion's local Python service exited unexpectedly. From frontend run `npm run doctor:desktop` to verify the source environment before retrying."
             .to_string()
     } else {
-        "Scholion's local Python service exited unexpectedly".to_string()
+        "Scholion's packaged local service exited unexpectedly".to_string()
     }
 }
 
@@ -61,7 +156,11 @@ fn request_method(request: &Value) -> &str {
         .unwrap_or("<unknown>")
 }
 
-fn run_python_request(module: &'static str, request: Value) -> Result<Value, String> {
+fn run_runtime_request(
+    runtime: &DesktopRuntime,
+    mode: RuntimeMode,
+    request: Value,
+) -> Result<Value, String> {
     let _bridge_guard = BRIDGE_PROCESS_LOCK
         .lock()
         .map_err(|_| "Scholion's local desktop bridge is unavailable".to_string())?;
@@ -73,21 +172,20 @@ fn run_python_request(module: &'static str, request: Value) -> Result<Value, Str
         return Err("Desktop request exceeded the safe size limit".to_string());
     }
 
-    let python = configured_python();
     if cfg!(debug_assertions) {
         eprintln!(
-            "[scholion-desktop] bridge start module={module} method={method} python={}",
-            python.display()
+            "[scholion-desktop] bridge start mode={} method={method}",
+            mode.frozen_argument()
         );
     }
 
-    let mut child = Command::new(&python)
-        .args(["-m", module])
+    let mut child = runtime
+        .command(mode)
         .stdin(Stdio::piped())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|_| python_unavailable_message())?;
+        .map_err(|_| runtime_unavailable_message())?;
 
     let mut stdin = child
         .stdin
@@ -100,11 +198,12 @@ fn run_python_request(module: &'static str, request: Value) -> Result<Value, Str
 
     let output = child
         .wait_with_output()
-        .map_err(|_| "Scholion's local Python service did not finish cleanly".to_string())?;
+        .map_err(|_| "Scholion's local service task did not finish cleanly".to_string())?;
 
     if cfg!(debug_assertions) {
         eprintln!(
-            "[scholion-desktop] bridge finish module={module} method={method} status={} stdout_bytes={} stderr_bytes={}",
+            "[scholion-desktop] bridge finish mode={} method={method} status={} stdout_bytes={} stderr_bytes={}",
+            mode.frozen_argument(),
             output.status,
             output.stdout.len(),
             output.stderr.len()
@@ -112,47 +211,72 @@ fn run_python_request(module: &'static str, request: Value) -> Result<Value, Str
     }
 
     if !output.status.success() {
-        return Err(python_exit_message());
+        return Err(runtime_exit_message());
     }
 
     serde_json::from_slice(&output.stdout).map_err(|_| {
         if cfg!(debug_assertions) {
             eprintln!(
-                "[scholion-desktop] bridge parse failure module={module} method={method} stdout_bytes={} stderr_bytes={}",
+                "[scholion-desktop] bridge parse failure mode={} method={method} stdout_bytes={} stderr_bytes={}",
+                mode.frozen_argument(),
                 output.stdout.len(),
                 output.stderr.len()
             );
         }
-        "Scholion's local Python service returned an invalid response".to_string()
+        "Scholion's local service returned an invalid response".to_string()
     })
 }
 
-async fn request_module(module: &'static str, request: Value) -> Result<Value, String> {
-    tauri::async_runtime::spawn_blocking(move || run_python_request(module, request))
+async fn request_mode(
+    mode: RuntimeMode,
+    request: Value,
+    runtime: DesktopRuntime,
+) -> Result<Value, String> {
+    tauri::async_runtime::spawn_blocking(move || run_runtime_request(&runtime, mode, request))
         .await
         .map_err(|_| "Scholion's local service task could not be completed".to_string())?
 }
 
-pub(crate) async fn playback_authorization_request(request: Value) -> Result<Value, String> {
-    request_module("scholion.desktop.playback_bridge", request).await
+pub(crate) async fn playback_authorization_request(
+    request: Value,
+    runtime: DesktopRuntime,
+) -> Result<Value, String> {
+    request_mode(RuntimeMode::PlaybackBridge, request, runtime).await
 }
 
 #[tauri::command]
-pub async fn desktop_request(request: Value) -> Result<Value, String> {
-    request_module("scholion.desktop.bridge", request).await
+pub async fn desktop_request(
+    request: Value,
+    runtime: State<'_, DesktopRuntime>,
+) -> Result<Value, String> {
+    request_mode(RuntimeMode::DesktopBridge, request, runtime.inner().clone()).await
 }
 
 #[tauri::command]
-pub async fn transcript_tools_request(request: Value) -> Result<Value, String> {
-    request_module("scholion.desktop.transcript_tools_bridge", request).await
+pub async fn transcript_tools_request(
+    request: Value,
+    runtime: State<'_, DesktopRuntime>,
+) -> Result<Value, String> {
+    request_mode(
+        RuntimeMode::TranscriptToolsBridge,
+        request,
+        runtime.inner().clone(),
+    )
+    .await
 }
 
 #[tauri::command]
-pub async fn lifecycle_request(request: Value) -> Result<Value, String> {
-    request_module("scholion.desktop.custody_bridge", request).await
+pub async fn lifecycle_request(
+    request: Value,
+    runtime: State<'_, DesktopRuntime>,
+) -> Result<Value, String> {
+    request_mode(RuntimeMode::CustodyBridge, request, runtime.inner().clone()).await
 }
 
 #[tauri::command]
-pub async fn update_request(request: Value) -> Result<Value, String> {
-    request_module("scholion.desktop.update_bridge", request).await
+pub async fn update_request(
+    request: Value,
+    runtime: State<'_, DesktopRuntime>,
+) -> Result<Value, String> {
+    request_mode(RuntimeMode::UpdateBridge, request, runtime.inner().clone()).await
 }
