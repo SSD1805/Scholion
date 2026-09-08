@@ -69,7 +69,9 @@ def _build(
     inputs: tuple[str, ...] | None = None,
     toolchain: dict[str, str] | None = None,
 ) -> bytes:
-    repository, bundle_root, qualification, sha256sums, default_inputs = _setup(tmp_path)
+    repository, bundle_root, qualification, sha256sums, default_inputs = _setup(
+        tmp_path
+    )
     return build_release_provenance(
         repository_root=repository,
         qualification_path=qualification,
@@ -84,7 +86,9 @@ def _build(
 
 
 @pytest.mark.parametrize("commit", ["short", "A" * 40])
-def test_provenance_rejects_invalid_commit_identity(tmp_path: Path, commit: str) -> None:
+def test_provenance_rejects_invalid_commit_identity(
+    tmp_path: Path, commit: str
+) -> None:
     with pytest.raises(ReleaseProvenanceError, match="40-hex"):
         _build(tmp_path, commit=commit)
 
@@ -214,7 +218,9 @@ def test_provenance_rejects_malformed_checksum_evidence(
         )
 
 
-def test_provenance_rejects_missing_and_unsafe_repository_inputs(tmp_path: Path) -> None:
+def test_provenance_rejects_missing_and_unsafe_repository_inputs(
+    tmp_path: Path,
+) -> None:
     with pytest.raises(ReleaseProvenanceError, match="requires repository input"):
         _build(tmp_path, inputs=())
 
