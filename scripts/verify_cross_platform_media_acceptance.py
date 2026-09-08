@@ -280,9 +280,7 @@ def verify_public_media() -> None:
 
         upstream_flac = _fetch_public_fixture(root)
         canonical_wav = _canonical_wav(root, upstream_flac)
-        compressed_mp3 = _compress_mp3(
-            root, canonical_wav, name="jfk-compressed.mp3"
-        )
+        compressed_mp3 = _compress_mp3(root, canonical_wav, name="jfk-compressed.mp3")
         video_mp4 = _wrap_media(root, canonical_wav)
         longer_mp3 = _longer_mp3(root, canonical_wav)
 
