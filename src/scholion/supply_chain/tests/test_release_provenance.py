@@ -23,9 +23,7 @@ def _repository(tmp_path: Path) -> Path:
     root = tmp_path / "repository"
     (root / "frontend" / "src-tauri" / "icons").mkdir(parents=True)
     (root / "frontend" / "src-tauri" / "Cargo.lock").write_text("cargo\n")
-    (root / "frontend" / "src-tauri" / "tauri.release.conf.json").write_text(
-        "{}\n"
-    )
+    (root / "frontend" / "src-tauri" / "tauri.release.conf.json").write_text("{}\n")
     (root / "frontend" / "src-tauri" / "icons" / "scholion-master.svg").write_text(
         "<svg/>\n"
     )
@@ -196,7 +194,9 @@ def test_provenance_rejects_qualification_runner_mismatch(tmp_path: Path) -> Non
         )
 
 
-def test_preview_provenance_cannot_relabel_release_ready_artifact(tmp_path: Path) -> None:
+def test_preview_provenance_cannot_relabel_release_ready_artifact(
+    tmp_path: Path,
+) -> None:
     repository = _repository(tmp_path)
     bundle_root, qualification, sha256sums = _qualified_preview(
         tmp_path, release_ready=True
