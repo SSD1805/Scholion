@@ -65,7 +65,9 @@ def _load_qualification(path: Path) -> dict[str, object]:
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise ReleaseProvenanceError("qualification evidence is not readable JSON") from exc
+        raise ReleaseProvenanceError(
+            "qualification evidence is not readable JSON"
+        ) from exc
     if not isinstance(document, dict):
         raise ReleaseProvenanceError("qualification evidence must be a JSON object")
     return document
@@ -89,9 +91,7 @@ def _measure_qualified_artifacts(
             raise ReleaseProvenanceError(
                 "qualification artifact entries must be objects"
             )
-        relative = _require_relative_path(
-            raw.get("path"), f"artifacts[{index}].path"
-        )
+        relative = _require_relative_path(raw.get("path"), f"artifacts[{index}].path")
         relative_text = relative.as_posix()
         if relative_text in seen_paths:
             raise ReleaseProvenanceError("qualification artifact paths must be unique")
@@ -108,9 +108,7 @@ def _measure_qualified_artifacts(
             raw.get("sha256"), f"artifacts[{index}].sha256"
         )
 
-        artifact = _resolve_beneath(
-            bundle_root, relative, f"artifacts[{index}].path"
-        )
+        artifact = _resolve_beneath(bundle_root, relative, f"artifacts[{index}].path")
         if not artifact.is_file():
             raise ReleaseProvenanceError("qualified artifact must be a regular file")
         actual_size = artifact.stat().st_size
@@ -181,9 +179,7 @@ def _measure_inputs(
         if relative_text in seen:
             raise ReleaseProvenanceError("release provenance inputs must be unique")
         seen.add(relative_text)
-        candidate = _resolve_beneath(
-            repository_root, relative, f"inputs[{index}]"
-        )
+        candidate = _resolve_beneath(repository_root, relative, f"inputs[{index}]")
         if not candidate.is_file():
             raise ReleaseProvenanceError(
                 "release provenance inputs must be regular files"
@@ -198,9 +194,7 @@ def _validate_toolchain(toolchain: Mapping[str, str]) -> dict[str, str]:
     normalized: dict[str, str] = {}
     for name, raw_value in toolchain.items():
         if _TOOL_NAME_RE.fullmatch(name) is None:
-            raise ReleaseProvenanceError(
-                "toolchain names must be bounded identifiers"
-            )
+            raise ReleaseProvenanceError("toolchain names must be bounded identifiers")
         value = _require_bounded_text(
             raw_value,
             f"toolchain.{name}",
