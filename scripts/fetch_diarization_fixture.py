@@ -37,7 +37,9 @@ def _fetch(name: str, output_dir: Path) -> Path:
     with urlopen(request, timeout=60) as response:  # noqa: S310
         payload = response.read(_MAX_FIXTURE_BYTES + 1)
     if len(payload) > _MAX_FIXTURE_BYTES:
-        raise RuntimeError(f"pinned diarization fixture {name} exceeded the byte ceiling")
+        raise RuntimeError(
+            f"pinned diarization fixture {name} exceeded the byte ceiling"
+        )
     if len(payload) != expected["size"]:
         raise RuntimeError(f"pinned diarization fixture {name} changed size")
     if _git_blob_sha1(payload) != expected["git_blob"]:

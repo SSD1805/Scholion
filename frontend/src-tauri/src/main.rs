@@ -12,8 +12,8 @@ fn main() {
 
     tauri::Builder::default()
         .setup(|app| {
-            let runtime = backend::DesktopRuntime::discover(app.handle())
-                .map_err(std::io::Error::other)?;
+            let runtime =
+                backend::DesktopRuntime::discover(app.handle()).map_err(std::io::Error::other)?;
             app.manage(runtime);
             Ok(())
         })

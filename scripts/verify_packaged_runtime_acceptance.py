@@ -35,8 +35,7 @@ def _run_runtime(
     if completed.returncode != 0:
         detail = completed.stderr.strip()
         raise RuntimeError(
-            f"packaged runtime mode {mode!r} failed"
-            + (f": {detail}" if detail else "")
+            f"packaged runtime mode {mode!r} failed" + (f": {detail}" if detail else "")
         )
     try:
         value = json.loads(completed.stdout)
@@ -70,7 +69,9 @@ def _require_worker_success(payload: dict[str, Any], *, operation: str) -> None:
     if payload.get("protocol_version") != 1 or payload.get("ok") is not True:
         raise RuntimeError(f"packaged {operation} worker did not report success")
     if payload.get("error") is not None:
-        raise RuntimeError(f"packaged {operation} worker returned contradictory error state")
+        raise RuntimeError(
+            f"packaged {operation} worker returned contradictory error state"
+        )
 
 
 def _words(text: str) -> set[str]:
@@ -98,7 +99,9 @@ def _validate_source(document: dict[str, Any], input_path: Path) -> None:
     if source.get("sha256") != expected_hash:
         raise RuntimeError("packaged canonical transcript recorded wrong source hash")
     if source.get("size_bytes") != input_path.stat().st_size:
-        raise RuntimeError("packaged canonical transcript recorded wrong source byte size")
+        raise RuntimeError(
+            "packaged canonical transcript recorded wrong source byte size"
+        )
 
 
 def _validate_engine(document: dict[str, Any]) -> None:
@@ -108,22 +111,30 @@ def _validate_engine(document: dict[str, Any]) -> None:
     if engine.get("name") != "faster-whisper" or engine.get("model") != "tiny":
         raise RuntimeError("packaged canonical transcript recorded wrong engine/model")
     if engine.get("device") != "cpu" or engine.get("compute_type") != "int8":
-        raise RuntimeError("packaged canonical transcript recorded wrong execution target")
+        raise RuntimeError(
+            "packaged canonical transcript recorded wrong execution target"
+        )
     if not str(engine.get("model_revision", "")).strip():
-        raise RuntimeError("packaged canonical transcript omitted immutable model revision")
+        raise RuntimeError(
+            "packaged canonical transcript omitted immutable model revision"
+        )
 
 
 def _validate_recognized_speech(document: dict[str, Any]) -> None:
     segments = document.get("segments")
     if not isinstance(segments, list) or not segments:
-        raise RuntimeError("packaged canonical transcript contains no recognized segments")
+        raise RuntimeError(
+            "packaged canonical transcript contains no recognized segments"
+        )
     recognized = " ".join(
         str(segment.get("text", ""))
         for segment in segments
         if isinstance(segment, dict)
     )
     if len(_words(recognized) & _EXPECTED_WORDS) < _MIN_EXPECTED_WORDS:
-        raise RuntimeError("packaged transcription did not recover enough known JFK speech")
+        raise RuntimeError(
+            "packaged transcription did not recover enough known JFK speech"
+        )
 
 
 def _validate_privacy(raw: str, private_paths: tuple[Path, ...]) -> None:
@@ -131,7 +142,9 @@ def _validate_privacy(raw: str, private_paths: tuple[Path, ...]) -> None:
     for private_path in private_paths:
         normalized = str(private_path).strip().lower()
         if normalized and normalized in lowered:
-            raise RuntimeError("packaged canonical evidence leaked a private local path")
+            raise RuntimeError(
+                "packaged canonical evidence leaked a private local path"
+            )
 
 
 def _validate_canonical(
@@ -153,12 +166,17 @@ def verify(runtime: Path) -> None:
     if not runtime.is_file():
         raise RuntimeError("packaged runtime executable is missing")
 
-    with tempfile.TemporaryDirectory(prefix="scholion-packaged-acceptance-") as temporary:
+    with tempfile.TemporaryDirectory(
+        prefix="scholion-packaged-acceptance-"
+    ) as temporary:
         root = Path(temporary)
         env = _runtime_environment(root)
 
         info = _run_runtime(runtime, "runtime-info", env=env)
-        if info.get("protocol_version") != 1 or info.get("runtime") != "scholion-desktop":
+        if (
+            info.get("protocol_version") != 1
+            or info.get("runtime") != "scholion-desktop"
+        ):
             raise RuntimeError("packaged runtime identity contract is invalid")
         for field in (
             "scholion_version",
@@ -218,7 +236,9 @@ def verify(runtime: Path) -> None:
         )
         for suffix in (".txt", ".srt", ".vtt"):
             if len(tuple(output_dir.glob(f"*{suffix}"))) != 1:
-                raise RuntimeError(f"packaged transcription omitted {suffix} publication")
+                raise RuntimeError(
+                    f"packaged transcription omitted {suffix} publication"
+                )
 
         print(
             "accepted packaged Scholion runtime: real JFK transcription, offline inference, "

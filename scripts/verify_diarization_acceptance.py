@@ -37,9 +37,7 @@ def _reference_turns(audio_path: Path, rttm_path: Path) -> tuple[_ReferenceTurn,
             start = float(fields[3])
             duration = float(fields[4])
         except ValueError as exc:
-            raise RuntimeError(
-                f"invalid RTTM timing on line {line_number}"
-            ) from exc
+            raise RuntimeError(f"invalid RTTM timing on line {line_number}") from exc
         if start < 0 or duration <= 0:
             raise RuntimeError(f"invalid RTTM interval on line {line_number}")
         turns.append(
@@ -53,7 +51,9 @@ def _reference_turns(audio_path: Path, rttm_path: Path) -> tuple[_ReferenceTurn,
         raise RuntimeError("RTTM reference contains no turns for the acceptance audio")
     speakers = {turn.speaker for turn in turns}
     if len(speakers) != 2:
-        raise RuntimeError("pinned diarization reference must contain exactly two speakers")
+        raise RuntimeError(
+            "pinned diarization reference must contain exactly two speakers"
+        )
     has_overlap = any(
         first.speaker != second.speaker
         and _overlap(
@@ -67,11 +67,15 @@ def _reference_turns(audio_path: Path, rttm_path: Path) -> tuple[_ReferenceTurn,
         for second in turns[index + 1 :]
     )
     if not has_overlap:
-        raise RuntimeError("pinned diarization reference must exercise overlapping speech")
+        raise RuntimeError(
+            "pinned diarization reference must exercise overlapping speech"
+        )
     return tuple(turns)
 
 
-def _overlap(first_start: float, first_end: float, second_start: float, second_end: float) -> float:
+def _overlap(
+    first_start: float, first_end: float, second_start: float, second_end: float
+) -> float:
     return max(0.0, min(first_end, second_end) - max(first_start, second_start))
 
 
@@ -99,9 +103,7 @@ def _reference_match(
             if mapping[predicted.speaker_ref] == expected.speaker
         )
         best_overlap = max(best_overlap, overlap_seconds)
-    reference_seconds = sum(
-        turn.end_seconds - turn.start_seconds for turn in reference
-    )
+    reference_seconds = sum(turn.end_seconds - turn.start_seconds for turn in reference)
     return best_overlap / reference_seconds
 
 

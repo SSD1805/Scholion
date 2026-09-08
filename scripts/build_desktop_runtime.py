@@ -26,7 +26,9 @@ def _runtime_executable(runtime_dir: Path) -> Path:
     return runtime_dir / name
 
 
-def _pyinstaller_arguments(root: Path, dist_path: Path, work_path: Path, spec_path: Path) -> list[str]:
+def _pyinstaller_arguments(
+    root: Path, dist_path: Path, work_path: Path, spec_path: Path
+) -> list[str]:
     arguments = [
         "--noconfirm",
         "--clean",
@@ -94,7 +96,9 @@ def build_runtime(output_dir: Path) -> Path:
         pyinstaller_run(_pyinstaller_arguments(root, dist_path, work_path, spec_path))
         built = dist_path / "scholion-runtime"
         if not built.is_dir():
-            raise RuntimeError("PyInstaller did not produce the expected runtime directory")
+            raise RuntimeError(
+                "PyInstaller did not produce the expected runtime directory"
+            )
         shutil.copytree(built, staging_dir)
 
     staging_dir.replace(output_dir)
