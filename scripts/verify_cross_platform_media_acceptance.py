@@ -6,7 +6,7 @@ import shutil
 import tempfile
 from pathlib import Path
 from typing import Any
-from urllib import request
+from urllib.request import Request, urlopen
 
 from verify_engine_acceptance import (
     _environment,
@@ -42,11 +42,11 @@ def _git_blob_sha1(payload: bytes) -> str:
 
 
 def _fetch_public_fixture(root: Path) -> Path:
-    fixture_request = request.Request(  # noqa: S310
+    fixture_request = Request(  # noqa: S310
         _JFK_FIXTURE_URL,
         headers={"User-Agent": "Scholion-acceptance/1"},
     )
-    with request.urlopen(fixture_request, timeout=60) as response:  # noqa: S310
+    with urlopen(fixture_request, timeout=60) as response:  # noqa: S310
         payload = response.read(_MAX_FIXTURE_BYTES + 1)
     if len(payload) > _MAX_FIXTURE_BYTES:
         raise RuntimeError("public acceptance fixture exceeded the byte ceiling")
