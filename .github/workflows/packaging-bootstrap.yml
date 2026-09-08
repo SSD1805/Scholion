@@ -1,0 +1,55 @@
+name: Packaging Bootstrap (temporary)
+
+on:
+  push:
+    branches: [release/packaging-qualification]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-native-runtime:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out packaging branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: true
+
+      - name: Wire playback through managed runtime
+        shell: python
+        run: |
+          from pathlib import Path
+
+          path = Path("frontend/src-tauri/src/playback.rs")
+          text = path.read_text()
+          old_signature = '''pub async fn playback_prepare(
+              request: PlaybackPrepareRequest,
+              sessions: State<'_, PlaybackSessions>,
+          ) -> Result<PlaybackPrepared, String> {'''
+          new_signature = '''pub async fn playback_prepare(
+              request: PlaybackPrepareRequest,
+              sessions: State<'_, PlaybackSessions>,
+              runtime: State<'_, backend::DesktopRuntime>,
+          ) -> Result<PlaybackPrepared, String> {'''
+          if old_signature not in text:
+              raise SystemExit("playback_prepare signature changed unexpectedly")
+          text = text.replace(old_signature, new_signature, 1)
+          old_call = "backend::playback_authorization_request(payload).await?;"
+          new_call = "backend::playback_authorization_request(payload, runtime.inner().clone()).await?;"
+          if old_call not in text:
+              raise SystemExit("playback authorization call changed unexpectedly")
+          path.write_text(text.replace(old_call, new_call, 1))
+
+      - name: Commit bootstrap patch
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            exit 0
+          fi
+          git config user.name "scholion-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git add frontend/src-tauri/src/playback.rs
+          git commit -m "Route playback authorization through packaged runtime"
+          git push
