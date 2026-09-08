@@ -241,7 +241,7 @@ Local recordings, transcripts, models, and research remain usable when update ch
 
 Repository mechanics now cover the update/model trust architecture, local update state, fixed transport, staging/hash verification, UI states, deterministic release/model metadata generation, and extensive synthetic trust tests.
 
-Issue #145 owns only the remaining **pre-packaging** decisions/cleanup. Once that milestone is complete, packaging still must provide:
+Issue #145 completed the **pre-packaging** decisions/cleanup. Once that milestone is complete, packaging still must provide:
 
 - the exact-pinned reviewed Rust verifier dependency and generated/audited lockfile;
 - the approved production public-key/key-rotation resource, never the private signer;

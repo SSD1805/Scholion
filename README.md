@@ -92,7 +92,7 @@ Updates follow a similarly narrow boundary. React can request only status, check
 
 In-app guidance is deliberately re-openable and non-hover-only where popovers are used. It explains contracts where users encounter them but carries no filesystem/database/process authority and does not recreate application policy in React. See **[In-app guidance](docs/in-app-guidance.md)**.
 
-There are still no end-user installers or Releases. The supported path remains a source build while pre-packaging cleanup and the later packaging/first-run milestone are completed.
+There are still no public signed installers or Releases. Source builds remain the supported user path while the current packaging milestone builds and qualifies unsigned Windows/macOS preview artifacts; those CI artifacts are evidence for release engineering, not yet public distributions.
 
 ## Themes and accessibility
 
@@ -213,9 +213,9 @@ Research/search, Processing, explicit embedded-track transcription, desktop comp
 
 The current sequence is intentionally narrow:
 
-1. **#145 pre-packaging release readiness:** final redundancy pass, production trust-input decisions, documentation truth-sync, and final Scholion icon/brand master;
-2. **packaging:** managed runtime/native dependencies, Windows/macOS installers, real public update keys/model catalog, OS signing/notarization, update activation, first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;
-3. **representative release qualification:** real packaged CPU-only/accelerator/Apple/Windows behavior, including #114's remaining native task-transport evidence; and
+1. **Packaging + artifact qualification:** freeze the managed desktop runtime, build exact Windows/macOS preview packages, qualify those exact bytes with real media, and finish managed native dependencies/first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;
+2. **Production trust + signing:** provision reviewed update keys/verifier, model catalog, current self-contained FFmpeg/FFprobe, native update activation, Windows signing, and macOS signing/notarization;
+3. **Representative release qualification:** real packaged CPU-only/accelerator/Apple/Windows behavior, including #114's remaining native task-transport evidence; and
 4. **MVP release.**
 
 Backup/restore + research portability, packaged semantic-model custody, and freeform research notebook/memo features remain valuable **post-MVP** work. They are no longer being treated as reasons to postpone the first useful packaged Scholion build.

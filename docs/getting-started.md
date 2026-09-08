@@ -4,7 +4,7 @@ This is the **use-the-thing** guide.
 
 Scholion is a private, local-first workspace for recorded evidence. You do not need to understand CUDA, DuckDB, SQLite, model revisions, signatures, or desktop IPC to use it. Python owns application/evidence decisions so the desktop can speak in recordings, transcripts, speakers, searches, notes, playback, storage, updates, and evidence.
 
-Scholion is still pre-production. There is no polished signed installer yet, so the supported path remains a source/developer checkout while issue #145 finishes pre-packaging readiness and packaging waits for the next milestone.
+Scholion is still pre-production. There is no public signed installer yet, so the supported path remains a source/developer checkout while the packaging milestone builds and qualifies unsigned Windows/macOS preview artifacts.
 
 ## Pick the smallest setup
 
@@ -214,12 +214,10 @@ See **[Semantic search](semantic-search.md)**.
 
 ## What comes next?
 
-The current milestone is issue #145: finish the post-update redundancy/trust-input/documentation cleanup and replace the placeholder product icon.
+Issue #145 is complete. The current milestone is Windows/macOS packaging plus exact-artifact Release Qualification. The sequence is:
 
-After #145, the sequence is:
-
-1. package Windows/macOS with managed runtime/native dependencies, real public update keys, reviewed model catalog, OS signing/notarization, update activation, first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;
-2. qualify real packages across representative machines, including #114's remaining CPU-only/accelerator task-transport evidence; and
+1. finish the managed runtime/native dependency boundary, preview installers, production update keys/verifier, reviewed model catalog, signing/notarization, update activation, and first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;
+2. qualify the exact packages on representative machines, including #114's remaining CPU-only/accelerator task-transport evidence; and
 3. release the MVP.
 
 Backup/restore + research portability, packaged semantic custody, and broader research-native features are **post-MVP** work. For the detailed sequence, see **[ROADMAP.md](../ROADMAP.md)**.

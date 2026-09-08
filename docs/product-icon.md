@@ -60,4 +60,4 @@ Before packaging freezes the generated native family:
 - verify there is no accidental resemblance to a microphone, chat bubble, document-upload icon, or generic AI sparkle mark; and
 - keep the same approved master across Windows/macOS/Linux derivatives even while official Linux binary packaging remains blocked by issue #135.
 
-Issue #145 owns selection and commitment of the final master. Platform derivative generation and replacement of the current Tauri PNG placeholder belong to the subsequent packaging milestone.
+Issue #145 completed selection and commitment of the final master. Platform derivative generation and any installer-specific icon work now belong to the active packaging milestone.
