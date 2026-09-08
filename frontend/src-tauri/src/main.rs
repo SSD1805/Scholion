@@ -4,11 +4,19 @@ mod backend;
 mod playback;
 mod processing;
 
+use tauri::Manager;
+
 fn main() {
     let playback_sessions = playback::PlaybackSessions::default();
     let playback_protocol = playback_sessions.clone();
 
     tauri::Builder::default()
+        .setup(|app| {
+            let runtime = backend::DesktopRuntime::discover(app.handle())
+                .map_err(std::io::Error::other)?;
+            app.manage(runtime);
+            Ok(())
+        })
         .manage(processing::ProcessingProcesses::default())
         .manage(playback_sessions)
         .plugin(tauri_plugin_dialog::init())
