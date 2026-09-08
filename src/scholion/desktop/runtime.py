@@ -9,12 +9,7 @@ from __future__ import annotations
 import json
 import sys
 from collections.abc import Callable, Sequence
-from importlib import metadata
-
-import ctranslate2
-import duckdb
-import faster_whisper
-import lingua
+from importlib import import_module, metadata
 
 from scholion.desktop import (
     bridge,
@@ -26,10 +21,22 @@ from scholion.desktop import (
 )
 
 _RUNTIME_PROTOCOL_VERSION = 1
+_RUNTIME_CAPABILITY_MODULES = (
+    "ctranslate2",
+    "duckdb",
+    "faster_whisper",
+    "lingua",
+)
 
 
 def _runtime_info() -> int:
     """Emit bounded non-sensitive runtime identity for package qualification."""
+    # The build script explicitly collects these optional distributions. Import them
+    # here so qualification proves the frozen runtime can load the capability graph,
+    # without making Scholion's ordinary static-analysis environment install it.
+    for module_name in _RUNTIME_CAPABILITY_MODULES:
+        import_module(module_name)
+
     payload = {
         "protocol_version": _RUNTIME_PROTOCOL_VERSION,
         "runtime": "scholion-desktop",
@@ -40,8 +47,6 @@ def _runtime_info() -> int:
         "duckdb_version": metadata.version("duckdb"),
         "lingua_version": metadata.version("lingua-language-detector"),
     }
-    # Keep imports live so frozen-build tooling includes the runtime capability graph.
-    _ = (ctranslate2, duckdb, faster_whisper, lingua)
     sys.stdout.write(json.dumps(payload, sort_keys=True))
     sys.stdout.write("\n")
     return 0
