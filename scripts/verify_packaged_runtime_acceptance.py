@@ -90,16 +90,18 @@ def _one_canonical(output_dir: Path) -> tuple[dict[str, Any], str]:
     return document, raw
 
 
-def _validate_canonical(
-    document: dict[str, Any], raw: str, *, input_path: Path
-) -> None:
+def _validate_source(document: dict[str, Any], input_path: Path) -> None:
     source = document.get("source")
     if not isinstance(source, dict):
         raise RuntimeError("packaged canonical transcript omitted source provenance")
     expected_hash = hashlib.sha256(input_path.read_bytes()).hexdigest()
-    if source.get("sha256") != expected_hash or source.get("size_bytes") != input_path.stat().st_size:
-        raise RuntimeError("packaged canonical transcript recorded wrong source identity")
+    if source.get("sha256") != expected_hash:
+        raise RuntimeError("packaged canonical transcript recorded wrong source hash")
+    if source.get("size_bytes") != input_path.stat().st_size:
+        raise RuntimeError("packaged canonical transcript recorded wrong source byte size")
 
+
+def _validate_engine(document: dict[str, Any]) -> None:
     engine = document.get("engine")
     if not isinstance(engine, dict):
         raise RuntimeError("packaged canonical transcript omitted engine provenance")
@@ -110,6 +112,8 @@ def _validate_canonical(
     if not str(engine.get("model_revision", "")).strip():
         raise RuntimeError("packaged canonical transcript omitted immutable model revision")
 
+
+def _validate_recognized_speech(document: dict[str, Any]) -> None:
     segments = document.get("segments")
     if not isinstance(segments, list) or not segments:
         raise RuntimeError("packaged canonical transcript contains no recognized segments")
@@ -121,15 +125,27 @@ def _validate_canonical(
     if len(_words(recognized) & _EXPECTED_WORDS) < _MIN_EXPECTED_WORDS:
         raise RuntimeError("packaged transcription did not recover enough known JFK speech")
 
+
+def _validate_privacy(raw: str, private_paths: tuple[Path, ...]) -> None:
     lowered = raw.lower()
-    for private_path in (
-        str(input_path.parent),
-        str(Path(os.environ.get("SCHOLION_STATE_DIR", ""))),
-        str(Path(os.environ.get("SCHOLION_MODEL_DIR", ""))),
-    ):
-        normalized = private_path.strip().lower()
+    for private_path in private_paths:
+        normalized = str(private_path).strip().lower()
         if normalized and normalized in lowered:
             raise RuntimeError("packaged canonical evidence leaked a private local path")
+
+
+def _validate_canonical(
+    document: dict[str, Any],
+    raw: str,
+    *,
+    input_path: Path,
+    state_dir: Path,
+    model_dir: Path,
+) -> None:
+    _validate_source(document, input_path)
+    _validate_engine(document)
+    _validate_recognized_speech(document)
+    _validate_privacy(raw, (input_path.parent, state_dir, model_dir))
 
 
 def verify(runtime: Path) -> None:
@@ -193,13 +209,13 @@ def verify(runtime: Path) -> None:
 
         output_dir = Path(env["SCHOLION_OUTPUT_DIR"])
         document, raw = _one_canonical(output_dir)
-        os.environ.update(
-            {
-                "SCHOLION_STATE_DIR": env["SCHOLION_STATE_DIR"],
-                "SCHOLION_MODEL_DIR": env["SCHOLION_MODEL_DIR"],
-            }
+        _validate_canonical(
+            document,
+            raw,
+            input_path=input_path,
+            state_dir=Path(env["SCHOLION_STATE_DIR"]),
+            model_dir=Path(env["SCHOLION_MODEL_DIR"]),
         )
-        _validate_canonical(document, raw, input_path=input_path)
         for suffix in (".txt", ".srt", ".vtt"):
             if len(tuple(output_dir.glob(f"*{suffix}"))) != 1:
                 raise RuntimeError(f"packaged transcription omitted {suffix} publication")
