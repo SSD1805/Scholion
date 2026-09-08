@@ -166,6 +166,24 @@ def _duration_seconds(path: Path) -> float:
     return duration
 
 
+def _expected_audio_stream_index(path: Path) -> int:
+    streams = _ffprobe(path).get("streams")
+    if not isinstance(streams, list):
+        raise RuntimeError("ffprobe acceptance result omitted stream metadata")
+    audio_indices = [
+        int(stream["index"])
+        for stream in streams
+        if isinstance(stream, dict)
+        and stream.get("codec_type") == "audio"
+        and "index" in stream
+    ]
+    if len(audio_indices) != 1:
+        raise RuntimeError(
+            "acceptance media must contain exactly one discoverable audio stream"
+        )
+    return audio_indices[0]
+
+
 def _offline_environment(root: Path, output_dir: Path) -> dict[str, str]:
     env = _environment(root, output_dir)
     env.update(
@@ -195,7 +213,8 @@ def _validate_source_identity(output_dir: Path, input_path: Path) -> None:
         raise RuntimeError("canonical transcript recorded the wrong source hash")
     if int(source.get("size_bytes", -1)) != input_path.stat().st_size:
         raise RuntimeError("canonical transcript recorded the wrong source size")
-    if int(source.get("audio_stream_index", -1)) != 0:
+    expected_stream = _expected_audio_stream_index(input_path)
+    if int(source.get("audio_stream_index", -1)) != expected_stream:
         raise RuntimeError("canonical transcript recorded the wrong audio stream")
 
 
