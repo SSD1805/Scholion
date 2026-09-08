@@ -35,10 +35,10 @@ def build_runtime(output_dir: Path) -> Path:
 
     root = _repository_root()
     output_dir = output_dir.resolve()
-    staging_parent = output_dir.parent / ".runtime-build"
-    shutil.rmtree(staging_parent, ignore_errors=True)
+    staging_dir = output_dir.parent / ".runtime-build"
+    output_dir.parent.mkdir(parents=True, exist_ok=True)
+    shutil.rmtree(staging_dir, ignore_errors=True)
     shutil.rmtree(output_dir, ignore_errors=True)
-    staging_parent.mkdir(parents=True, exist_ok=True)
 
     with tempfile.TemporaryDirectory(prefix="scholion-pyinstaller-") as temporary:
         temporary_path = Path(temporary)
@@ -76,9 +76,9 @@ def build_runtime(output_dir: Path) -> Path:
         built = dist_path / "scholion-runtime"
         if not built.is_dir():
             raise RuntimeError("PyInstaller did not produce the expected runtime directory")
-        shutil.copytree(built, staging_parent)
+        shutil.copytree(built, staging_dir)
 
-    staging_parent.replace(output_dir)
+    staging_dir.replace(output_dir)
     executable = _runtime_executable(output_dir)
     if not executable.is_file():
         raise RuntimeError("Packaged Scholion runtime executable is missing")
