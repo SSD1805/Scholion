@@ -63,25 +63,25 @@ pub(crate) struct DesktopRuntime {
 
 impl DesktopRuntime {
     pub(crate) fn discover(app: &AppHandle) -> Result<Self, String> {
-        if let Ok(value) = env::var("SCHOLION_RUNTIME") {
-            if !value.trim().is_empty() {
-                return Ok(Self {
-                    executable: PathBuf::from(value),
-                    kind: RuntimeKind::Frozen,
-                });
-            }
-        }
-
-        if let Ok(value) = env::var("SCHOLION_PYTHON") {
-            if !value.trim().is_empty() {
-                return Ok(Self {
-                    executable: PathBuf::from(value),
-                    kind: RuntimeKind::Python,
-                });
-            }
-        }
-
         if cfg!(debug_assertions) {
+            if let Ok(value) = env::var("SCHOLION_RUNTIME") {
+                if !value.trim().is_empty() {
+                    return Ok(Self {
+                        executable: PathBuf::from(value),
+                        kind: RuntimeKind::Frozen,
+                    });
+                }
+            }
+
+            if let Ok(value) = env::var("SCHOLION_PYTHON") {
+                if !value.trim().is_empty() {
+                    return Ok(Self {
+                        executable: PathBuf::from(value),
+                        kind: RuntimeKind::Python,
+                    });
+                }
+            }
+
             let repo_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
             let candidate = if cfg!(windows) {
                 repo_root.join(".venv").join("Scripts").join("python.exe")
