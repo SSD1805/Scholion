@@ -125,8 +125,22 @@ jobs:
           --disable-pip
           --progress-spinner off
 
-      - name: Build managed Scholion runtime
-        run: uv run python scripts/build_desktop_runtime.py
+      - name: Build managed Scholion runtime without dependency resync
+        run: uv run --no-sync python scripts/build_desktop_runtime.py
+
+      - name: Reject development tooling from frozen runtime
+        shell: python
+        run: |
+          from pathlib import Path
+
+          internal = Path("frontend/src-tauri/resources/runtime/_internal")
+          forbidden = [internal / name for name in ("mypy", "pytest", "_pytest")]
+          present = [path.as_posix() for path in forbidden if path.exists()]
+          if present:
+              raise SystemExit(
+                  "development-only packages leaked into the frozen runtime: "
+                  + ", ".join(present)
+              )
 
       - name: Prove frozen runtime before bundling
         shell: bash
@@ -136,11 +150,18 @@ jobs:
           else
             runtime="frontend/src-tauri/resources/runtime/scholion-runtime"
           fi
-          uv run python scripts/verify_packaged_runtime_acceptance.py "$runtime"
+          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py "$runtime"
 
       - name: Install locked frontend dependencies
         working-directory: frontend
         run: npm ci --no-fund --no-audit
+
+      - name: Generate native application icons from reviewed master
+        working-directory: frontend
+        run: >-
+          npm run tauri -- icon
+          src-tauri/icons/scholion-master.svg
+          --output src-tauri/icons
 
       - name: Build unsigned macOS preview package
         if: runner.os == 'macOS'
@@ -184,7 +205,7 @@ jobs:
           trap 'hdiutil detach "$mount_point" >/dev/null 2>&1 || true' EXIT
           runtime="$mount_point/Scholion.app/Contents/Resources/runtime/scholion-runtime"
           test -x "$runtime"
-          uv run python scripts/verify_packaged_runtime_acceptance.py "$runtime"
+          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py "$runtime"
           hdiutil detach "$mount_point"
           trap - EXIT
 
@@ -205,7 +226,7 @@ jobs:
           if (-not (Test-Path $runtime -PathType Leaf)) {
             throw "Installed Scholion runtime is missing"
           }
-          uv run python scripts/verify_packaged_runtime_acceptance.py $runtime
+          uv run --no-sync python scripts/verify_packaged_runtime_acceptance.py $runtime
           $uninstaller = Join-Path $installDir "uninstall.exe"
           if (Test-Path $uninstaller -PathType Leaf) {
             $uninstall = Start-Process -FilePath $uninstaller -ArgumentList "/S" -Wait -PassThru
@@ -260,6 +281,8 @@ jobs:
                   "offline_inference_after_model_install": True,
                   "canonical_evidence_and_exports": True,
                   "locked_and_audited_packaging_toolchain": True,
+                  "runtime_excludes_development_tooling": True,
+                  "reviewed_master_native_icon_generation": True,
                   "pyinstaller_exact_6_22_2": True,
                   "tauri_package_build": True,
                   "exact_package_install_or_mount": True,
