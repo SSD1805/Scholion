@@ -1,0 +1,105 @@
+name: Packaging lock bootstrap (temporary)
+
+on:
+  push:
+    branches: [release/packaging-qualification]
+
+permissions:
+  contents: write
+
+jobs:
+  lock-packaging:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out packaging branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: true
+
+      - name: Add packaging group and locked qualification install
+        shell: python
+        run: |
+          from pathlib import Path
+
+          project = Path("pyproject.toml")
+          text = project.read_text()
+          needle = "[dependency-groups]\ndev = [\n"
+          replacement = (
+              "[dependency-groups]\n"
+              "packaging = [\n"
+              '    "pyinstaller==6.22.2",\n'
+              "]\n"
+              "dev = [\n"
+          )
+          if text.count(needle) != 1:
+              raise SystemExit("dependency-groups boundary changed unexpectedly")
+          project.write_text(text.replace(needle, replacement, 1))
+
+          workflow = Path(".github/workflows/release-qualification.yml")
+          text = workflow.read_text()
+          old = '''      - name: Install locked Scholion transcription graph
+                run: uv sync --locked --extra transcription
+
+              - name: Install exact packaging tool
+                run: uv pip install "pyinstaller==6.22.2"
+          '''
+          new = '''      - name: Install locked Scholion transcription and packaging graph
+                run: uv sync --locked --extra transcription --group packaging
+
+              - name: Export exact qualification dependency graph
+                run: >-
+                  uv export
+                  --locked
+                  --all-groups
+                  --extra transcription
+                  --no-emit-project
+                  --no-hashes
+                  --format requirements-txt
+                  --output-file "${{ runner.temp }}/scholion-packaging-requirements.txt"
+
+              - name: Audit exact qualification dependency graph
+                run: >-
+                  uvx --from pip-audit==2.10.1 pip-audit
+                  --requirement "${{ runner.temp }}/scholion-packaging-requirements.txt"
+                  --no-deps
+                  --disable-pip
+                  --progress-spinner off
+          '''
+          if text.count(old) != 1:
+              raise SystemExit("release qualification install block changed unexpectedly")
+          text = text.replace(old, new, 1)
+          text = text.replace(
+              '              "pyinstaller_exact_6_22_2",\n',
+              '              "locked_and_audited_packaging_toolchain",\n              "pyinstaller_exact_6_22_2",\n',
+              1,
+          )
+          text = text.replace(
+              '              "lock_and_audit_complete_packaging_toolchain",\n',
+              "",
+              1,
+          )
+          workflow.write_text(text)
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          version: "0.11.33"
+          enable-cache: false
+
+      - name: Regenerate lockfile
+        run: uv lock
+
+      - name: Verify locked packaging group
+        run: uv sync --locked --group packaging --no-dev
+
+      - name: Commit lock and remove bootstrap
+        shell: bash
+        run: |
+          git rm .github/workflows/packaging-lock-bootstrap.yml
+          git add pyproject.toml uv.lock .github/workflows/release-qualification.yml
+          git config user.name "scholion-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Lock and audit packaging toolchain"
+          git push
