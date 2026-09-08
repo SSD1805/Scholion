@@ -5,8 +5,8 @@ import json
 import platform
 import re
 import subprocess
+from collections.abc import Mapping, Sequence
 from pathlib import Path, PurePosixPath
-from typing import Mapping, Sequence
 
 from scholion.supply_chain.digests import sha256_file
 
@@ -269,8 +269,10 @@ def build_release_provenance(
 
 
 def _command_version(*command: str) -> str:
+    # All callers supply repository-owned fixed executable names and arguments. This
+    # stays no-shell and captures only bounded version output for provenance.
     try:
-        completed = subprocess.run(
+        completed = subprocess.run(  # noqa: S603
             command,
             check=True,
             capture_output=True,
