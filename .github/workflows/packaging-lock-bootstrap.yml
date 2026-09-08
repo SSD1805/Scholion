@@ -18,69 +18,25 @@ jobs:
         with:
           persist-credentials: true
 
-      - name: Add packaging group and locked qualification install
+      - name: Add locked packaging dependency group
         shell: python
         run: |
           from pathlib import Path
 
           project = Path("pyproject.toml")
           text = project.read_text()
-          needle = "[dependency-groups]\ndev = [\n"
-          replacement = (
-              "[dependency-groups]\n"
-              "packaging = [\n"
-              '    "pyinstaller==6.22.2",\n'
-              "]\n"
-              "dev = [\n"
-          )
-          if text.count(needle) != 1:
-              raise SystemExit("dependency-groups boundary changed unexpectedly")
-          project.write_text(text.replace(needle, replacement, 1))
-
-          workflow = Path(".github/workflows/release-qualification.yml")
-          text = workflow.read_text()
-          old = '''      - name: Install locked Scholion transcription graph
-                run: uv sync --locked --extra transcription
-
-              - name: Install exact packaging tool
-                run: uv pip install "pyinstaller==6.22.2"
-          '''
-          new = '''      - name: Install locked Scholion transcription and packaging graph
-                run: uv sync --locked --extra transcription --group packaging
-
-              - name: Export exact qualification dependency graph
-                run: >-
-                  uv export
-                  --locked
-                  --all-groups
-                  --extra transcription
-                  --no-emit-project
-                  --no-hashes
-                  --format requirements-txt
-                  --output-file "${{ runner.temp }}/scholion-packaging-requirements.txt"
-
-              - name: Audit exact qualification dependency graph
-                run: >-
-                  uvx --from pip-audit==2.10.1 pip-audit
-                  --requirement "${{ runner.temp }}/scholion-packaging-requirements.txt"
-                  --no-deps
-                  --disable-pip
-                  --progress-spinner off
-          '''
-          if text.count(old) != 1:
-              raise SystemExit("release qualification install block changed unexpectedly")
-          text = text.replace(old, new, 1)
-          text = text.replace(
-              '              "pyinstaller_exact_6_22_2",\n',
-              '              "locked_and_audited_packaging_toolchain",\n              "pyinstaller_exact_6_22_2",\n',
-              1,
-          )
-          text = text.replace(
-              '              "lock_and_audit_complete_packaging_toolchain",\n',
-              "",
-              1,
-          )
-          workflow.write_text(text)
+          if "[dependency-groups]\npackaging = [\n" not in text:
+              needle = "[dependency-groups]\ndev = [\n"
+              replacement = (
+                  "[dependency-groups]\n"
+                  "packaging = [\n"
+                  '    "pyinstaller==6.22.2",\n'
+                  "]\n"
+                  "dev = [\n"
+              )
+              if text.count(needle) != 1:
+                  raise SystemExit("dependency-groups boundary changed unexpectedly")
+              project.write_text(text.replace(needle, replacement, 1))
 
       - name: Set up uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
