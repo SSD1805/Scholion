@@ -7,8 +7,9 @@ import os
 import re
 import subprocess
 import tempfile
+from contextlib import nullcontext
 from pathlib import Path
-from typing import Any
+from typing import Any, ContextManager
 
 from verify_cross_platform_media_acceptance import _fetch_public_fixture
 
@@ -161,14 +162,22 @@ def _validate_canonical(
     _validate_privacy(raw, (input_path.parent, state_dir, model_dir))
 
 
-def verify(runtime: Path) -> None:
+def _workspace_context(workspace_root: Path | None) -> ContextManager[str | Path]:
+    if workspace_root is None:
+        return tempfile.TemporaryDirectory(prefix="scholion-packaged-acceptance-")
+    resolved = workspace_root.expanduser().resolve(strict=False)
+    if resolved.exists() and any(resolved.iterdir()):
+        raise RuntimeError("retained packaged acceptance workspace must start empty")
+    resolved.mkdir(parents=True, exist_ok=True)
+    return nullcontext(resolved)
+
+
+def verify(runtime: Path, *, workspace_root: Path | None = None) -> None:
     runtime = runtime.expanduser().resolve(strict=True)
     if not runtime.is_file():
         raise RuntimeError("packaged runtime executable is missing")
 
-    with tempfile.TemporaryDirectory(
-        prefix="scholion-packaged-acceptance-"
-    ) as temporary:
+    with _workspace_context(workspace_root) as temporary:
         root = Path(temporary)
         env = _runtime_environment(root)
 
@@ -251,8 +260,13 @@ def main() -> int:
         description="Qualify an installed/final bundled Scholion runtime with real media."
     )
     parser.add_argument("runtime", type=Path)
+    parser.add_argument(
+        "--workspace-root",
+        type=Path,
+        help="Retain acceptance state under this empty directory for lifecycle checks.",
+    )
     arguments = parser.parse_args()
-    verify(arguments.runtime)
+    verify(arguments.runtime, workspace_root=arguments.workspace_root)
     return 0
 
 
