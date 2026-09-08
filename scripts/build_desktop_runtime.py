@@ -8,6 +8,13 @@ import tempfile
 from pathlib import Path
 
 _EXPECTED_PYINSTALLER = "6.22.2"
+_RUNTIME_METADATA = (
+    "scholion",
+    "faster-whisper",
+    "ctranslate2",
+    "duckdb",
+    "lingua-language-detector",
+)
 
 
 def _repository_root() -> Path:
@@ -17,6 +24,45 @@ def _repository_root() -> Path:
 def _runtime_executable(runtime_dir: Path) -> Path:
     name = "scholion-runtime.exe" if sys.platform == "win32" else "scholion-runtime"
     return runtime_dir / name
+
+
+def _pyinstaller_arguments(root: Path, dist_path: Path, work_path: Path, spec_path: Path) -> list[str]:
+    arguments = [
+        "--noconfirm",
+        "--clean",
+        "--onedir",
+        "--name",
+        "scholion-runtime",
+        "--paths",
+        str(root / "src"),
+        # dependency-injector uses Cython extension modules whose imports are not all
+        # visible to PyInstaller's static graph. Collect that package explicitly so a
+        # frozen AppContainer has the same module surface as the locked Python graph.
+        "--collect-submodules",
+        "dependency_injector",
+        "--collect-all",
+        "faster_whisper",
+        "--collect-all",
+        "ctranslate2",
+        "--collect-all",
+        "duckdb",
+        "--collect-all",
+        "lingua",
+    ]
+    for distribution in _RUNTIME_METADATA:
+        arguments.extend(("--copy-metadata", distribution))
+    arguments.extend(
+        (
+            "--distpath",
+            str(dist_path),
+            "--workpath",
+            str(work_path),
+            "--specpath",
+            str(spec_path),
+            str(root / "scripts" / "scholion_runtime_entry.py"),
+        )
+    )
+    return arguments
 
 
 def build_runtime(output_dir: Path) -> Path:
@@ -45,34 +91,7 @@ def build_runtime(output_dir: Path) -> Path:
         dist_path = temporary_path / "dist"
         work_path = temporary_path / "work"
         spec_path = temporary_path / "spec"
-        pyinstaller_run(
-            [
-                "--noconfirm",
-                "--clean",
-                "--onedir",
-                "--name",
-                "scholion-runtime",
-                "--paths",
-                str(root / "src"),
-                "--collect-submodules",
-                "scholion",
-                "--collect-all",
-                "faster_whisper",
-                "--collect-all",
-                "ctranslate2",
-                "--collect-all",
-                "duckdb",
-                "--collect-all",
-                "lingua",
-                "--distpath",
-                str(dist_path),
-                "--workpath",
-                str(work_path),
-                "--specpath",
-                str(spec_path),
-                str(root / "scripts" / "scholion_runtime_entry.py"),
-            ]
-        )
+        pyinstaller_run(_pyinstaller_arguments(root, dist_path, work_path, spec_path))
         built = dist_path / "scholion-runtime"
         if not built.is_dir():
             raise RuntimeError("PyInstaller did not produce the expected runtime directory")
