@@ -1,0 +1,178 @@
+name: Packaging docs truth-sync (temporary)
+
+on:
+  push:
+    branches: [release/packaging-qualification]
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out packaging branch
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: true
+
+      - name: Truth-sync release documentation
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          def replace(path: str, old: str, new: str, *, count: int = 1) -> None:
+              file = Path(path)
+              text = file.read_text()
+              found = text.count(old)
+              if found < count:
+                  raise SystemExit(f"{path}: expected at least {count} copies of {old!r}, found {found}")
+              file.write_text(text.replace(old, new, count))
+
+          def regex(path: str, pattern: str, replacement: str) -> None:
+              file = Path(path)
+              text = file.read_text()
+              updated, matches = re.subn(pattern, replacement, text, count=1, flags=re.S)
+              if matches != 1:
+                  raise SystemExit(f"{path}: expected one regex match for {pattern!r}, found {matches}")
+              file.write_text(updated)
+
+          # Root roadmap and deterministic diagram source.
+          replace(
+              "ROADMAP.md",
+              "The project is now in **pre-packaging release readiness**. Packaging itself is deliberately the next milestone after issue #145, not part of the current branch.",
+              "Issue #145 is complete. The project is now in the **Windows/macOS packaging and artifact-qualification milestone**: Scholion is freezing its managed desktop runtime, building unsigned preview packages, and proving those exact package bytes before production signing/release inputs are provisioned.",
+          )
+          replace(
+              "ROADMAP.md",
+              "Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, and signed update/model-trust mechanics. The current milestone is pre-packaging release readiness, followed by Windows/macOS packaging and representative release qualification. Official Linux binary distribution remains separately blocked by issue #135.",
+              "Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, signed update/model-trust mechanics, hosted cross-platform real-media acceptance, and completed pre-packaging readiness. The current milestone is Windows/macOS packaging plus artifact-level release qualification, followed by representative physical-device qualification. Official Linux binary distribution remains separately blocked by issue #135.",
+          )
+          replace(
+              "ROADMAP.md",
+              "Issue #145 owns the review procedure; the real immutable revisions, licenses, regression evidence, and measured entries remain deliberate release inputs.",
+              "Issue #145 froze the review procedure; the real immutable revisions, licenses, regression evidence, and measured entries remain deliberate release inputs for packaging.",
+          )
+          replace(
+              "ROADMAP.md",
+              "| Model custody | managed revision + project policy verification | implemented mechanics | deliberate real catalog review/provisioning under #145 |",
+              "| Model custody | managed revision + project policy verification | implemented mechanics | deliberate real catalog review/provisioning for release |",
+          )
+          replace(
+              "ROADMAP.md",
+              "| Packaging | Python wheel + source Tauri | development only | managed runtime/installers/update activation/uninstall; Linux public package blocked by #135 |",
+              "| Packaging | Python wheel + Tauri + managed frozen runtime | Windows/macOS preview packaging + artifact qualification in progress | managed FFmpeg, production trust inputs, update activation, signing/notarization, uninstall qualification; Linux public package blocked by #135 |",
+          )
+          replace(
+              "ROADMAP.md",
+              "## 3. Pre-packaging release readiness ← current milestone (#145)",
+              "## 3. Pre-packaging release readiness complete (#145)",
+          )
+          replace(
+              "ROADMAP.md",
+              "Before turning Tauri bundling on, finish the narrow cleanup that should be frozen before installer/update compatibility becomes real:",
+              "Issue #145 closed the narrow cleanup that needed to be frozen before installer/update compatibility became real:",
+          )
+          replace(
+              "ROADMAP.md",
+              "## 4. Packaging and first-run/update/uninstall ← next milestone, deliberately waiting",
+              "## 4. Packaging and first-run/update/uninstall ← current milestone",
+          )
+          replace(
+              "ROADMAP.md",
+              "After #145, package the real application rather than extending feature scope:",
+              "With #145 complete, package the real application rather than extending feature scope. The current tranche has started the closed managed runtime, Windows/macOS preview bundles, and exact-artifact Release Qualification workflow; the remaining bullets are still release gates until explicitly qualified:",
+          )
+          replace(
+              "ROADMAP.md",
+              "Once real packages exist, qualify what users will actually run:",
+              "Hosted Release Qualification now proves the frozen runtime and exact unsigned Windows/macOS preview package can process pinned real JFK media. That is artifact-level CI evidence, not representative-device evidence. Continue by qualifying what users will actually run:",
+          )
+          replace(
+              "ROADMAP.md",
+              "**finish #145 → package Windows/macOS → qualify real packages → release the MVP.**",
+              "**package and artifact-qualify Windows/macOS → provision production trust/signing/native dependencies → qualify representative devices → release the MVP.**",
+          )
+
+          replace(
+              "docs/diagrams/src/scholion-roadmap.mmd",
+              "    I --> J[Pre-packaging readiness]\n    J --> K[Windows and macOS packaging]\n    K --> L[Representative release qualification]",
+              "    I --> J[Pre-packaging readiness complete]\n    J --> K[Windows and macOS packaging and artifact qualification]\n    K --> L[Representative device qualification]",
+          )
+
+          # Root README release status.
+          replace(
+              "README.md",
+              "There are still no end-user installers or Releases. The supported path remains a source build while pre-packaging cleanup and the later packaging/first-run milestone are completed.",
+              "There are still no public signed installers or Releases. Source builds remain the supported user path while the current packaging milestone builds and qualifies unsigned Windows/macOS preview artifacts; those CI artifacts are evidence for release engineering, not yet public distributions.",
+          )
+          regex(
+              "README.md",
+              r"The current sequence is intentionally narrow:\n\n1\. \*\*#145 pre-packaging release readiness:\*\*.*?\n4\. \*\*MVP release\.\*\*",
+              "The current sequence is intentionally narrow:\n\n1. **Packaging + artifact qualification:** freeze the managed desktop runtime, build exact Windows/macOS preview packages, qualify those exact bytes with real media, and finish managed native dependencies/first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;\n2. **Production trust + signing:** provision reviewed update keys/verifier, model catalog, current self-contained FFmpeg/FFprobe, native update activation, Windows signing, and macOS signing/notarization;\n3. **Representative release qualification:** real packaged CPU-only/accelerator/Apple/Windows behavior, including #114's remaining native task-transport evidence; and\n4. **MVP release.**",
+          )
+
+          # Human docs indexes / getting started.
+          replace(
+              "docs/security/README.md",
+              "The application-side update/model-trust mechanics were completed in merged PR #144. Issue #145 is the current **pre-packaging** milestone: production trust-input decisions, post-update redundancy cleanup, documentation truth-sync, and final product icon/brand assets. Packaging itself follows after #145.",
+              "The application-side update/model-trust mechanics were completed in merged PR #144, and issue #145 completed the pre-packaging trust-input/redundancy/documentation/icon freeze. Windows/macOS packaging and exact-artifact Release Qualification are now the current milestone; production trust material, managed native media tools, signing/notarization, and representative-device evidence remain explicit release gates.",
+          )
+          replace(
+              "docs/getting-started.md",
+              "Scholion is still pre-production. There is no polished signed installer yet, so the supported path remains a source/developer checkout while issue #145 finishes pre-packaging readiness and packaging waits for the next milestone.",
+              "Scholion is still pre-production. There is no public signed installer yet, so the supported path remains a source/developer checkout while the packaging milestone builds and qualifies unsigned Windows/macOS preview artifacts.",
+          )
+          regex(
+              "docs/getting-started.md",
+              r"## What comes next\?\n\nThe current milestone is issue #145:.*?\n\nBackup/restore \+ research portability",
+              "## What comes next?\n\nIssue #145 is complete. The current milestone is Windows/macOS packaging plus exact-artifact Release Qualification. The sequence is:\n\n1. finish the managed runtime/native dependency boundary, preview installers, production update keys/verifier, reviewed model catalog, signing/notarization, update activation, and first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;\n2. qualify the exact packages on representative machines, including #114's remaining CPU-only/accelerator task-transport evidence; and\n3. release the MVP.\n\nBackup/restore + research portability",
+          )
+
+          # Docs landing page has the same old sequencing paragraph.
+          regex(
+              "docs/README.md",
+              r"## What comes next\n\nThe Scholion identity migration and application-side update/model-trust mechanics are complete\. The current milestone is issue #145:\n\n1\. .*?\n3\. .*?MVP.*?\n",
+              "## What comes next\n\nThe Scholion identity migration, application-side update/model-trust mechanics, and pre-packaging milestone #145 are complete. The current milestone is packaging and exact-artifact qualification:\n\n1. freeze/package the managed runtime and native dependencies, build Windows/macOS preview installers, and qualify the exact artifact bytes with real media;\n2. provision production update verification material, reviewed model trust, signing/notarization, native update activation, and representative-device evidence; official Linux binary packaging remains blocked by #135; and\n3. release the MVP when those gates pass.\n",
+          )
+
+          # Security hardening milestone boundary.
+          regex(
+              "docs/security/release-hardening.md",
+              r"## Current milestone boundary\n\nIssue #145 owns the last pre-packaging cleanup:.*?\n\n## Ordered residual work after #145",
+              "## Current milestone boundary\n\nIssue #145 is complete: the post-#144 redundancy re-audit, production verifier/key-rotation decision, real-model review procedure, signing-input validation, documentation truth-sync, and final product mark were frozen before packaging began.\n\nThe current milestone is Windows/macOS packaging plus exact-artifact Release Qualification. The repository now has a closed managed desktop-runtime boundary and an unsigned preview-package qualification path, but `release_ready` remains false until current self-contained FFmpeg/FFprobe, reviewed model/update trust inputs, native activation, OS signing/notarization, and representative-device evidence are present.\n\n## Ordered residual release work after #145",
+          )
+
+          # Product icon / trust architecture history.
+          replace(
+              "docs/product-icon.md",
+              "Issue #145 owns selection and commitment of the final master. Platform derivative generation and replacement of the current Tauri PNG placeholder belong to the subsequent packaging milestone.",
+              "Issue #145 completed selection and commitment of the final master. Platform derivative generation and any installer-specific icon work now belong to the active packaging milestone.",
+          )
+          replace(
+              "docs/security/update-model-trust.md",
+              "Issue #145 owns only the remaining **pre-packaging**",
+              "Issue #145 completed the **pre-packaging**",
+          )
+
+      - name: Install pinned Mermaid toolchain
+        run: npm ci --prefix tools/mermaid --no-fund --no-audit
+
+      - name: Enable Chromium user-namespace sandbox on Ubuntu runner
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
+      - name: Regenerate deterministic documentation SVGs
+        run: npm --prefix tools/mermaid run render
+
+      - name: Commit truth-sync and remove bootstrap
+        shell: bash
+        run: |
+          git rm .github/workflows/docs-truth-sync-bootstrap.yml
+          git add README.md ROADMAP.md docs tools/mermaid
+          git config user.name "scholion-ci"
+          git config user.email "actions@users.noreply.github.com"
+          git commit -m "Truth-sync packaging and qualification milestone"
+          git push
