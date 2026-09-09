@@ -210,7 +210,9 @@ def _run(command: Sequence[str], *, cwd: Path) -> subprocess.CompletedProcess[st
         ) from exc
 
 
-def _prepare_macos(config: Mapping[str, Any], output: Path) -> dict[str, object]:
+def _macos_policy(
+    config: Mapping[str, Any],
+) -> tuple[str, str, str, str, list[str]]:
     if config.get("strategy") != "source-build":
         raise MediaToolPreparationError("macOS media-tool policy must use source build")
     if config.get("upstream_repository") != "FFmpeg/FFmpeg":
@@ -223,7 +225,11 @@ def _prepare_macos(config: Mapping[str, Any], output: Path) -> dict[str, object]
         raise MediaToolPreparationError("macOS FFmpeg source tag is not approved")
     tag_object_sha = _require_sha(config.get("tag_object_sha"), "tag_object_sha")
     commit_sha = _require_sha(config.get("commit_sha"), "commit_sha")
-    raw_args = config.get("configure_args")
+    configure_args = _macos_configure_args(config.get("configure_args"))
+    return source_url, tag, tag_object_sha, commit_sha, configure_args
+
+
+def _macos_configure_args(raw_args: object) -> list[str]:
     if not isinstance(raw_args, list) or not raw_args:
         raise MediaToolPreparationError("macOS FFmpeg configure arguments are missing")
     configure_args: list[str] = []
@@ -237,7 +243,11 @@ def _prepare_macos(config: Mapping[str, Any], output: Path) -> dict[str, object]
         raise MediaToolPreparationError("macOS FFmpeg build policy lost required hardening")
     if any("gpl" in argument.lower() for argument in configure_args):
         raise MediaToolPreparationError("macOS FFmpeg build must not enable GPL components")
+    return configure_args
 
+
+def _prepare_macos(config: Mapping[str, Any], output: Path) -> dict[str, object]:
+    source_url, tag, tag_object_sha, commit_sha, configure_args = _macos_policy(config)
     git = _resolved_command("git")
     make = _resolved_command("make")
     with tempfile.TemporaryDirectory(prefix="scholion-ffmpeg-source-") as temporary:
@@ -245,11 +255,20 @@ def _prepare_macos(config: Mapping[str, Any], output: Path) -> dict[str, object]
         source.mkdir()
         _run([git, "init"], cwd=source)
         _run([git, "remote", "add", "origin", source_url], cwd=source)
-        _run([git, "fetch", "--depth", "1", "origin", f"refs/tags/{tag}:refs/tags/{tag}"], cwd=source)
-        resolved_tag = _run([git, "rev-parse", f"refs/tags/{tag}^{{tag}}"], cwd=source).stdout.strip()
-        resolved_commit = _run([git, "rev-parse", f"refs/tags/{tag}^{{commit}}"], cwd=source).stdout.strip()
+        _run(
+            [git, "fetch", "--depth", "1", "origin", f"refs/tags/{tag}:refs/tags/{tag}"],
+            cwd=source,
+        )
+        resolved_tag = _run(
+            [git, "rev-parse", f"refs/tags/{tag}^{{tag}}"], cwd=source
+        ).stdout.strip()
+        resolved_commit = _run(
+            [git, "rev-parse", f"refs/tags/{tag}^{{commit}}"], cwd=source
+        ).stdout.strip()
         if resolved_tag != tag_object_sha or resolved_commit != commit_sha:
-            raise MediaToolPreparationError("FFmpeg source identity does not match reviewed policy")
+            raise MediaToolPreparationError(
+                "FFmpeg source identity does not match reviewed policy"
+            )
         _run([git, "checkout", "--detach", commit_sha], cwd=source)
         _run([str(source / "configure"), *configure_args], cwd=source)
         jobs = str(max(1, min(os.cpu_count() or 1, 4)))
@@ -257,7 +276,9 @@ def _prepare_macos(config: Mapping[str, Any], output: Path) -> dict[str, object]
         for name in ("ffmpeg", "ffprobe"):
             built = source / name
             if not built.is_file():
-                raise MediaToolPreparationError(f"FFmpeg source build did not produce {name}")
+                raise MediaToolPreparationError(
+                    f"FFmpeg source build did not produce {name}"
+                )
             shutil.copy2(built, output / name)
             (output / name).chmod(0o755)
 
