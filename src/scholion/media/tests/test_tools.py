@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -10,7 +11,11 @@ from types import SimpleNamespace
 import pytest
 
 from scholion.media.errors import MediaToolUnavailableError
-from scholion.media.tools import media_tool_identity, resolve_media_tool
+from scholion.media.tools import (
+    configure_frozen_media_tool_path,
+    media_tool_identity,
+    resolve_media_tool,
+)
 
 
 def _bundled_name(name: str) -> str:
@@ -41,6 +46,17 @@ def test_source_runtime_resolves_media_tool_from_path(
     assert seen == [_bundled_name("ffmpeg")]
 
 
+def test_source_runtime_missing_media_tool_is_typed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    monkeypatch.setattr(shutil, "which", lambda _: None)
+
+    with pytest.raises(MediaToolUnavailableError, match="not installed or not on PATH"):
+        resolve_media_tool("ffmpeg")
+
+
 def test_frozen_runtime_uses_only_bundled_tool(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -58,6 +74,25 @@ def test_frozen_runtime_uses_only_bundled_tool(
     assert resolve_media_tool("ffprobe") == str(tool.resolve())
 
 
+def test_frozen_runtime_without_bundle_root_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sys, "frozen", True, raising=False)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+
+    with pytest.raises(MediaToolUnavailableError, match="could not resolve"):
+        resolve_media_tool("ffmpeg")
+
+
+def test_frozen_runtime_with_missing_bundle_root_fails_closed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _freeze(monkeypatch, tmp_path / "missing-bundle")
+
+    with pytest.raises(MediaToolUnavailableError, match="could not resolve"):
+        resolve_media_tool("ffmpeg")
+
+
 def test_frozen_runtime_fails_closed_when_bundled_tool_is_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -67,6 +102,18 @@ def test_frozen_runtime_fails_closed_when_bundled_tool_is_missing(
     monkeypatch.setattr(shutil, "which", lambda _: "/host/ffmpeg")
 
     with pytest.raises(MediaToolUnavailableError, match="missing managed ffmpeg"):
+        resolve_media_tool("ffmpeg")
+
+
+def test_frozen_runtime_rejects_directory_as_managed_tool(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = tmp_path / "bundle"
+    candidate = bundle / "media-tools" / _bundled_name("ffmpeg")
+    candidate.mkdir(parents=True)
+    _freeze(monkeypatch, bundle)
+
+    with pytest.raises(MediaToolUnavailableError, match="not a regular file"):
         resolve_media_tool("ffmpeg")
 
 
@@ -86,6 +133,34 @@ def test_frozen_runtime_rejects_media_tool_symlink_escape(
 
     with pytest.raises(MediaToolUnavailableError, match="outside its bundle"):
         resolve_media_tool("ffmpeg")
+
+
+def test_source_runtime_does_not_rewrite_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delattr(sys, "frozen", raising=False)
+    monkeypatch.delattr(sys, "_MEIPASS", raising=False)
+    monkeypatch.setenv("PATH", "/developer/bin")
+
+    configure_frozen_media_tool_path()
+
+    assert os.environ["PATH"] == "/developer/bin"
+
+
+def test_frozen_runtime_path_is_constrained_to_managed_tools(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = tmp_path / "bundle"
+    media_tools = bundle / "media-tools"
+    media_tools.mkdir(parents=True)
+    for name in ("ffmpeg", "ffprobe"):
+        (media_tools / _bundled_name(name)).write_bytes(b"managed")
+    _freeze(monkeypatch, bundle)
+    monkeypatch.setenv("PATH", "/ambient/bin")
+
+    configure_frozen_media_tool_path()
+
+    assert os.environ["PATH"] == str(media_tools.resolve())
 
 
 def test_media_tool_identity_is_bounded_and_does_not_expose_path(
@@ -115,6 +190,24 @@ def test_media_tool_identity_is_bounded_and_does_not_expose_path(
     assert identity.size_bytes == len(payload)
     assert identity.sha256 == hashlib.sha256(payload).hexdigest()
     assert str(bundle) not in repr(identity)
+
+
+def test_media_tool_identity_wraps_native_execution_timeout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    bundle = tmp_path / "bundle"
+    tool = bundle / "media-tools" / _bundled_name("ffmpeg")
+    tool.parent.mkdir(parents=True)
+    tool.write_bytes(b"managed")
+    _freeze(monkeypatch, bundle)
+
+    def timeout(*_: object, **__: object) -> None:
+        raise subprocess.TimeoutExpired("ffmpeg", 1)
+
+    monkeypatch.setattr(subprocess, "run", timeout)
+
+    with pytest.raises(MediaToolUnavailableError, match="could not be executed"):
+        media_tool_identity("ffmpeg")
 
 
 def test_media_tool_identity_rejects_failed_and_unbounded_version(
