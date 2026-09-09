@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-import shutil
 import subprocess
 import wave
 from pathlib import Path
 
 from scholion.media.errors import MediaToolUnavailableError
+from scholion.media.tools import resolve_media_tool
 from scholion.transcription.audio import DecodedAudio
 from scholion.transcription.enhancement_models import (
     EnhancedAudio,
@@ -47,11 +47,7 @@ class FfmpegAfftdnEnhancer:
         workspace_dir: Path,
     ) -> EnhancedAudio:
         self._validate_configuration(configuration)
-        executable = shutil.which("ffmpeg")
-        if executable is None:
-            raise MediaToolUnavailableError(
-                "FFmpeg is required for local speech noise suppression"
-            )
+        executable = resolve_media_tool("ffmpeg")
         provider_version = self._ffmpeg_version(executable)
         destination = (workspace_dir / "enhanced.wav").resolve(strict=False)
         command = [
