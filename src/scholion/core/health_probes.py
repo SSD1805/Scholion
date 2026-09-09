@@ -1,10 +1,13 @@
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
 from scholion.core.health_check import CheckResult, CheckStatus, DetailValue
+from scholion.media.errors import MediaToolUnavailableError
+from scholion.media.tools import resolve_media_tool
 from scholion.runner.inspector import RunnerInspector
 
 
@@ -126,17 +129,17 @@ class FfmpegProbe:
         self.timeout_seconds = timeout_seconds
 
     def check(self) -> CheckResult:
-        executable = shutil.which("ffmpeg")
-        if executable is None:
+        try:
+            executable = resolve_media_tool("ffmpeg")
+        except MediaToolUnavailableError:
             return CheckResult(
                 self.check_id,
                 CheckStatus.WARN,
-                "FFmpeg is not installed",
+                "FFmpeg is not available",
                 self.required,
                 error_code="ffmpeg_missing",
             )
         try:
-            # The executable is an absolute path resolved by shutil.which; no shell.
             completed = subprocess.run(  # noqa: S603
                 [executable, "-version"],
                 capture_output=True,
@@ -166,7 +169,10 @@ class FfmpegProbe:
             CheckStatus.PASS,
             "FFmpeg is available",
             self.required,
-            details={"executable": executable, "version": version},
+            details={
+                "source": "bundled" if bool(getattr(sys, "frozen", False)) else "path",
+                "version": version,
+            },
         )
 
 
