@@ -112,7 +112,9 @@ def media_tool_identity(
             timeout=timeout_seconds,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise MediaToolUnavailableError(f"{name} could not be executed", cause=exc) from exc
+        raise MediaToolUnavailableError(
+            f"{name} could not be executed", cause=exc
+        ) from exc
     if completed.returncode != 0:
         raise MediaToolUnavailableError(f"{name} could not be executed")
     first_line = completed.stdout.splitlines()[0] if completed.stdout else ""
