@@ -302,6 +302,7 @@ def collect_release_toolchain(repository_root: Path) -> dict[str, str]:
     tauri_version = (
         tauri_document.get("version") if isinstance(tauri_document, dict) else None
     )
+    npm_executable = "npm.cmd" if platform.system() == "Windows" else "npm"
 
     return _validate_toolchain(
         {
@@ -309,7 +310,7 @@ def collect_release_toolchain(repository_root: Path) -> dict[str, str]:
             "uv": _command_version("uv", "--version"),
             "pyinstaller": importlib.metadata.version("pyinstaller"),
             "node": _command_version("node", "--version"),
-            "npm": _command_version("npm", "--version"),
+            "npm": _command_version(npm_executable, "--version"),
             "rustc": _command_version("rustc", "--version"),
             "cargo": _command_version("cargo", "--version"),
             "tauri-cli": _require_bounded_text(
