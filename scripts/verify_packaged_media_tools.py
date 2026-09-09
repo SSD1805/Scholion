@@ -32,22 +32,32 @@ def _expected_tools(evidence_path: Path) -> dict[str, dict[str, object]]:
     try:
         document: Any = json.loads(evidence_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise RuntimeError("Managed media-tool preparation evidence is invalid") from exc
+        raise RuntimeError(
+            "Managed media-tool preparation evidence is invalid"
+        ) from exc
     if not isinstance(document, dict) or document.get("schema_version") != 1:
-        raise RuntimeError("Managed media-tool preparation evidence has unsupported schema")
+        raise RuntimeError(
+            "Managed media-tool preparation evidence has unsupported schema"
+        )
     raw_tools = document.get("tools")
     if not isinstance(raw_tools, list) or len(raw_tools) != 2:
         raise RuntimeError("Managed media-tool preparation evidence has wrong tool set")
     expected: dict[str, dict[str, object]] = {}
     for raw in raw_tools:
         if not isinstance(raw, dict):
-            raise RuntimeError("Managed media-tool preparation evidence has invalid tool")
+            raise RuntimeError(
+                "Managed media-tool preparation evidence has invalid tool"
+            )
         raw_name = raw.get("name")
         if not isinstance(raw_name, str):
-            raise RuntimeError("Managed media-tool preparation evidence has invalid tool name")
+            raise RuntimeError(
+                "Managed media-tool preparation evidence has invalid tool name"
+            )
         name = raw_name.removesuffix(".exe")
         if name not in {"ffmpeg", "ffprobe"} or name in expected:
-            raise RuntimeError("Managed media-tool preparation evidence has wrong tool set")
+            raise RuntimeError(
+                "Managed media-tool preparation evidence has wrong tool set"
+            )
         expected[name] = raw
     if set(expected) != {"ffmpeg", "ffprobe"}:
         raise RuntimeError("Managed media-tool preparation evidence has wrong tool set")
@@ -90,7 +100,9 @@ def verify(runtime: Path, evidence_path: Path) -> None:
         raise RuntimeError("Packaged runtime identity must be a JSON object")
     media_tools = payload.get("media_tools")
     if not isinstance(media_tools, dict) or set(media_tools) != {"ffmpeg", "ffprobe"}:
-        raise RuntimeError("Packaged runtime did not report the exact managed media-tool set")
+        raise RuntimeError(
+            "Packaged runtime did not report the exact managed media-tool set"
+        )
     for name in ("ffmpeg", "ffprobe"):
         actual = _require_tool_identity(media_tools[name], name)
         _assert_matches_prepared(actual, expected[name], name)
