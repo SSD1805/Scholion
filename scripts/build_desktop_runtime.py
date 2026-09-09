@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import argparse
 import importlib.metadata
-import os
 import shutil
 import sys
 import tempfile
@@ -38,14 +37,25 @@ def _managed_media_files(media_tools_dir: Path) -> tuple[Path, Path, Path]:
     return ffmpeg, ffprobe, evidence
 
 
+def _overlay_managed_media_files(runtime_dir: Path, media_tools_dir: Path) -> None:
+    """Copy reviewed media bytes after PyInstaller finishes touching Mach-O binaries."""
+    inputs = _managed_media_files(media_tools_dir)
+    internal = runtime_dir / "_internal"
+    if not internal.is_dir():
+        raise RuntimeError("PyInstaller runtime internal directory is missing")
+    destination = internal / "media-tools"
+    shutil.rmtree(destination, ignore_errors=True)
+    destination.mkdir()
+    for source in inputs:
+        shutil.copy2(source, destination / source.name)
+
+
 def _pyinstaller_arguments(
     root: Path,
     dist_path: Path,
     work_path: Path,
     spec_path: Path,
-    media_tools_dir: Path,
 ) -> list[str]:
-    ffmpeg, ffprobe, evidence = _managed_media_files(media_tools_dir)
     arguments = [
         "--noconfirm",
         "--clean",
@@ -67,12 +77,6 @@ def _pyinstaller_arguments(
         "duckdb",
         "--collect-all",
         "lingua",
-        "--add-binary",
-        f"{ffmpeg}{os.pathsep}media-tools",
-        "--add-binary",
-        f"{ffprobe}{os.pathsep}media-tools",
-        "--add-data",
-        f"{evidence}{os.pathsep}media-tools",
     ]
     for distribution in _RUNTIME_METADATA:
         arguments.extend(("--copy-metadata", distribution))
@@ -124,7 +128,6 @@ def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
                 dist_path,
                 work_path,
                 spec_path,
-                media_tools_dir,
             )
         )
         built = dist_path / "scholion-runtime"
@@ -133,6 +136,7 @@ def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
                 "PyInstaller did not produce the expected runtime directory"
             )
         shutil.copytree(built, staging_dir)
+        _overlay_managed_media_files(staging_dir, media_tools_dir)
 
     staging_dir.replace(output_dir)
     executable = _runtime_executable(output_dir)
