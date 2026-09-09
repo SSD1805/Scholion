@@ -70,7 +70,9 @@ def test_frozen_runtime_fails_closed_when_bundled_tool_is_missing(
         resolve_media_tool("ffmpeg")
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation is not guaranteed")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="symlink creation is not guaranteed"
+)
 def test_frozen_runtime_rejects_media_tool_symlink_escape(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
