@@ -19,6 +19,7 @@ from scholion.desktop import (
     transcript_tools_bridge,
     update_bridge,
 )
+from scholion.media.tools import media_tool_identity
 
 _RUNTIME_PROTOCOL_VERSION = 1
 _RUNTIME_CAPABILITY_MODULES = (
@@ -37,6 +38,16 @@ def _runtime_info() -> int:
     for module_name in _RUNTIME_CAPABILITY_MODULES:
         import_module(module_name)
 
+    media_tools = {}
+    for name in ("ffmpeg", "ffprobe"):
+        identity = media_tool_identity(name)
+        media_tools[name] = {
+            "source": identity.source,
+            "version": identity.version,
+            "size_bytes": identity.size_bytes,
+            "sha256": identity.sha256,
+        }
+
     payload = {
         "protocol_version": _RUNTIME_PROTOCOL_VERSION,
         "runtime": "scholion-desktop",
@@ -46,6 +57,7 @@ def _runtime_info() -> int:
         "ctranslate2_version": metadata.version("ctranslate2"),
         "duckdb_version": metadata.version("duckdb"),
         "lingua_version": metadata.version("lingua-language-detector"),
+        "media_tools": media_tools,
     }
     sys.stdout.write(json.dumps(payload, sort_keys=True))
     sys.stdout.write("\n")
