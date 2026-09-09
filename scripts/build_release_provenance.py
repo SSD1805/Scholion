@@ -14,6 +14,7 @@ _DEFAULT_INPUTS = (
     "frontend/src-tauri/Cargo.lock",
     "frontend/src-tauri/tauri.release.conf.json",
     "frontend/src-tauri/icons/scholion-master.svg",
+    "packaging/media-tools.json",
 )
 
 
