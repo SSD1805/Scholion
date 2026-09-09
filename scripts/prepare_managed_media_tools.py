@@ -62,11 +62,15 @@ def _load_manifest(path: Path) -> dict[str, Any]:
     try:
         document = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError) as exc:
-        raise MediaToolPreparationError("media-tool manifest is not readable JSON") from exc
+        raise MediaToolPreparationError(
+            "media-tool manifest is not readable JSON"
+        ) from exc
     if not isinstance(document, dict) or document.get("schema_version") != 1:
         raise MediaToolPreparationError("unsupported media-tool manifest schema")
     if document.get("version_family") != "9.0":
-        raise MediaToolPreparationError("media-tool manifest must pin FFmpeg 9.0 family")
+        raise MediaToolPreparationError(
+            "media-tool manifest must pin FFmpeg 9.0 family"
+        )
     platforms = document.get("platforms")
     if not isinstance(platforms, dict):
         raise MediaToolPreparationError("media-tool manifest platforms are invalid")
@@ -98,16 +102,21 @@ def _platform_config(manifest: Mapping[str, Any], key: str) -> dict[str, Any]:
 def _download_https(url: str, destination: Path) -> None:
     parsed = urllib.parse.urlparse(url)
     if parsed.scheme != "https" or parsed.hostname != "github.com":
-        raise MediaToolPreparationError("managed media-tool download must use github.com HTTPS")
+        raise MediaToolPreparationError(
+            "managed media-tool download must use github.com HTTPS"
+        )
     request = urllib.request.Request(  # noqa: S310
         url,
         headers={"User-Agent": "Scholion-release-qualification"},
     )
     try:
-        with urllib.request.urlopen(  # noqa: S310
-            request,
-            timeout=_DOWNLOAD_TIMEOUT_SECONDS,
-        ) as response, destination.open("wb") as output:
+        with (
+            urllib.request.urlopen(  # noqa: S310
+                request,
+                timeout=_DOWNLOAD_TIMEOUT_SECONDS,
+            ) as response,
+            destination.open("wb") as output,
+        ):
             shutil.copyfileobj(response, output)
     except OSError as exc:
         raise MediaToolPreparationError("managed media-tool download failed") from exc
@@ -134,7 +143,9 @@ def _copy_unique_zip_member(
 
 def _prepare_windows(config: Mapping[str, Any], output: Path) -> dict[str, object]:
     if config.get("strategy") != "pinned-archive":
-        raise MediaToolPreparationError("Windows media-tool policy must use pinned archive")
+        raise MediaToolPreparationError(
+            "Windows media-tool policy must use pinned archive"
+        )
     if config.get("upstream_repository") != "BtbN/FFmpeg-Builds":
         raise MediaToolPreparationError("unexpected Windows media-tool upstream")
     release_tag = _require_text(config.get("release_tag"), "release_tag", 128)
@@ -151,16 +162,24 @@ def _prepare_windows(config: Mapping[str, Any], output: Path) -> dict[str, objec
         raise MediaToolPreparationError("Windows media-tool asset URL is not canonical")
     expected_digest = _require_digest(config.get("asset_sha256"), "asset_sha256")
     expected_size = config.get("asset_size_bytes")
-    if not isinstance(expected_size, int) or isinstance(expected_size, bool) or expected_size < 1:
+    if (
+        not isinstance(expected_size, int)
+        or isinstance(expected_size, bool)
+        or expected_size < 1
+    ):
         raise MediaToolPreparationError("asset_size_bytes must be positive")
 
     with tempfile.TemporaryDirectory(prefix="scholion-media-tools-") as temporary:
         archive_path = Path(temporary) / asset_name
         _download_https(expected_url, archive_path)
         if archive_path.stat().st_size != expected_size:
-            raise MediaToolPreparationError("managed FFmpeg archive size does not match policy")
+            raise MediaToolPreparationError(
+                "managed FFmpeg archive size does not match policy"
+            )
         if _sha256_file(archive_path) != expected_digest:
-            raise MediaToolPreparationError("managed FFmpeg archive digest does not match policy")
+            raise MediaToolPreparationError(
+                "managed FFmpeg archive digest does not match policy"
+            )
         try:
             with zipfile.ZipFile(archive_path) as archive:
                 _copy_unique_zip_member(
@@ -174,7 +193,9 @@ def _prepare_windows(config: Mapping[str, Any], output: Path) -> dict[str, objec
                     destination=output / "ffprobe.exe",
                 )
         except zipfile.BadZipFile as exc:
-            raise MediaToolPreparationError("managed FFmpeg archive is invalid") from exc
+            raise MediaToolPreparationError(
+                "managed FFmpeg archive is invalid"
+            ) from exc
 
     return {
         "strategy": "pinned-archive",
@@ -236,13 +257,19 @@ def _macos_configure_args(raw_args: object) -> list[str]:
     for index, raw in enumerate(raw_args):
         argument = _require_text(raw, f"configure_args[{index}]", 128)
         if not argument.startswith("--"):
-            raise MediaToolPreparationError("FFmpeg configure arguments must be options")
+            raise MediaToolPreparationError(
+                "FFmpeg configure arguments must be options"
+            )
         configure_args.append(argument)
     required_args = {"--disable-autodetect", "--disable-network", "--disable-shared"}
     if not required_args.issubset(configure_args):
-        raise MediaToolPreparationError("macOS FFmpeg build policy lost required hardening")
+        raise MediaToolPreparationError(
+            "macOS FFmpeg build policy lost required hardening"
+        )
     if any("gpl" in argument.lower() for argument in configure_args):
-        raise MediaToolPreparationError("macOS FFmpeg build must not enable GPL components")
+        raise MediaToolPreparationError(
+            "macOS FFmpeg build must not enable GPL components"
+        )
     return configure_args
 
 
@@ -256,7 +283,14 @@ def _prepare_macos(config: Mapping[str, Any], output: Path) -> dict[str, object]
         _run([git, "init"], cwd=source)
         _run([git, "remote", "add", "origin", source_url], cwd=source)
         _run(
-            [git, "fetch", "--depth", "1", "origin", f"refs/tags/{tag}:refs/tags/{tag}"],
+            [
+                git,
+                "fetch",
+                "--depth",
+                "1",
+                "origin",
+                f"refs/tags/{tag}:refs/tags/{tag}",
+            ],
             cwd=source,
         )
         resolved_tag = _run(
@@ -302,9 +336,13 @@ def _tool_identity(path: Path, *, version_family: str) -> dict[str, object]:
             timeout=_TOOL_TIMEOUT_SECONDS,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
-        raise MediaToolPreparationError(f"prepared {path.name} could not execute") from exc
+        raise MediaToolPreparationError(
+            f"prepared {path.name} could not execute"
+        ) from exc
     if completed.returncode != 0 or not completed.stdout:
-        raise MediaToolPreparationError(f"prepared {path.name} could not report identity")
+        raise MediaToolPreparationError(
+            f"prepared {path.name} could not report identity"
+        )
     first_line = completed.stdout.splitlines()[0]
     if len(first_line) > 256 or version_family not in first_line:
         raise MediaToolPreparationError(
@@ -324,7 +362,9 @@ def prepare(manifest_path: Path, output: Path) -> bytes:
     key = _platform_key()
     config = _platform_config(manifest, key)
     if output.exists() and any(output.iterdir()):
-        raise MediaToolPreparationError("managed media-tool output directory must be empty")
+        raise MediaToolPreparationError(
+            "managed media-tool output directory must be empty"
+        )
     output.mkdir(parents=True, exist_ok=True)
 
     if key == "windows-x86_64":
@@ -334,7 +374,9 @@ def prepare(manifest_path: Path, output: Path) -> bytes:
         source_identity = _prepare_macos(config, output)
         names = ("ffmpeg", "ffprobe")
     else:  # pragma: no cover - _platform_key owns the closed platform set.
-        raise MediaToolPreparationError(f"unsupported managed media-tool platform: {key}")
+        raise MediaToolPreparationError(
+            f"unsupported managed media-tool platform: {key}"
+        )
 
     version_family = str(manifest["version_family"])
     evidence = {
@@ -345,7 +387,10 @@ def prepare(manifest_path: Path, output: Path) -> bytes:
         "license": _require_text(config.get("license"), "license", 64),
         "source": source_identity,
         "tools": sorted(
-            (_tool_identity(output / name, version_family=version_family) for name in names),
+            (
+                _tool_identity(output / name, version_family=version_family)
+                for name in names
+            ),
             key=lambda item: str(item["name"]),
         ),
     }
