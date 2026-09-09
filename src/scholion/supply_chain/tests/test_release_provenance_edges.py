@@ -17,7 +17,9 @@ _COMMIT = "a" * 40
 
 def _setup(tmp_path: Path) -> tuple[Path, Path, Path, Path, tuple[str, ...]]:
     repository = tmp_path / "repository"
-    (repository / "frontend" / "src-tauri" / "icons").mkdir(parents=True)
+    (repository / "frontend" / "src-tauri" / "icons").mkdir(
+        parents=True, exist_ok=True
+    )
     files = {
         "uv.lock": "uv\n",
         "frontend/package-lock.json": "{}\n",
@@ -32,12 +34,12 @@ def _setup(tmp_path: Path) -> tuple[Path, Path, Path, Path, tuple[str, ...]]:
 
     bundle_root = tmp_path / "bundle"
     artifact = bundle_root / "nsis" / "Scholion.exe"
-    artifact.parent.mkdir(parents=True)
+    artifact.parent.mkdir(parents=True, exist_ok=True)
     artifact.write_bytes(b"package")
     digest = sha256_file(artifact)
 
     evidence_dir = tmp_path / "release-preview"
-    evidence_dir.mkdir()
+    evidence_dir.mkdir(exist_ok=True)
     qualification = evidence_dir / "qualification.json"
     qualification.write_text(
         json.dumps(
@@ -242,7 +244,7 @@ def test_provenance_rejects_invalid_toolchain_identity(tmp_path: Path) -> None:
         _build(tmp_path, toolchain={"python": "3.12\nextra"})
 
 
-def test_collect_release_toolchain_uses_bounded_installed_versions(
+def test_collect_release_toolchain_uses_windows_npm_wrapper(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     repository = tmp_path / "repository"
@@ -260,7 +262,7 @@ def test_collect_release_toolchain_uses_bounded_installed_versions(
     versions = {
         "uv": "uv 0.11.33",
         "node": "v24.8.0",
-        "npm": "11.6.0",
+        "npm.cmd": "11.6.0",
         "rustc": "rustc 1.90.0",
         "cargo": "cargo 1.90.0",
     }
@@ -270,12 +272,17 @@ def test_collect_release_toolchain_uses_bounded_installed_versions(
 
     monkeypatch.setattr(subprocess, "run", fake_run)
     monkeypatch.setattr("importlib.metadata.version", lambda _: "6.22.2")
+    monkeypatch.setattr(
+        "scholion.supply_chain.release_provenance.platform.system",
+        lambda: "Windows",
+    )
 
     toolchain = collect_release_toolchain(repository)
 
     assert toolchain["tauri-cli"] == "2.8.5"
     assert toolchain["pyinstaller"] == "6.22.2"
     assert toolchain["uv"] == "uv 0.11.33"
+    assert toolchain["npm"] == "11.6.0"
     assert toolchain["cargo"] == "cargo 1.90.0"
 
 
