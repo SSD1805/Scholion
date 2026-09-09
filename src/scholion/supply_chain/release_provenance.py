@@ -53,7 +53,7 @@ def _require_relative_path(value: object, field: str) -> PurePosixPath:
 
 def _resolve_beneath(root: Path, relative: PurePosixPath, field: str) -> Path:
     resolved_root = root.resolve(strict=True)
-    candidate = (resolved_root / Path(*relative.parts)).resolve(strict=True)
+    candidate = (resolved_root / Path(*relative.parts)).resolve(strict=False)
     try:
         candidate.relative_to(resolved_root)
     except ValueError as exc:
