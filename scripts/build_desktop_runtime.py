@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import importlib.metadata
+import os
 import shutil
 import sys
 import tempfile
@@ -26,9 +27,25 @@ def _runtime_executable(runtime_dir: Path) -> Path:
     return runtime_dir / name
 
 
+def _managed_media_files(media_tools_dir: Path) -> tuple[Path, Path, Path]:
+    suffix = ".exe" if sys.platform == "win32" else ""
+    ffmpeg = media_tools_dir / f"ffmpeg{suffix}"
+    ffprobe = media_tools_dir / f"ffprobe{suffix}"
+    evidence = media_tools_dir / "managed-media-tools.json"
+    for path in (ffmpeg, ffprobe, evidence):
+        if not path.is_file():
+            raise RuntimeError(f"Managed media-tool input is missing: {path.name}")
+    return ffmpeg, ffprobe, evidence
+
+
 def _pyinstaller_arguments(
-    root: Path, dist_path: Path, work_path: Path, spec_path: Path
+    root: Path,
+    dist_path: Path,
+    work_path: Path,
+    spec_path: Path,
+    media_tools_dir: Path,
 ) -> list[str]:
+    ffmpeg, ffprobe, evidence = _managed_media_files(media_tools_dir)
     arguments = [
         "--noconfirm",
         "--clean",
@@ -50,6 +67,12 @@ def _pyinstaller_arguments(
         "duckdb",
         "--collect-all",
         "lingua",
+        "--add-binary",
+        f"{ffmpeg}{os.pathsep}media-tools",
+        "--add-binary",
+        f"{ffprobe}{os.pathsep}media-tools",
+        "--add-data",
+        f"{evidence}{os.pathsep}media-tools",
     ]
     for distribution in _RUNTIME_METADATA:
         arguments.extend(("--copy-metadata", distribution))
@@ -67,7 +90,7 @@ def _pyinstaller_arguments(
     return arguments
 
 
-def build_runtime(output_dir: Path) -> Path:
+def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
     try:
         pyinstaller_version = importlib.metadata.version("pyinstaller")
     except importlib.metadata.PackageNotFoundError as exc:
@@ -83,6 +106,8 @@ def build_runtime(output_dir: Path) -> Path:
 
     root = _repository_root()
     output_dir = output_dir.resolve()
+    media_tools_dir = media_tools_dir.resolve(strict=True)
+    _managed_media_files(media_tools_dir)
     staging_dir = output_dir.parent / ".runtime-build"
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     shutil.rmtree(staging_dir, ignore_errors=True)
@@ -93,7 +118,15 @@ def build_runtime(output_dir: Path) -> Path:
         dist_path = temporary_path / "dist"
         work_path = temporary_path / "work"
         spec_path = temporary_path / "spec"
-        pyinstaller_run(_pyinstaller_arguments(root, dist_path, work_path, spec_path))
+        pyinstaller_run(
+            _pyinstaller_arguments(
+                root,
+                dist_path,
+                work_path,
+                spec_path,
+                media_tools_dir,
+            )
+        )
         built = dist_path / "scholion-runtime"
         if not built.is_dir():
             raise RuntimeError(
@@ -117,8 +150,13 @@ def main() -> int:
         type=Path,
         default=_repository_root() / "frontend" / "src-tauri" / "resources" / "runtime",
     )
+    parser.add_argument(
+        "--media-tools-dir",
+        type=Path,
+        default=_repository_root() / "build" / "managed-media-tools",
+    )
     arguments = parser.parse_args()
-    executable = build_runtime(arguments.output_dir)
+    executable = build_runtime(arguments.output_dir, arguments.media_tools_dir)
     print(executable)
     return 0
 
