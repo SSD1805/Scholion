@@ -37,14 +37,14 @@ def test_direct_audio_returns_original_without_resolving_ffmpeg(tmp_path):
     source = tmp_path / "ready.wav"
     source.write_bytes(b"RIFFaudio")
     decoder = FfmpegAudioDecoder()
-    with patch("scholion.transcription.audio.shutil.which") as which:
+    with patch("scholion.transcription.audio.resolve_media_tool") as resolve:
         result = decoder.decode(
             media(source),
             DecodeConfiguration(DecodeStrategy.DIRECT, "pcm_s16le", 16_000, 1),
             tmp_path / "workspace",
         )
     assert result == DecodedAudio(source.resolve(), temporary=False)
-    which.assert_not_called()
+    resolve.assert_not_called()
     decoder.cleanup(result)
     assert source.exists()
 
@@ -60,7 +60,7 @@ def test_video_container_maps_only_selected_audio_to_private_wav(tmp_path):
         return SimpleNamespace(returncode=0)
 
     with (
-        patch("scholion.transcription.audio.shutil.which", return_value="ffmpeg"),
+        patch("scholion.transcription.audio.resolve_media_tool", return_value="ffmpeg"),
         patch("scholion.transcription.audio.subprocess.run", side_effect=run) as call,
     ):
         result = FfmpegAudioDecoder(timeout_seconds=12.5).decode(
@@ -114,8 +114,14 @@ def test_decoder_requires_positive_timeout():
 def test_normalization_requires_ffmpeg(tmp_path):
     source = tmp_path / "audio.m4a"
     source.write_bytes(b"audio")
+    unavailable = MediaToolUnavailableError(
+        "FFmpeg is required to extract and normalize this recording's audio"
+    )
     with (
-        patch("scholion.transcription.audio.shutil.which", return_value=None),
+        patch(
+            "scholion.transcription.audio.resolve_media_tool",
+            side_effect=unavailable,
+        ),
         pytest.raises(MediaToolUnavailableError, match="^FFmpeg is required"),
     ):
         FfmpegAudioDecoder().decode(media(source), normalized(), tmp_path)
@@ -144,7 +150,7 @@ def test_native_process_failures_are_typed_and_remove_partial_output(
         raise effect
 
     with (
-        patch("scholion.transcription.audio.shutil.which", return_value="ffmpeg"),
+        patch("scholion.transcription.audio.resolve_media_tool", return_value="ffmpeg"),
         patch("scholion.transcription.audio.subprocess.run", side_effect=run),
         pytest.raises(error_type, match=f"^{message}"),
     ):
@@ -165,7 +171,7 @@ def test_nonzero_ffmpeg_exit_removes_output_and_hides_native_details(
         return SimpleNamespace(returncode=returncode)
 
     with (
-        patch("scholion.transcription.audio.shutil.which", return_value="ffmpeg"),
+        patch("scholion.transcription.audio.resolve_media_tool", return_value="ffmpeg"),
         patch("scholion.transcription.audio.subprocess.run", side_effect=run),
         pytest.raises(
             AudioDecodeError,
@@ -187,7 +193,7 @@ def test_header_only_or_empty_normalized_audio_is_rejected(tmp_path, payload):
         return SimpleNamespace(returncode=0)
 
     with (
-        patch("scholion.transcription.audio.shutil.which", return_value="ffmpeg"),
+        patch("scholion.transcription.audio.resolve_media_tool", return_value="ffmpeg"),
         patch("scholion.transcription.audio.subprocess.run", side_effect=run),
         pytest.raises(
             AudioDecodeError, match="^Normalized audio contains no usable samples$"
@@ -201,7 +207,7 @@ def test_missing_normalized_output_is_typed(tmp_path):
     source = tmp_path / "audio.m4a"
     source.write_bytes(b"audio")
     with (
-        patch("scholion.transcription.audio.shutil.which", return_value="ffmpeg"),
+        patch("scholion.transcription.audio.resolve_media_tool", return_value="ffmpeg"),
         patch(
             "scholion.transcription.audio.subprocess.run",
             return_value=SimpleNamespace(returncode=0),
