@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import shutil
 import subprocess
 import sys
@@ -77,6 +78,16 @@ def resolve_media_tool(name: str) -> str:
             f"Packaged Scholion runtime managed {name} is not a regular file"
         )
     return str(resolved)
+
+
+def configure_frozen_media_tool_path() -> None:
+    """Constrain legacy PATH lookup to managed media bytes in packaged Scholion."""
+    bundle_root = _frozen_bundle_root()
+    if bundle_root is None:
+        return
+    for name in sorted(_ALLOWED_MEDIA_TOOLS):
+        resolve_media_tool(name)
+    os.environ["PATH"] = str(bundle_root / "media-tools")
 
 
 def _sha256_file(path: Path) -> str:
