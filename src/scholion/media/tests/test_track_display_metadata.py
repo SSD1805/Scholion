@@ -88,7 +88,9 @@ def test_multitrack_probe_runs_one_extra_bounded_display_query(monkeypatch, tmp_
             return _display_payload()
         return _base_payload()
 
-    monkeypatch.setattr(probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe")
+    monkeypatch.setattr(
+        probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe"
+    )
     monkeypatch.setattr(FfprobeMediaProbe, "_run", fake_run)
 
     media = FfprobeMediaProbe().probe(source)
@@ -111,7 +113,9 @@ def test_single_track_probe_does_not_request_display_metadata(monkeypatch, tmp_p
         calls.append(entries)
         return _base_payload(multitrack=False)
 
-    monkeypatch.setattr(probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe")
+    monkeypatch.setattr(
+        probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe"
+    )
     monkeypatch.setattr(FfprobeMediaProbe, "_run", fake_run)
 
     FfprobeMediaProbe().probe(source)
