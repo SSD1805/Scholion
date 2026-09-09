@@ -17,9 +17,7 @@ _COMMIT = "a" * 40
 
 def _setup(tmp_path: Path) -> tuple[Path, Path, Path, Path, tuple[str, ...]]:
     repository = tmp_path / "repository"
-    (repository / "frontend" / "src-tauri" / "icons").mkdir(
-        parents=True, exist_ok=True
-    )
+    (repository / "frontend" / "src-tauri" / "icons").mkdir(parents=True, exist_ok=True)
     files = {
         "uv.lock": "uv\n",
         "frontend/package-lock.json": "{}\n",
