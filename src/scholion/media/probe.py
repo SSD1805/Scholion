@@ -1,7 +1,6 @@
 import hashlib
 import json
 import math
-import shutil
 import subprocess
 from collections.abc import Mapping
 from pathlib import Path
@@ -22,6 +21,7 @@ from scholion.media.models import (
     TemporalTagKind,
     TemporalTagSource,
 )
+from scholion.media.tools import resolve_media_tool
 
 _HASH_BLOCK_SIZE = 1024 * 1024
 _MAX_PROBE_OUTPUT_BYTES = 1024 * 1024
@@ -266,12 +266,7 @@ class FfprobeMediaProbe:
         if before[0] < 1:
             raise UnsupportedMediaError("Input file is empty")
 
-        executable = shutil.which("ffprobe")
-        if executable is None:
-            raise MediaToolUnavailableError(
-                "FFprobe is required to inspect audio input"
-            )
-
+        executable = resolve_media_tool("ffprobe")
         payload = self._run(executable, source, entries=_FFPROBE_ENTRIES)
         display_lookup: Mapping[int, Mapping[str, Any]] = {}
         if _multiple_audio_streams(payload):
