@@ -4,13 +4,13 @@ Scholion is a **private, local-first workspace for recorded evidence**. Its job 
 
 Modern Scholion restarted on August 2, 2026. The MVP product foundation is now substantially built: import, local processing, explicit embedded-audio-track choice, canonical evidence, lexical/semantic/hybrid retrieval, verified navigation, durable notes/tags/collections/saved searches, transcript and speaker tools, native source playback, lifecycle/retention controls, contextual guidance, accessibility themes, and signed update/model-trust mechanics all exist in repository code.
 
-Issue #145 is complete. The project is now in the **Windows/macOS packaging and artifact-qualification milestone**: Scholion is freezing its managed desktop runtime, building unsigned preview packages, and proving those exact package bytes before production signing/release inputs are provisioned.
+Issue #145 is complete and PR #164 completed the first Windows/macOS packaging foundation. Scholion now has a locked/audited managed frozen runtime, reviewed-master native icon generation, exact unsigned Windows NSIS and macOS DMG preview packages, and real packaged-runtime acceptance against those artifact boundaries. The active repository-owned tranche is **package lifecycle + deterministic release evidence** under #165/#166; production native/trust inputs, signing, and representative-device qualification remain separate release gates.
 
 ![Scholion roadmap 🗺️✨ diagram](./docs/diagrams/generated/scholion-roadmap.svg)
 
 [Diagram source (Mermaid)](./docs/diagrams/src/scholion-roadmap.mmd)
 
-Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, signed update/model-trust mechanics, hosted cross-platform real-media acceptance, and completed pre-packaging readiness. The current milestone is Windows/macOS packaging plus artifact-level release qualification, followed by representative physical-device qualification. Official Linux binary distribution remains separately blocked by issue #135.
+Text fallback: Scholion already spans local media, reliable transcription, canonical evidence, private retrieval, verified navigation, durable research, native desktop workflows, lifecycle/playback, signed update/model-trust mechanics, hosted cross-platform real-media acceptance, completed pre-packaging readiness, and a qualified Windows/macOS preview-package foundation. The current tranche hardens exact package lifecycle and release evidence before production native/trust inputs and representative physical-device qualification. Official Linux binary distribution remains separately blocked by issue #135.
 
 # MVP foundation now
 
@@ -84,7 +84,7 @@ The desktop now also has an explicit **Updates** workspace. Manual checks use on
 | Architecture/redundancy | capability-blind transport + app-layer composition + one Research contract | re-audited after #144 | no known duplicate authority remains in current milestone |
 | Frontend tests | strict TS/build + Playwright/axe | primary surfaces including Updates covered | grow with features, avoid duplicated backend policy |
 | Update trust | exact-byte signed manifest + fixed endpoint + rollback/expiry/equivocation + staging + UI | implemented mechanics | production public key/native verifier wiring and OS activation during packaging |
-| Packaging | Python wheel + Tauri + managed frozen runtime | Windows/macOS preview packaging + artifact qualification in progress | managed FFmpeg, production trust inputs, update activation, signing/notarization, uninstall qualification; Linux public package blocked by #135 |
+| Packaging | managed frozen runtime + Tauri | Windows/macOS unsigned preview foundation qualified in #164; lifecycle/provenance hardening active in #165/#166 | reviewed FFmpeg, production trust inputs, native activation, signing/notarization, final release evidence; Linux public package blocked by #135 |
 | Backup/restore | authority boundaries known | not implemented | **post-MVP** portability/data-safety feature |
 | Representative hardware | platform CI + policy contracts | partial | real devices; #114 owns current task-transport evidence |
 
@@ -130,18 +130,28 @@ The verifier decision is documented in **[Production trust inputs](docs/security
 
 ## 4. Packaging and first-run/update/uninstall ← current milestone
 
-With #145 complete, package the real application rather than extending feature scope. The current tranche has started the closed managed runtime, Windows/macOS preview bundles, and exact-artifact Release Qualification workflow; the remaining bullets are still release gates until explicitly qualified:
+PR #164 completed the first packaging-foundation tranche:
 
-- managed Python runtime/sidecar;
-- FFmpeg/native dependencies;
-- Windows and macOS installers/bundles;
-- storage onboarding/repair;
+- locked/audited managed Python runtime construction with exact PyInstaller custody;
+- closed packaged runtime selection at the Tauri boundary;
+- reviewed Scholion master → native icon generation;
+- unsigned Windows NSIS and macOS DMG construction;
+- real JFK transcription through the frozen runtime before bundling;
+- exact NSIS install / exact DMG mount followed by packaged-runtime re-qualification; and
+- SHA-256 artifact identity plus explicit `release_ready: false` qualification evidence.
+
+Issue #165 / PR #166 is the active repository-owned lifecycle/evidence tranche. It binds deterministic provenance to the exact qualified package bytes, checksums, commit, lockfiles/config/master icon and bounded build-tool identity, and strengthens Windows qualification to install → real retained Scholion evidence/state → uninstall → preservation check → reinstall the same installer → second acceptance → final uninstall. macOS remains honestly scoped to DMG mount/runtime/unmount until a stronger lifecycle exists.
+
+The remaining release gates are:
+
+- reviewed self-contained FFmpeg/FFprobe and any remaining native dependencies;
+- storage onboarding/repair behavior that needs representative package/device evidence;
 - bundled reviewed public update key set;
 - bundled reviewed faster-whisper model-trust catalog;
 - native Ed25519 verification and platform-safe update activation;
 - OS code signing/notarization;
-- release checksums and reproducible provenance/SBOM material; and
-- evidence-safe uninstall semantics.
+- final production release checksums/provenance/SBOM publication; and
+- representative-device evidence-safe lifecycle qualification where hosted CI cannot substitute for a real machine.
 
 Packaging must not silently move/delete user evidence. Uninstall should remove application/runtime/cache state only according to explicit rules while preserving original recordings, canonical transcript evidence, and authoritative research unless the user separately requests destruction.
 
@@ -149,7 +159,7 @@ Public **Linux** binary packaging remains blocked by issue #135 while the suppor
 
 ## 5. Representative release qualification
 
-Hosted Release Qualification now proves the frozen runtime and exact unsigned Windows/macOS preview package can process pinned real JFK media. That is artifact-level CI evidence, not representative-device evidence. Continue by qualifying what users will actually run:
+Hosted Release Qualification now proves the frozen runtime and exact unsigned Windows/macOS preview package can process pinned real JFK media. PR #164 established that artifact boundary; #165/#166 adds stronger Windows lifecycle/evidence custody and deterministic provenance. This remains artifact-level CI evidence, not representative-device evidence. Continue by qualifying what users will actually run:
 
 - Windows 8 GB CPU-only;
 - ordinary 16 GB systems;
@@ -196,6 +206,6 @@ A future notebook page should live in authoritative SQLite as its own research-d
 
 The rule is now intentionally boring:
 
-**package and artifact-qualify Windows/macOS → provision production trust/signing/native dependencies → qualify representative devices → release the MVP.**
+**finish lifecycle/provenance hardening → provision production trust/signing/native dependencies → qualify representative devices → release the MVP.**
 
 Do not reopen completed product tranches merely because later research or portability features are interesting. Do not call production secrets, real upstream trust decisions, OS signing, or representative-device evidence “implemented” until they actually exist.
