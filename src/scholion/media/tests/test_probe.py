@@ -52,11 +52,11 @@ def install_completed_probe(monkeypatch, response, *, returncode=0):
             stderr="private ffprobe detail",
         )
 
-    def fake_which(name):
+    def fake_resolve(name):
         captured["lookup"] = name
         return "/tools/ffprobe"
 
-    monkeypatch.setattr(probe_module.shutil, "which", fake_which)
+    monkeypatch.setattr(probe_module, "resolve_media_tool", fake_resolve)
     monkeypatch.setattr(probe_module.subprocess, "run", fake_run)
     return captured
 
@@ -326,7 +326,11 @@ def test_optional_invalid_numeric_fields_are_omitted(tmp_path):
 def test_missing_ffprobe_is_a_typed_dependency_failure(monkeypatch, tmp_path):
     source = tmp_path / "audio.wav"
     source.write_bytes(b"audio")
-    monkeypatch.setattr(probe_module.shutil, "which", lambda name: None)
+
+    def unavailable(name):
+        raise MediaToolUnavailableError("FFprobe is required to inspect audio input")
+
+    monkeypatch.setattr(probe_module, "resolve_media_tool", unavailable)
     with pytest.raises(MediaToolUnavailableError) as error:
         FfprobeMediaProbe().probe(source)
     assert error.value.exit_code == 1
@@ -337,7 +341,7 @@ def test_empty_input_is_rejected_before_executable_lookup(monkeypatch, tmp_path)
     source = tmp_path / "empty.wav"
     source.touch()
     lookup = pytest.MonkeyPatch()
-    lookup.setattr(probe_module.shutil, "which", lambda name: pytest.fail("lookup"))
+    lookup.setattr(probe_module, "resolve_media_tool", lambda name: pytest.fail("lookup"))
     try:
         with pytest.raises(UnsupportedMediaError, match="^Input file is empty$"):
             FfprobeMediaProbe().probe(source)
@@ -360,7 +364,7 @@ def test_missing_input_metadata_is_a_typed_probe_failure(tmp_path):
 def test_probe_timeout_hides_command_detail(monkeypatch, tmp_path):
     source = tmp_path / "audio.wav"
     source.write_bytes(b"audio")
-    monkeypatch.setattr(probe_module.shutil, "which", lambda name: "/tools/ffprobe")
+    monkeypatch.setattr(probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe")
 
     def timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired(args[0], 2)
@@ -375,7 +379,7 @@ def test_probe_timeout_hides_command_detail(monkeypatch, tmp_path):
 def test_probe_execution_failure_is_typed(monkeypatch, tmp_path):
     source = tmp_path / "audio.wav"
     source.write_bytes(b"audio")
-    monkeypatch.setattr(probe_module.shutil, "which", lambda name: "/tools/ffprobe")
+    monkeypatch.setattr(probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe")
 
     def unavailable(*args, **kwargs):
         raise OSError("private")
@@ -390,7 +394,7 @@ def test_probe_execution_failure_is_typed(monkeypatch, tmp_path):
 def test_probe_decode_failure_is_typed(monkeypatch, tmp_path):
     source = tmp_path / "audio.wav"
     source.write_bytes(b"audio")
-    monkeypatch.setattr(probe_module.shutil, "which", lambda name: "/tools/ffprobe")
+    monkeypatch.setattr(probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe")
 
     def invalid_text(*args, **kwargs):
         raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
