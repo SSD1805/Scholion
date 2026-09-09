@@ -341,7 +341,9 @@ def test_empty_input_is_rejected_before_executable_lookup(monkeypatch, tmp_path)
     source = tmp_path / "empty.wav"
     source.touch()
     lookup = pytest.MonkeyPatch()
-    lookup.setattr(probe_module, "resolve_media_tool", lambda name: pytest.fail("lookup"))
+    lookup.setattr(
+        probe_module, "resolve_media_tool", lambda name: pytest.fail("lookup")
+    )
     try:
         with pytest.raises(UnsupportedMediaError, match="^Input file is empty$"):
             FfprobeMediaProbe().probe(source)
@@ -364,7 +366,9 @@ def test_missing_input_metadata_is_a_typed_probe_failure(tmp_path):
 def test_probe_timeout_hides_command_detail(monkeypatch, tmp_path):
     source = tmp_path / "audio.wav"
     source.write_bytes(b"audio")
-    monkeypatch.setattr(probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe")
+    monkeypatch.setattr(
+        probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe"
+    )
 
     def timeout(*args, **kwargs):
         raise subprocess.TimeoutExpired(args[0], 2)
@@ -379,7 +383,9 @@ def test_probe_timeout_hides_command_detail(monkeypatch, tmp_path):
 def test_probe_execution_failure_is_typed(monkeypatch, tmp_path):
     source = tmp_path / "audio.wav"
     source.write_bytes(b"audio")
-    monkeypatch.setattr(probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe")
+    monkeypatch.setattr(
+        probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe"
+    )
 
     def unavailable(*args, **kwargs):
         raise OSError("private")
@@ -394,7 +400,9 @@ def test_probe_execution_failure_is_typed(monkeypatch, tmp_path):
 def test_probe_decode_failure_is_typed(monkeypatch, tmp_path):
     source = tmp_path / "audio.wav"
     source.write_bytes(b"audio")
-    monkeypatch.setattr(probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe")
+    monkeypatch.setattr(
+        probe_module, "resolve_media_tool", lambda name: "/tools/ffprobe"
+    )
 
     def invalid_text(*args, **kwargs):
         raise UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid")
