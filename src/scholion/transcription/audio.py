@@ -11,13 +11,13 @@ windows are measured from frame zero of this canonical audio and the assembler m
 engine-local timestamps back onto that one source-relative recording timeline.
 """
 
-import shutil
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
 from scholion.media.errors import AudioDecodeError, MediaToolUnavailableError
 from scholion.media.models import MediaInfo
+from scholion.media.tools import resolve_media_tool
 from scholion.transcription.models import DecodeConfiguration, DecodeStrategy
 
 
@@ -55,11 +55,7 @@ class FfmpegAudioDecoder:
         if configuration.strategy is DecodeStrategy.DIRECT:
             return DecodedAudio(media.input.path, temporary=False)
 
-        executable = shutil.which("ffmpeg")
-        if executable is None:
-            raise MediaToolUnavailableError(
-                "FFmpeg is required to extract and normalize this recording's audio"
-            )
+        executable = resolve_media_tool("ffmpeg")
         destination = (workspace_dir / "normalized.wav").resolve(strict=False)
         command = [
             executable,
