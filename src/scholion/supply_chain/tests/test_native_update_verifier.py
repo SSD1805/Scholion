@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import base64
 import json
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -217,7 +216,7 @@ def test_frozen_runtime_without_native_host_stays_off(
     _freeze(
         monkeypatch,
         runtime=runtime,
-        platform=os.sys.platform,
+        platform=sys.platform,
         candidate=None,
     )
 
