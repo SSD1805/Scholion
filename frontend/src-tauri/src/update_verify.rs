@@ -4,11 +4,13 @@ use std::fs;
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 
+pub(crate) const VERIFY_ARGUMENT: &str = "--scholion-verify-update-signature";
 const PROTOCOL_VERSION: u8 = 1;
 const MAX_REQUEST_BYTES: usize = 512 * 1024;
 const MAX_PAYLOAD_BYTES: usize = 64 * 1024;
 const MAX_CATALOG_BYTES: usize = 32 * 1024;
 const MAX_KEY_ID_BYTES: usize = 64;
+#[cfg(any(target_os = "windows", target_os = "macos"))]
 const UPDATE_KEY_CATALOG_NAME: &str = "update-keys.json";
 
 #[derive(Debug, Deserialize)]
@@ -64,9 +66,9 @@ struct VerifyResponse {
 fn valid_key_id(value: &str) -> bool {
     !value.is_empty()
         && value.len() <= MAX_KEY_ID_BYTES
-        && value
-            .bytes()
-            .all(|byte| byte.is_ascii_lowercase() || byte.is_ascii_digit() || b"._-".contains(&byte))
+        && value.bytes().all(|byte| {
+            byte.is_ascii_lowercase() || byte.is_ascii_digit() || b"._-".contains(&byte)
+        })
 }
 
 fn hex_nibble(byte: u8) -> Option<u8> {
@@ -284,9 +286,20 @@ mod tests {
 
     #[test]
     fn catalog_requires_one_current_key_and_strict_lower_hex() {
-        assert!(parse_catalog(&catalog_json("next", "release-test", RFC8032_PUBLIC_KEY)).is_none());
-        assert!(parse_catalog(&catalog_json("current", "release-test", &RFC8032_PUBLIC_KEY.to_uppercase())).is_none());
-        assert!(parse_catalog(&catalog_json("current", "Bad Key", RFC8032_PUBLIC_KEY)).is_none());
+        assert!(
+            parse_catalog(&catalog_json("next", "release-test", RFC8032_PUBLIC_KEY)).is_none()
+        );
+        assert!(
+            parse_catalog(&catalog_json(
+                "current",
+                "release-test",
+                &RFC8032_PUBLIC_KEY.to_uppercase(),
+            ))
+            .is_none()
+        );
+        assert!(
+            parse_catalog(&catalog_json("current", "Bad Key", RFC8032_PUBLIC_KEY)).is_none()
+        );
     }
 
     #[test]
