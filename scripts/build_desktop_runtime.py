@@ -7,6 +7,10 @@ import sys
 import tempfile
 from pathlib import Path
 
+from scholion.supply_chain.release_trust_inputs import (
+    verify_prepared_release_trust_inputs,
+)
+
 _EXPECTED_PYINSTALLER = "6.22.2"
 _RUNTIME_METADATA = (
     "scholion",
@@ -48,6 +52,24 @@ def _overlay_managed_media_files(runtime_dir: Path, media_tools_dir: Path) -> No
     destination.mkdir()
     for source in inputs:
         shutil.copy2(source, destination / source.name)
+
+
+def _overlay_release_trust_files(runtime_dir: Path, trust_inputs_dir: Path) -> None:
+    """Copy reviewed trust bytes only after their preparation evidence re-verifies."""
+    prepared = verify_prepared_release_trust_inputs(trust_inputs_dir)
+    internal = runtime_dir / "_internal"
+    if not internal.is_dir():
+        raise RuntimeError("PyInstaller runtime internal directory is missing")
+
+    model_destination = internal / "scholion" / "supply_chain" / "model-trust.json"
+    model_destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(prepared.model_trust, model_destination)
+
+    public_destination = runtime_dir / "release-trust"
+    shutil.rmtree(public_destination, ignore_errors=True)
+    public_destination.mkdir()
+    shutil.copy2(prepared.update_keys, public_destination / prepared.update_keys.name)
+    shutil.copy2(prepared.evidence, public_destination / prepared.evidence.name)
 
 
 def _pyinstaller_arguments(
@@ -94,7 +116,11 @@ def _pyinstaller_arguments(
     return arguments
 
 
-def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
+def build_runtime(
+    output_dir: Path,
+    media_tools_dir: Path,
+    release_trust_dir: Path | None = None,
+) -> Path:
     try:
         pyinstaller_version = importlib.metadata.version("pyinstaller")
     except importlib.metadata.PackageNotFoundError as exc:
@@ -112,6 +138,9 @@ def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
     output_dir = output_dir.resolve()
     media_tools_dir = media_tools_dir.resolve(strict=True)
     _managed_media_files(media_tools_dir)
+    if release_trust_dir is not None:
+        release_trust_dir = release_trust_dir.resolve(strict=True)
+        verify_prepared_release_trust_inputs(release_trust_dir)
     staging_dir = output_dir.parent / ".runtime-build"
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     shutil.rmtree(staging_dir, ignore_errors=True)
@@ -137,6 +166,8 @@ def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
             )
         shutil.copytree(built, staging_dir)
         _overlay_managed_media_files(staging_dir, media_tools_dir)
+        if release_trust_dir is not None:
+            _overlay_release_trust_files(staging_dir, release_trust_dir)
 
     staging_dir.replace(output_dir)
     executable = _runtime_executable(output_dir)
@@ -159,8 +190,20 @@ def main() -> int:
         type=Path,
         default=_repository_root() / "build" / "managed-media-tools",
     )
+    parser.add_argument(
+        "--release-trust-dir",
+        type=Path,
+        help=(
+            "Prepared release trust directory. Omit it for trust-free preview/source "
+            "builds that must keep updates disabled."
+        ),
+    )
     arguments = parser.parse_args()
-    executable = build_runtime(arguments.output_dir, arguments.media_tools_dir)
+    executable = build_runtime(
+        arguments.output_dir,
+        arguments.media_tools_dir,
+        arguments.release_trust_dir,
+    )
     print(executable)
     return 0
 
