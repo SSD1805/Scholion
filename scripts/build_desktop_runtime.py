@@ -8,6 +8,7 @@ import tempfile
 from pathlib import Path
 
 from scholion.supply_chain.release_trust_inputs import (
+    install_prepared_release_trust_inputs,
     verify_prepared_release_trust_inputs,
 )
 
@@ -52,24 +53,6 @@ def _overlay_managed_media_files(runtime_dir: Path, media_tools_dir: Path) -> No
     destination.mkdir()
     for source in inputs:
         shutil.copy2(source, destination / source.name)
-
-
-def _overlay_release_trust_files(runtime_dir: Path, trust_inputs_dir: Path) -> None:
-    """Copy reviewed trust bytes only after their preparation evidence re-verifies."""
-    prepared = verify_prepared_release_trust_inputs(trust_inputs_dir)
-    internal = runtime_dir / "_internal"
-    if not internal.is_dir():
-        raise RuntimeError("PyInstaller runtime internal directory is missing")
-
-    model_destination = internal / "scholion" / "supply_chain" / "model-trust.json"
-    model_destination.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(prepared.model_trust, model_destination)
-
-    public_destination = runtime_dir / "release-trust"
-    shutil.rmtree(public_destination, ignore_errors=True)
-    public_destination.mkdir()
-    shutil.copy2(prepared.update_keys, public_destination / prepared.update_keys.name)
-    shutil.copy2(prepared.evidence, public_destination / prepared.evidence.name)
 
 
 def _pyinstaller_arguments(
@@ -167,7 +150,7 @@ def build_runtime(
         shutil.copytree(built, staging_dir)
         _overlay_managed_media_files(staging_dir, media_tools_dir)
         if release_trust_dir is not None:
-            _overlay_release_trust_files(staging_dir, release_trust_dir)
+            install_prepared_release_trust_inputs(staging_dir, release_trust_dir)
 
     staging_dir.replace(output_dir)
     executable = _runtime_executable(output_dir)
