@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sys
 from importlib.resources import files
 from pathlib import Path
 
@@ -29,8 +30,38 @@ def load_model_trust_catalog(path: Path) -> ModelTrustCatalog:
     return parse_model_trust_catalog(payload)
 
 
+def _frozen_catalog_candidate() -> Path | None:
+    if not getattr(sys, "frozen", False):
+        return None
+    raw_root = getattr(sys, "_MEIPASS", None)
+    if not isinstance(raw_root, str) or not raw_root.strip():
+        return None
+    try:
+        root = Path(raw_root).resolve(strict=True)
+        if not root.is_dir():
+            return None
+        candidate = (
+            root / "scholion" / "supply_chain" / _BUNDLED_MODEL_TRUST_CATALOG
+        ).resolve(strict=True)
+    except OSError:
+        return None
+    if not candidate.is_file() or not candidate.is_relative_to(root):
+        return None
+    return candidate
+
+
 def load_bundled_model_trust_catalog() -> ModelTrustCatalog | None:
-    """Load the catalog shipped inside Scholion, if this build intentionally includes one."""
+    """Load the exact model policy shipped by this build, when one is present."""
+    if getattr(sys, "frozen", False):
+        candidate = _frozen_catalog_candidate()
+        if candidate is None:
+            return None
+        try:
+            payload = candidate.read_bytes()
+        except OSError as exc:
+            raise ValueError("bundled model trust catalog is unavailable") from exc
+        return parse_model_trust_catalog(payload)
+
     candidate = files("scholion.supply_chain").joinpath(_BUNDLED_MODEL_TRUST_CATALOG)
     if not candidate.is_file():
         return None
