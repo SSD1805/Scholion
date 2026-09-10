@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import json
 import subprocess
 import sys
@@ -49,9 +48,9 @@ def test_native_update_verifier_sends_exact_bounded_protocol(
     assert request == {
         "algorithm": "ed25519",
         "key_id": "release-2026-a",
-        "payload_base64": base64.b64encode(b"exact signed bytes").decode("ascii"),
+        "payload": list(b"exact signed bytes"),
         "protocol_version": 1,
-        "signature_base64": base64.b64encode(b"s" * 64).decode("ascii"),
+        "signature": list(b"s" * 64),
     }
 
 
