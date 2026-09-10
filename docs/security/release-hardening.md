@@ -21,9 +21,9 @@ The implementation status below is deliberately conservative. Repository mechani
 - unknown-field rejection; and
 - tests for payload tampering, unknown keys, expiry, rollback, channel mismatch, malformed metadata, and conflicting same-sequence metadata.
 
-**Verifier decision frozen for packaging:** Scholion will use exact-pinned **`ed25519-dalek` 3.0.0** in the native Rust host, using strict verification and without `legacy_compatibility` or `hazmat`. The current source-build Cargo graph intentionally does not add that dependency yet because the generated lockfile, bundled production public-key resource, and native activation boundary belong to the packaging milestone. Do not hand-edit Cargo.lock to simulate integration.
+**Verifier decision frozen for the production-trust tranche:** Scholion will use exact-pinned **`ed25519-dalek` 3.0.0** in the native Rust host, using strict verification and without `legacy_compatibility` or `hazmat`. The current source-build Cargo graph intentionally does not add that dependency yet because the generated lockfile, bundled production public-key resource, and native verification boundary belong to the next trust-input tranche. Do not hand-edit Cargo.lock to simulate integration.
 
-**Production gate still required:** create/provision the real public verification material and key-rotation set during packaging. Source/development builds therefore keep update checking fail-closed/off and make no update request.
+**Production gate still required:** create/provision the real public verification material and key-rotation set, then wire the reviewed verifier at the native boundary. Source/development builds therefore keep update checking fail-closed/off and make no update request.
 
 The private signing key is intentionally outside the repository and application. `scripts/build_release_metadata.py` produces deterministic exact payload bytes for an offline signer and can wrap only the resulting public signature. There is no repository tool that accepts or stores a private signing key.
 
@@ -71,7 +71,7 @@ The generator measures bytes. It does not decide that a model is trustworthy.
 
 **Production gate still required:** deliberately review real faster-whisper revisions, licenses, file sets, regression behavior, and generated entries, then commit/bundle that catalog in a signed release. Development cache contents, guessed hashes, `main`, and `HEAD` are not acceptable trust inputs.
 
-The exact review sequence is frozen in **[Production trust inputs](production-trust-inputs.md)** so packaging does not invent model policy ad hoc.
+The exact review sequence is frozen in **[Production trust inputs](production-trust-inputs.md)** so the release process does not invent model policy ad hoc.
 
 See **[Signed update and model trust channel](update-model-trust.md)** for schemas and threat-model detail.
 
@@ -97,6 +97,8 @@ A new release sequence must not be reused for different signed content. Key rota
 
 Scholion already treats media parsing as hostile input in several concrete ways:
 
+- packaged Windows/macOS runtimes resolve only repository-owned reviewed FFmpeg/FFprobe from the bundled `media-tools` directory rather than ambient host PATH;
+- release qualification binds managed media-tool source/binary identity into deterministic evidence and proves the exact bundled bytes before package acceptance;
 - FFprobe and FFmpeg are invoked without a shell;
 - network protocols are restricted to `file` for media probe/decode;
 - parser/decode calls have explicit timeouts;
@@ -161,21 +163,23 @@ Browser Playwright intentionally swaps in mock clients and is not native evidenc
 
 Issue #114 tracks representative native task-transport qualification. Issue #135 remains the upstream-blocked Linux GTK/GLib dependency gate.
 
-## Current milestone boundary
+## Completed package hardening foundation
 
-Issue #145 is complete: the post-#144 redundancy re-audit, production verifier/key-rotation decision, real-model review procedure, signing-input validation, documentation truth-sync, and final product mark were frozen before packaging began.
+Issue #145 completed the post-#144 redundancy re-audit, production verifier/key-rotation decision, real-model review procedure, signing-input validation, documentation truth-sync, and final product mark before packaging began.
 
-The current milestone is Windows/macOS packaging plus exact-artifact Release Qualification. The repository now has a closed managed desktop-runtime boundary and an unsigned preview-package qualification path, but `release_ready` remains false until current self-contained FFmpeg/FFprobe, reviewed model/update trust inputs, native activation, OS signing/notarization, and representative-device evidence are present.
+PR #164 then established the Windows/macOS managed frozen-runtime and exact unsigned preview-package boundary with real packaged-media acceptance. PR #166 completed deterministic package provenance and evidence-safe Windows install/uninstall/reinstall qualification while keeping the macOS DMG lifecycle claim honest. PR #167 completed reviewed packaged FFmpeg/FFprobe custody, removed frozen-runtime dependence on ambient host PATH, bound media-tool identity into release evidence/provenance, and preserved exact reviewed macOS media-tool bytes after PyInstaller processing.
 
-## Ordered residual release work after #145
+Those tranches are complete repository/artifact mechanics. They do not make the unsigned preview artifacts public releases. `release_ready` remains false until production update/model trust material, native verification, OS signing/notarization, native activation, and representative-device evidence are present.
+
+## Ordered residual release work
 
 The remaining **MVP release gates** are narrow and concrete:
 
-1. package Windows/macOS with the exact-pinned native verifier and approved public-key set;
-2. review real faster-whisper revisions and bundle the generated catalog;
-3. implement/qualify native package activation with OS signing/notarization;
-4. qualify real packaged devices/offline behavior, including #114; and
-5. release the MVP when those gates pass.
+1. review real faster-whisper revisions and bundle the generated catalog, provision the approved public update-key set, and exact-pin/wire the reviewed native Ed25519 verifier;
+2. sign Windows packages and sign/notarize macOS packages once those production trust inputs are stable;
+3. implement and qualify native update activation so only an already trusted, OS-signed candidate can be executed;
+4. qualify real packaged devices/offline/repair/update behavior, including #114; and
+5. publish the MVP with final checksums, deterministic provenance, SBOM material, signatures, and qualification evidence bound to the same release candidate.
 
 Official Linux binary distribution remains blocked by #135 until a stable/reviewed upstream-supported Tauri stack removes the affected dependency generation.
 
