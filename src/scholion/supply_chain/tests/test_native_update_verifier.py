@@ -29,7 +29,8 @@ def test_native_update_verifier_sends_exact_bounded_protocol(
         return _completed(stdout=b'{"protocol_version":1,"verified":true}')
 
     monkeypatch.setattr(subprocess, "run", fake_run)
-    verifier = NativeUpdateVerifier(Path("/trusted/scholion-native"))
+    executable = Path("/trusted/scholion-native")
+    verifier = NativeUpdateVerifier(executable)
 
     assert verifier.verify(
         key_id="release-2026-a",
@@ -39,7 +40,7 @@ def test_native_update_verifier_sends_exact_bounded_protocol(
     )
 
     assert seen["args"] == [
-        "/trusted/scholion-native",
+        str(executable),
         "--scholion-verify-update-signature",
     ]
     assert seen["check"] is False
