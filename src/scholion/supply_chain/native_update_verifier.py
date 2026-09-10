@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import base64
 import json
 import os
 import subprocess
@@ -37,8 +36,8 @@ class NativeUpdateVerifier:
             "protocol_version": _NATIVE_PROTOCOL_VERSION,
             "key_id": key_id,
             "algorithm": algorithm,
-            "payload_base64": base64.b64encode(payload).decode("ascii"),
-            "signature_base64": base64.b64encode(signature).decode("ascii"),
+            "payload": list(payload),
+            "signature": list(signature),
         }
         encoded = json.dumps(
             request,
