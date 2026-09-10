@@ -64,8 +64,12 @@ def _output_file(directory: Path, name: str) -> Path:
     candidate = directory / name
     if candidate.is_symlink():
         candidate.unlink()
-    elif candidate.exists() and not candidate.is_file():
-        raise ReleaseTrustInputError("prepared trust output path is not a regular file")
+    elif candidate.exists():
+        if not candidate.is_file():
+            raise ReleaseTrustInputError(
+                "prepared trust output path is not a regular file"
+            )
+        candidate.unlink()
     return candidate
 
 
@@ -311,8 +315,10 @@ def install_prepared_release_trust_inputs(
         raise ReleaseTrustInputError("frozen model trust destination escaped the runtime")
     if model_destination.is_symlink():
         model_destination.unlink()
-    elif model_destination.exists() and not model_destination.is_file():
-        raise ReleaseTrustInputError("frozen model trust destination is not a file")
+    elif model_destination.exists():
+        if not model_destination.is_file():
+            raise ReleaseTrustInputError("frozen model trust destination is not a file")
+        model_destination.unlink()
     shutil.copy2(prepared.model_trust, model_destination)
 
     public_destination = runtime / "release-trust"
