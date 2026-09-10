@@ -181,11 +181,7 @@ fn verify_request(catalog: &ValidatedCatalog, request: &VerifyRequest) -> bool {
     {
         return false;
     }
-    let Some(key) = catalog
-        .keys
-        .iter()
-        .find(|key| key.key_id == request.key_id)
-    else {
+    let Some(key) = catalog.keys.iter().find(|key| key.key_id == request.key_id) else {
         return false;
     };
     let Ok(signature) = Signature::try_from(request.signature.as_slice()) else {
@@ -286,20 +282,14 @@ mod tests {
 
     #[test]
     fn catalog_requires_one_current_key_and_strict_lower_hex() {
-        assert!(
-            parse_catalog(&catalog_json("next", "release-test", RFC8032_PUBLIC_KEY)).is_none()
-        );
-        assert!(
-            parse_catalog(&catalog_json(
-                "current",
-                "release-test",
-                &RFC8032_PUBLIC_KEY.to_uppercase(),
-            ))
-            .is_none()
-        );
-        assert!(
-            parse_catalog(&catalog_json("current", "Bad Key", RFC8032_PUBLIC_KEY)).is_none()
-        );
+        assert!(parse_catalog(&catalog_json("next", "release-test", RFC8032_PUBLIC_KEY)).is_none());
+        assert!(parse_catalog(&catalog_json(
+            "current",
+            "release-test",
+            &RFC8032_PUBLIC_KEY.to_uppercase(),
+        ))
+        .is_none());
+        assert!(parse_catalog(&catalog_json("current", "Bad Key", RFC8032_PUBLIC_KEY)).is_none());
     }
 
     #[test]
