@@ -3,10 +3,30 @@
 mod backend;
 mod playback;
 mod processing;
+mod update_verify;
 
 use tauri::Manager;
 
+fn maybe_run_update_verifier() -> Option<i32> {
+    let arguments: Vec<_> = std::env::args_os().skip(1).collect();
+    let requests_verifier = arguments
+        .first()
+        .and_then(|argument| argument.to_str())
+        == Some(update_verify::VERIFY_ARGUMENT);
+    if !requests_verifier {
+        return None;
+    }
+    if arguments.len() != 1 {
+        return Some(2);
+    }
+    Some(update_verify::run_cli())
+}
+
 fn main() {
+    if let Some(exit_code) = maybe_run_update_verifier() {
+        std::process::exit(exit_code);
+    }
+
     let playback_sessions = playback::PlaybackSessions::default();
     let playback_protocol = playback_sessions.clone();
 
