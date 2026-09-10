@@ -80,66 +80,78 @@ def _require_exact_keys(
         raise ReleaseTrustInputError(f"{label} has unexpected fields")
 
 
-def _parse_update_key_catalog(payload: bytes) -> tuple[tuple[str, str], ...]:
+def _decode_json_object(payload: bytes, *, label: str) -> dict[str, Any]:
     try:
         document = json.loads(payload.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
-        raise ReleaseTrustInputError(
-            "update key catalog must be valid UTF-8 JSON"
-        ) from exc
+        raise ReleaseTrustInputError(f"{label} must be valid UTF-8 JSON") from exc
     if not isinstance(document, dict):
-        raise ReleaseTrustInputError("update key catalog must be a JSON object")
-    _require_exact_keys(
-        document, {"schema_version", "keys"}, label="update key catalog"
-    )
-    if document.get("schema_version") != _SCHEMA_VERSION:
-        raise ReleaseTrustInputError("unsupported update key catalog schema version")
+        raise ReleaseTrustInputError(f"{label} must be a JSON object")
+    return document
 
-    raw_keys = document.get("keys")
+
+def _parse_update_key_record(raw: object) -> tuple[str, str, str]:
+    if not isinstance(raw, dict):
+        raise ReleaseTrustInputError("update key records must be objects")
+    _require_exact_keys(
+        raw,
+        {"key_id", "algorithm", "public_key_hex", "state"},
+        label="update key record",
+    )
+    key_id = raw.get("key_id")
+    public_key = raw.get("public_key_hex")
+    state = raw.get("state")
+    if not isinstance(key_id, str) or _KEY_ID_RE.fullmatch(key_id) is None:
+        raise ReleaseTrustInputError("update key ID is invalid")
+    if raw.get("algorithm") != "ed25519":
+        raise ReleaseTrustInputError("update key algorithm must be ed25519")
+    if (
+        not isinstance(public_key, str)
+        or _LOWER_HEX_32_RE.fullmatch(public_key) is None
+    ):
+        raise ReleaseTrustInputError(
+            "update public key must be exactly 32 lowercase-hex bytes"
+        )
+    if not isinstance(state, str) or state not in {"current", "next"}:
+        raise ReleaseTrustInputError("update key state must be current or next")
+    return key_id, state, public_key
+
+
+def _validate_update_key_records(raw_keys: object) -> tuple[tuple[str, str], ...]:
     if not isinstance(raw_keys, list) or not 1 <= len(raw_keys) <= 2:
         raise ReleaseTrustInputError("update key catalog must contain one or two keys")
 
     identities: list[tuple[str, str]] = []
     public_keys: set[str] = set()
-    current_count = 0
     for raw in raw_keys:
-        if not isinstance(raw, dict):
-            raise ReleaseTrustInputError("update key records must be objects")
-        _require_exact_keys(
-            raw,
-            {"key_id", "algorithm", "public_key_hex", "state"},
-            label="update key record",
-        )
-        key_id = raw.get("key_id")
-        algorithm = raw.get("algorithm")
-        public_key = raw.get("public_key_hex")
-        state = raw.get("state")
-        if not isinstance(key_id, str) or _KEY_ID_RE.fullmatch(key_id) is None:
-            raise ReleaseTrustInputError("update key ID is invalid")
-        if algorithm != "ed25519":
-            raise ReleaseTrustInputError("update key algorithm must be ed25519")
-        if (
-            not isinstance(public_key, str)
-            or _LOWER_HEX_32_RE.fullmatch(public_key) is None
-        ):
-            raise ReleaseTrustInputError(
-                "update public key must be exactly 32 lowercase-hex bytes"
-            )
-        if state not in {"current", "next"}:
-            raise ReleaseTrustInputError("update key state must be current or next")
+        key_id, state, public_key = _parse_update_key_record(raw)
         if any(existing_id == key_id for existing_id, _ in identities):
             raise ReleaseTrustInputError("update key IDs must be unique")
         if public_key in public_keys:
             raise ReleaseTrustInputError("update public keys must be unique")
-        public_keys.add(public_key)
-        current_count += int(state == "current")
         identities.append((key_id, state))
+        public_keys.add(public_key)
 
-    if current_count != 1:
+    if sum(state == "current" for _, state in identities) != 1:
         raise ReleaseTrustInputError(
             "update key catalog must contain exactly one current key"
         )
     return tuple(identities)
+
+
+def _parse_update_key_catalog(payload: bytes) -> tuple[tuple[str, str], ...]:
+    document = _decode_json_object(payload, label="update key catalog")
+    _require_exact_keys(
+        document, {"schema_version", "keys"}, label="update key catalog"
+    )
+    schema_version = document.get("schema_version")
+    if (
+        not isinstance(schema_version, int)
+        or isinstance(schema_version, bool)
+        or schema_version != _SCHEMA_VERSION
+    ):
+        raise ReleaseTrustInputError("unsupported update key catalog schema version")
+    return _validate_update_key_records(document.get("keys"))
 
 
 def _parse_model_catalog(payload: bytes) -> ModelTrustCatalog:
