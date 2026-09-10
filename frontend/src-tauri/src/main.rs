@@ -9,9 +9,7 @@ use tauri::Manager;
 
 fn maybe_run_update_verifier() -> Option<i32> {
     let arguments: Vec<_> = std::env::args_os().skip(1).collect();
-    let requests_verifier = arguments
-        .first()
-        .and_then(|argument| argument.to_str())
+    let requests_verifier = arguments.first().and_then(|argument| argument.to_str())
         == Some(update_verify::VERIFY_ARGUMENT);
     if !requests_verifier {
         return None;
