@@ -7,6 +7,7 @@ use std::sync::Mutex;
 use tauri::{AppHandle, Manager, State};
 
 const MAX_REQUEST_BYTES: usize = 128 * 1024;
+const NATIVE_UPDATE_VERIFIER_ENV: &str = "SCHOLION_NATIVE_UPDATE_VERIFIER";
 
 // Each one-shot Python bridge process composes application services that may open the
 // same DuckDB-backed projections. DuckDB does not support overlapping writer processes
@@ -59,6 +60,19 @@ enum RuntimeKind {
 pub(crate) struct DesktopRuntime {
     executable: PathBuf,
     kind: RuntimeKind,
+    native_update_verifier: Option<PathBuf>,
+}
+
+fn packaged_native_update_verifier(resource_dir: &Path) -> Option<PathBuf> {
+    let current_executable = env::current_exe().ok()?;
+    let expected_catalog = crate::update_verify::catalog_path_for_executable(&current_executable)?;
+    let resource_catalog = resource_dir.join("update-keys.json");
+    if expected_catalog != resource_catalog
+        || !crate::update_verify::catalog_is_valid(&resource_catalog)
+    {
+        return None;
+    }
+    Some(current_executable)
 }
 
 impl DesktopRuntime {
@@ -69,6 +83,7 @@ impl DesktopRuntime {
                     return Ok(Self {
                         executable: PathBuf::from(value),
                         kind: RuntimeKind::Frozen,
+                        native_update_verifier: None,
                     });
                 }
             }
@@ -78,6 +93,7 @@ impl DesktopRuntime {
                     return Ok(Self {
                         executable: PathBuf::from(value),
                         kind: RuntimeKind::Python,
+                        native_update_verifier: None,
                     });
                 }
             }
@@ -95,6 +111,7 @@ impl DesktopRuntime {
                     PathBuf::from("python")
                 },
                 kind: RuntimeKind::Python,
+                native_update_verifier: None,
             });
         }
 
@@ -111,9 +128,11 @@ impl DesktopRuntime {
         if !candidate.is_file() {
             return Err("Scholion's packaged local runtime is missing".to_string());
         }
+        let native_update_verifier = packaged_native_update_verifier(&resource_dir);
         Ok(Self {
             executable: candidate,
             kind: RuntimeKind::Frozen,
+            native_update_verifier,
         })
     }
 
@@ -125,6 +144,12 @@ impl DesktopRuntime {
             }
             RuntimeKind::Frozen => {
                 command.arg(mode.frozen_argument());
+            }
+        }
+        command.env_remove(NATIVE_UPDATE_VERIFIER_ENV);
+        if let RuntimeMode::UpdateBridge = mode {
+            if let Some(verifier) = &self.native_update_verifier {
+                command.env(NATIVE_UPDATE_VERIFIER_ENV, verifier);
             }
         }
         command
@@ -279,4 +304,49 @@ pub async fn update_request(
     runtime: State<'_, DesktopRuntime>,
 ) -> Result<Value, String> {
     request_mode(RuntimeMode::UpdateBridge, request, runtime.inner().clone()).await
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::ffi::OsStr;
+
+    fn runtime(verifier: Option<&str>) -> DesktopRuntime {
+        DesktopRuntime {
+            executable: PathBuf::from("runtime"),
+            kind: RuntimeKind::Frozen,
+            native_update_verifier: verifier.map(PathBuf::from),
+        }
+    }
+
+    #[test]
+    fn update_command_receives_only_configured_native_verifier() {
+        let command = runtime(Some("trusted-native")).command(RuntimeMode::UpdateBridge);
+        let verifier = command
+            .get_envs()
+            .find(|(name, _)| *name == OsStr::new(NATIVE_UPDATE_VERIFIER_ENV))
+            .and_then(|(_, value)| value);
+        assert_eq!(verifier, Some(OsStr::new("trusted-native")));
+    }
+
+    #[test]
+    fn commands_scrub_ambient_native_verifier_when_not_authorized() {
+        let command = runtime(None).command(RuntimeMode::UpdateBridge);
+        let verifier = command
+            .get_envs()
+            .find(|(name, _)| *name == OsStr::new(NATIVE_UPDATE_VERIFIER_ENV));
+        assert_eq!(
+            verifier,
+            Some((OsStr::new(NATIVE_UPDATE_VERIFIER_ENV), None))
+        );
+
+        let command = runtime(Some("trusted-native")).command(RuntimeMode::DesktopBridge);
+        let verifier = command
+            .get_envs()
+            .find(|(name, _)| *name == OsStr::new(NATIVE_UPDATE_VERIFIER_ENV));
+        assert_eq!(
+            verifier,
+            Some((OsStr::new(NATIVE_UPDATE_VERIFIER_ENV), None))
+        );
+    }
 }
