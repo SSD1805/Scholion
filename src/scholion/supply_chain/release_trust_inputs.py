@@ -17,6 +17,7 @@ _MODEL_TRUST_CATALOG_NAME = "model-trust.json"
 _EVIDENCE_NAME = "release-trust-inputs.json"
 _MAX_UPDATE_KEY_CATALOG_BYTES = 32 * 1024
 _MAX_MODEL_TRUST_CATALOG_BYTES = 2 * 1024 * 1024
+_MAX_EVIDENCE_BYTES = 256 * 1024
 _KEY_ID_RE = re.compile(r"^[a-z0-9._-]{1,64}$")
 _LOWER_HEX_32_RE = re.compile(r"^[0-9a-f]{64}$")
 
@@ -44,6 +45,28 @@ def _read_bounded(path: Path, *, maximum: int, label: str) -> bytes:
         return resolved.read_bytes()
     except OSError as exc:
         raise ReleaseTrustInputError(f"{label} is unavailable") from exc
+
+
+def _prepared_payload(root: Path, name: str, *, maximum: int, label: str) -> bytes:
+    candidate = root / name
+    if candidate.is_symlink():
+        raise ReleaseTrustInputError(f"{label} must not be a symlink")
+    try:
+        resolved = candidate.resolve(strict=True)
+    except OSError as exc:
+        raise ReleaseTrustInputError(f"{label} is unavailable") from exc
+    if not resolved.is_relative_to(root):
+        raise ReleaseTrustInputError(f"{label} escaped the prepared trust directory")
+    return _read_bounded(resolved, maximum=maximum, label=label)
+
+
+def _output_file(directory: Path, name: str) -> Path:
+    candidate = directory / name
+    if candidate.is_symlink():
+        candidate.unlink()
+    elif candidate.exists() and not candidate.is_file():
+        raise ReleaseTrustInputError("prepared trust output path is not a regular file")
+    return candidate
 
 
 def _require_exact_keys(
@@ -192,9 +215,11 @@ def prepare_release_trust_inputs(
 
     destination = output_dir.expanduser().resolve(strict=False)
     destination.mkdir(parents=True, exist_ok=True)
-    update_output = destination / _UPDATE_KEY_CATALOG_NAME
-    model_output = destination / _MODEL_TRUST_CATALOG_NAME
-    evidence_output = destination / _EVIDENCE_NAME
+    if not destination.is_dir():
+        raise ReleaseTrustInputError("prepared trust output must be a directory")
+    update_output = _output_file(destination, _UPDATE_KEY_CATALOG_NAME)
+    model_output = _output_file(destination, _MODEL_TRUST_CATALOG_NAME)
+    evidence_output = _output_file(destination, _EVIDENCE_NAME)
     update_output.write_bytes(update_payload)
     model_output.write_bytes(model_payload)
     evidence_output.write_text(
@@ -211,20 +236,33 @@ def prepare_release_trust_inputs(
 
 def verify_prepared_release_trust_inputs(directory: Path) -> PreparedReleaseTrustInputs:
     """Re-verify prepared trust bytes against their deterministic evidence."""
-    resolved = directory.expanduser().resolve(strict=True)
+    try:
+        resolved = directory.expanduser().resolve(strict=True)
+    except OSError as exc:
+        raise ReleaseTrustInputError("prepared trust directory is unavailable") from exc
+    if not resolved.is_dir():
+        raise ReleaseTrustInputError("prepared trust directory must be a directory")
+
     update_path = resolved / _UPDATE_KEY_CATALOG_NAME
     model_path = resolved / _MODEL_TRUST_CATALOG_NAME
     evidence_path = resolved / _EVIDENCE_NAME
-
-    update_payload = _read_bounded(
-        update_path,
+    update_payload = _prepared_payload(
+        resolved,
+        _UPDATE_KEY_CATALOG_NAME,
         maximum=_MAX_UPDATE_KEY_CATALOG_BYTES,
         label="prepared update key catalog",
     )
-    model_payload = _read_bounded(
-        model_path,
+    model_payload = _prepared_payload(
+        resolved,
+        _MODEL_TRUST_CATALOG_NAME,
         maximum=_MAX_MODEL_TRUST_CATALOG_BYTES,
         label="prepared model trust catalog",
+    )
+    evidence_payload = _prepared_payload(
+        resolved,
+        _EVIDENCE_NAME,
+        maximum=_MAX_EVIDENCE_BYTES,
+        label="release trust evidence",
     )
     key_identities = _parse_update_key_catalog(update_payload)
     catalog = _parse_model_catalog(model_payload)
@@ -235,8 +273,8 @@ def verify_prepared_release_trust_inputs(directory: Path) -> PreparedReleaseTrus
         catalog=catalog,
     )
     try:
-        observed = json.loads(evidence_path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
+        observed = json.loads(evidence_payload.decode("utf-8"))
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ReleaseTrustInputError(
             "release trust evidence is unavailable or invalid"
         ) from exc
@@ -265,6 +303,16 @@ def install_prepared_release_trust_inputs(
 
     model_destination = internal / "scholion" / "supply_chain" / _MODEL_TRUST_CATALOG_NAME
     model_destination.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        model_parent = model_destination.parent.resolve(strict=True)
+    except OSError as exc:
+        raise ReleaseTrustInputError("frozen model trust destination is unavailable") from exc
+    if not model_parent.is_relative_to(runtime):
+        raise ReleaseTrustInputError("frozen model trust destination escaped the runtime")
+    if model_destination.is_symlink():
+        model_destination.unlink()
+    elif model_destination.exists() and not model_destination.is_file():
+        raise ReleaseTrustInputError("frozen model trust destination is not a file")
     shutil.copy2(prepared.model_trust, model_destination)
 
     public_destination = runtime / "release-trust"
