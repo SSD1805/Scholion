@@ -191,8 +191,7 @@ def prepare_release_trust_inputs(
     )
 
     destination = output_dir.expanduser().resolve(strict=False)
-    shutil.rmtree(destination, ignore_errors=True)
-    destination.mkdir(parents=True)
+    destination.mkdir(parents=True, exist_ok=True)
     update_output = destination / _UPDATE_KEY_CATALOG_NAME
     model_output = destination / _MODEL_TRUST_CATALOG_NAME
     evidence_output = destination / _EVIDENCE_NAME
@@ -251,3 +250,28 @@ def verify_prepared_release_trust_inputs(directory: Path) -> PreparedReleaseTrus
         model_trust=model_path,
         evidence=evidence_path,
     )
+
+
+def install_prepared_release_trust_inputs(
+    runtime_dir: Path,
+    prepared_dir: Path,
+) -> None:
+    """Install only verified trust files into their fixed frozen-runtime locations."""
+    runtime = runtime_dir.expanduser().resolve(strict=True)
+    internal = runtime / "_internal"
+    if not runtime.is_dir() or not internal.is_dir():
+        raise ReleaseTrustInputError("frozen runtime layout is unavailable")
+    prepared = verify_prepared_release_trust_inputs(prepared_dir)
+
+    model_destination = internal / "scholion" / "supply_chain" / _MODEL_TRUST_CATALOG_NAME
+    model_destination.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(prepared.model_trust, model_destination)
+
+    public_destination = runtime / "release-trust"
+    if public_destination.is_symlink():
+        public_destination.unlink()
+    else:
+        shutil.rmtree(public_destination, ignore_errors=True)
+    public_destination.mkdir()
+    shutil.copy2(prepared.update_keys, public_destination / _UPDATE_KEY_CATALOG_NAME)
+    shutil.copy2(prepared.evidence, public_destination / _EVIDENCE_NAME)
