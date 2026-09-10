@@ -25,7 +25,6 @@ frontend/dist/
 frontend/playwright-report/
 frontend/test-results/
 frontend/src-tauri/target/
-frontend/src-tauri/resources/runtime/
 
 # Prepared release inputs/evidence (reviewed source policy belongs elsewhere)
 build/release-trust-inputs/
