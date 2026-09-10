@@ -49,8 +49,7 @@ class NativeUpdateVerifier:
             completed = subprocess.run(  # noqa: S603
                 [str(self.executable), _NATIVE_VERIFY_ARGUMENT],
                 input=encoded,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
                 check=False,
                 timeout=_VERIFY_TIMEOUT_SECONDS,
             )
