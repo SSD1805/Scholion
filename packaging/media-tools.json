@@ -1,0 +1,41 @@
+{
+  "schema_version": 1,
+  "version_family": "9.0",
+  "platforms": {
+    "macos-arm64": {
+      "strategy": "source-build",
+      "upstream_repository": "FFmpeg/FFmpeg",
+      "source_url": "https://github.com/FFmpeg/FFmpeg.git",
+      "tag": "n9.0",
+      "tag_object_sha": "5b9252abfe2fda0ccb71ed45cd7a954cc45d2b6f",
+      "commit_sha": "d32b387f2b0a484599d4587d651891f0c63c4238",
+      "license": "LGPL-2.1-or-later",
+      "configure_args": [
+        "--disable-autodetect",
+        "--disable-network",
+        "--disable-debug",
+        "--disable-doc",
+        "--disable-htmlpages",
+        "--disable-manpages",
+        "--disable-podpages",
+        "--disable-txtpages",
+        "--disable-ffplay",
+        "--disable-shared",
+        "--enable-static",
+        "--enable-pic"
+      ]
+    },
+    "windows-x86_64": {
+      "strategy": "pinned-archive",
+      "upstream_repository": "BtbN/FFmpeg-Builds",
+      "release_id": 385119951,
+      "release_tag": "autobuild-2026-09-08-23-15",
+      "asset_id": 551508071,
+      "asset_name": "ffmpeg-n9.0.1-27-g9b0578816c-win64-lgpl-9.0.zip",
+      "asset_url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-08-23-15/ffmpeg-n9.0.1-27-g9b0578816c-win64-lgpl-9.0.zip",
+      "asset_size_bytes": 147038743,
+      "asset_sha256": "ea426b29489671e4af94392ad2d0dc5628aa8afcd7ccbd42b215e93209ced6b8",
+      "license": "LGPL-2.1-or-later"
+    }
+  }
+}

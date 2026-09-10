@@ -46,7 +46,12 @@ def test_enhancer_fails_closed_when_ffmpeg_is_unavailable(
     source = tmp_path / "source.wav"
     _write_wave(source)
     monkeypatch.setattr(
-        "scholion.transcription.enhancement.shutil.which", lambda _: None
+        "scholion.transcription.enhancement.resolve_media_tool",
+        lambda _: (_ for _ in ()).throw(
+            MediaToolUnavailableError(
+                "FFmpeg is required for local speech noise suppression"
+            )
+        ),
     )
 
     with pytest.raises(MediaToolUnavailableError, match="noise suppression"):
@@ -64,7 +69,8 @@ def test_enhancer_applies_fixed_filter_and_preserves_timeline(
     _write_wave(source)
     commands: list[list[str]] = []
     monkeypatch.setattr(
-        "scholion.transcription.enhancement.shutil.which", lambda _: "/usr/bin/ffmpeg"
+        "scholion.transcription.enhancement.resolve_media_tool",
+        lambda _: "/usr/bin/ffmpeg",
     )
 
     def fake_run(command: list[str], **_: object) -> SimpleNamespace:
@@ -110,7 +116,8 @@ def test_enhancer_removes_output_when_timeline_changes(
     source = tmp_path / "source.wav"
     _write_wave(source, frames=160)
     monkeypatch.setattr(
-        "scholion.transcription.enhancement.shutil.which", lambda _: "/usr/bin/ffmpeg"
+        "scholion.transcription.enhancement.resolve_media_tool",
+        lambda _: "/usr/bin/ffmpeg",
     )
 
     def fake_run(command: list[str], **_: object) -> SimpleNamespace:
@@ -137,7 +144,8 @@ def test_enhancer_cleans_partial_output_when_filter_fails(
     source = tmp_path / "source.wav"
     _write_wave(source)
     monkeypatch.setattr(
-        "scholion.transcription.enhancement.shutil.which", lambda _: "/usr/bin/ffmpeg"
+        "scholion.transcription.enhancement.resolve_media_tool",
+        lambda _: "/usr/bin/ffmpeg",
     )
 
     def fake_run(command: list[str], **_: object) -> SimpleNamespace:
@@ -164,7 +172,8 @@ def test_version_probe_timeout_is_dependency_failure(
     source = tmp_path / "source.wav"
     _write_wave(source)
     monkeypatch.setattr(
-        "scholion.transcription.enhancement.shutil.which", lambda _: "/usr/bin/ffmpeg"
+        "scholion.transcription.enhancement.resolve_media_tool",
+        lambda _: "/usr/bin/ffmpeg",
     )
 
     def fake_run(command: list[str], **_: object) -> SimpleNamespace:
