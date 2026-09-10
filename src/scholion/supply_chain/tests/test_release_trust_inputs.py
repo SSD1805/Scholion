@@ -9,6 +9,7 @@ import pytest
 from scholion.supply_chain import release_trust_inputs
 from scholion.supply_chain.release_trust_inputs import (
     ReleaseTrustInputError,
+    install_prepared_release_trust_inputs,
     prepare_release_trust_inputs,
     verify_prepared_release_trust_inputs,
 )
@@ -120,12 +121,12 @@ def test_prepare_preserves_exact_bytes_and_emits_path_free_evidence(
     assert verified == prepared
 
 
-def test_prepare_replaces_stale_output_directory(tmp_path: Path) -> None:
+def test_prepare_leaves_unrelated_output_files_untouched(tmp_path: Path) -> None:
     update_path, model_path, _, _ = _write_inputs(tmp_path)
     output = tmp_path / "prepared"
     output.mkdir()
-    stale = output / "stale-secret.txt"
-    stale.write_text("do not retain", encoding="utf-8")
+    unrelated = output / "unrelated.txt"
+    unrelated.write_text("preserve me", encoding="utf-8")
 
     prepare_release_trust_inputs(
         update_key_catalog=update_path,
@@ -133,7 +134,51 @@ def test_prepare_replaces_stale_output_directory(tmp_path: Path) -> None:
         output_dir=output,
     )
 
-    assert not stale.exists()
+    assert unrelated.read_text(encoding="utf-8") == "preserve me"
+
+
+def test_install_copies_only_verified_allowlist_into_runtime(tmp_path: Path) -> None:
+    update_path, model_path, _, _ = _write_inputs(tmp_path)
+    prepared = prepare_release_trust_inputs(
+        update_key_catalog=update_path,
+        model_trust_catalog=model_path,
+        output_dir=tmp_path / "prepared",
+    )
+    (prepared.directory / "stray.txt").write_text("do not bundle", encoding="utf-8")
+
+    runtime = tmp_path / "runtime"
+    (runtime / "_internal").mkdir(parents=True)
+    release_trust = runtime / "release-trust"
+    release_trust.mkdir()
+    (release_trust / "stale.txt").write_text("remove me", encoding="utf-8")
+
+    install_prepared_release_trust_inputs(runtime, prepared.directory)
+
+    assert (
+        runtime / "_internal" / "scholion" / "supply_chain" / "model-trust.json"
+    ).read_bytes() == prepared.model_trust.read_bytes()
+    assert (
+        runtime / "release-trust" / "update-keys.json"
+    ).read_bytes() == prepared.update_keys.read_bytes()
+    assert (
+        runtime / "release-trust" / "release-trust-inputs.json"
+    ).read_bytes() == prepared.evidence.read_bytes()
+    assert not (runtime / "release-trust" / "stray.txt").exists()
+    assert not (runtime / "release-trust" / "stale.txt").exists()
+
+
+def test_install_rejects_invalid_runtime_layout(tmp_path: Path) -> None:
+    update_path, model_path, _, _ = _write_inputs(tmp_path)
+    prepared = prepare_release_trust_inputs(
+        update_key_catalog=update_path,
+        model_trust_catalog=model_path,
+        output_dir=tmp_path / "prepared",
+    )
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+
+    with pytest.raises(ReleaseTrustInputError, match="runtime layout"):
+        install_prepared_release_trust_inputs(runtime, prepared.directory)
 
 
 @pytest.mark.parametrize(
