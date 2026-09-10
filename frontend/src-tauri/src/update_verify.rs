@@ -153,7 +153,13 @@ pub(crate) fn catalog_is_valid(path: &Path) -> bool {
 pub(crate) fn catalog_path_for_executable(executable: &Path) -> Option<PathBuf> {
     #[cfg(target_os = "windows")]
     {
-        return Some(executable.parent()?.join(UPDATE_KEY_CATALOG_NAME));
+        return Some(
+            executable
+                .parent()?
+                .join("runtime")
+                .join("release-trust")
+                .join(UPDATE_KEY_CATALOG_NAME),
+        );
     }
     #[cfg(target_os = "macos")]
     {
@@ -162,6 +168,8 @@ pub(crate) fn catalog_path_for_executable(executable: &Path) -> Option<PathBuf> 
                 .parent()?
                 .parent()?
                 .join("Resources")
+                .join("runtime")
+                .join("release-trust")
                 .join(UPDATE_KEY_CATALOG_NAME),
         );
     }
