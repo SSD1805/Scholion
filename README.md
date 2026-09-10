@@ -46,9 +46,12 @@ Scholion is pre-production, but the backend and desktop cover a coherent path fr
 | Desktop presentation | Tauri + React Intake, Processing, Library, verified evidence reader/playback, Research, Storage, Updates, transcript tools, and eight semantic-token themes |
 | Accessibility | keyboard/semantic-role tests, axe, non-hover contextual help, explicit light/dark browser schemes, and an eight-skin contrast matrix |
 | Architecture hygiene | capability-blind transport, app-layer service composition, one typed saved-question surface, one Research evidence presentation contract; re-audited after the update-channel tranche |
+| Packaging evidence | exact unsigned Windows NSIS/macOS DMG previews, managed frozen runtime, deterministic provenance/lifecycle evidence, and repository-owned reviewed packaged FFmpeg/FFprobe custody |
 | Quality | Linux/macOS/Windows CI, strict typing, lint/format/security, complexity/dead-code, branch coverage, dependency audit, Playwright/axe, native Rust tests, package verification, targeted mutation qualification |
 
 Model trust has two deliberately separate concepts. Provider/local custody proves what Scholion downloaded and currently observes. Project policy trust proves that the exact repository revision and complete file set match a catalog deliberately approved by the Scholion release. The policy machinery is implemented; the repository intentionally contains no guessed production faster-whisper entries. See **[Signed update and model trust channel](docs/security/update-model-trust.md)** and **[Production trust inputs](docs/security/production-trust-inputs.md)**.
+
+Packaged Windows/macOS preview qualification now owns its FFmpeg/FFprobe dependency rather than trusting ambient host PATH. The managed media-tool inputs are reviewed, exact-byte identity is recorded in release evidence, and frozen Scholion resolves only the bundled `media-tools` directory. This removes a major package-reproducibility ambiguity without pretending the media parser is OS-sandboxed.
 
 ## From recording to useful evidence
 
@@ -88,11 +91,11 @@ Playback follows the same evidence discipline. Python re-verifies the exact cano
 
 Storage follows the same authority split. React requests a plan and renders the backend's effective scopes/actions; a separate fixed Tauri command can invoke only the custody bridge; Python recalculates the plan at execution and refuses stale confirmation tokens. Source and canonical paths are stripped before the response reaches React. See **[Storage and lifecycle controls](docs/storage-lifecycle.md)**.
 
-Updates follow a similarly narrow boundary. React can request only status, check, or stage. The update endpoint and platform artifact remain application policy. Source/development builds without production verification material report **Update checking is off** and make no request. A manual check is network activity, not behavioral telemetry: GitHub/CDN can observe ordinary connection metadata such as IP address/time, but Scholion sends no installation ID, corpus/research content, hardware/model inventory, or product-behavior data. A staged artifact is not called installed until the later native packaging/signing boundary can activate it safely.
+Updates follow a similarly narrow boundary. React can request only status, check, or stage. The update endpoint and platform artifact remain application policy. Source/development builds without production verification material report **Update checking is off** and make no request. A manual check is network activity, not behavioral telemetry: GitHub/CDN can observe ordinary connection metadata such as IP address/time, but Scholion sends no installation ID, corpus/research content, hardware/model inventory, or product-behavior data. A staged artifact is not called installed until the later native signing/activation boundary can execute it safely.
 
 In-app guidance is deliberately re-openable and non-hover-only where popovers are used. It explains contracts where users encounter them but carries no filesystem/database/process authority and does not recreate application policy in React. See **[In-app guidance](docs/in-app-guidance.md)**.
 
-There are still no public signed installers or Releases. Source builds remain the supported user path while the current packaging milestone builds and qualifies unsigned Windows/macOS preview artifacts; those CI artifacts are evidence for release engineering, not yet public distributions.
+There are still no public signed installers or Releases. Source builds remain the supported user path. Hosted release engineering now constructs and qualifies exact unsigned Windows/macOS preview artifacts with managed runtime, deterministic provenance/lifecycle evidence, and repository-owned packaged FFmpeg/FFprobe, but those CI artifacts are not yet production-signed distributions or representative-device evidence.
 
 ## Themes and accessibility
 
@@ -209,15 +212,16 @@ Normal qualification includes Ruff, strict mypy, Vulture, Radon, branch coverage
 
 ## Where the project goes next
 
-Research/search, Processing, explicit embedded-track transcription, desktop comprehension/themes, transcript/speaker tools, verified native playback, contextual guidance, desktop lifecycle/retention controls, architecture consolidation, product identity, and the application-side update/model-trust mechanics are complete MVP foundations.
+Research/search, Processing, explicit embedded-track transcription, desktop comprehension/themes, transcript/speaker tools, verified native playback, contextual guidance, desktop lifecycle/retention controls, architecture consolidation, product identity, application-side update/model-trust mechanics, package lifecycle/provenance, and managed packaged FFmpeg/FFprobe custody are complete MVP foundations.
 
-The current sequence is intentionally narrow:
+The remaining first-release sequence is intentionally narrow:
 
-1. **Packaging + artifact qualification:** freeze the managed desktop runtime, build exact Windows/macOS preview packages, qualify those exact bytes with real media, and finish managed native dependencies/first-run/repair/uninstall semantics; official Linux binary packaging remains blocked by #135;
-2. **Production trust + signing:** provision reviewed update keys/verifier, model catalog, current self-contained FFmpeg/FFprobe, native update activation, Windows signing, and macOS signing/notarization;
-3. **Representative release qualification:** real packaged CPU-only/accelerator/Apple/Windows behavior, including #114's remaining native task-transport evidence; and
-4. **MVP release.**
+1. **Production trust inputs:** review and bundle the real faster-whisper model-trust catalog, provision the approved public update-key set, and exact-pin/wire the native Ed25519 verifier;
+2. **OS signing/notarization:** sign Windows package bytes and sign/notarize macOS package bytes after production trust inputs are stable;
+3. **Native update activation:** execute only an already trusted, OS-signed staged candidate while keeping staging distinct from installation until this boundary is qualified;
+4. **Representative release qualification:** prove real packaged CPU-only/accelerator/Apple/Windows behavior, offline/update/repair/lifecycle cases, accessibility/device behavior, and #114's remaining native task-transport evidence; and
+5. **MVP release:** publish the final candidate with checksums, deterministic provenance, SBOM material, signatures, and qualification evidence bound to the same bytes.
 
-Backup/restore + research portability, packaged semantic-model custody, and freeform research notebook/memo features remain valuable **post-MVP** work. They are no longer being treated as reasons to postpone the first useful packaged Scholion build.
+Official Linux binary packaging remains blocked by #135. Backup/restore + research portability, packaged semantic-model custody, and freeform research notebook/memo features remain valuable **post-MVP** work. They are no longer being treated as reasons to postpone the first useful packaged Scholion build.
 
 See **[ROADMAP.md](ROADMAP.md)** for the capability audit and sequencing.

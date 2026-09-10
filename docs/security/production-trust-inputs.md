@@ -1,8 +1,8 @@
 # Production trust inputs
 
-This document freezes the remaining **production inputs** for Scholion's application-update and model-trust channels without pretending that packaging, private-key custody, or reviewed upstream model snapshots already exist.
+This document freezes the remaining **production inputs** for Scholion's application-update and model-trust channels without pretending that private-key custody, reviewed upstream model snapshots, OS signing credentials, or representative-device evidence already exist.
 
-The application-side mechanics are already implemented: exact signed payload bytes, key IDs, expiry, rollback/equivocation protection, stable-channel enforcement, fixed-endpoint manual checking, signed platform selection, exact size/SHA-256 staging, and fail-closed source builds. The work here is about deciding what production releases will plug into those seams.
+The application-side mechanics are already implemented: exact signed payload bytes, key IDs, expiry, rollback/equivocation protection, stable-channel enforcement, fixed-endpoint manual checking, signed platform selection, exact size/SHA-256 staging, and fail-closed source builds. The Windows/macOS packaging foundation, deterministic package provenance/lifecycle qualification, and repository-owned packaged FFmpeg/FFprobe custody are also complete through PRs #164, #166, and #167. The work here is now the next release tranche: provision real production trust material and connect it to the native verification boundary without manufacturing placeholder trust.
 
 ## Application release verifier decision
 
@@ -31,9 +31,9 @@ The project should not add a second updater framework merely to obtain one crypt
 
 ### When the dependency is added
 
-The Cargo dependency and lockfile change belong to the **packaging milestone**, together with the actual bundled public-key resource and native activation boundary. Until those assets exist, source/development builds remain `Updates off` and perform no update request.
+The Cargo dependency and lockfile change belong to the **production-trust tranche**, together with the actual bundled public-key resource and native verification boundary. PR #167 deliberately stopped at managed native-media custody; it did not smuggle placeholder release keys into the package. Until approved public verification material exists, source/development builds remain `Updates off` and perform no update request.
 
-Packaging should pin the reviewed version exactly and rerun:
+The production-trust tranche should pin the reviewed version exactly and rerun:
 
 - `cargo check --locked`;
 - `cargo test --locked`;
@@ -110,21 +110,24 @@ These items cannot be truthfully completed by repository code alone:
 
 - creating and safeguarding the real private release-signing key;
 - deciding which real upstream faster-whisper revisions/licenses are approved after live source review;
-- generating the final public-key resource from that private key;
+- generating/reviewing the final public-key resource from the selected release key;
 - OS signing/notarization credentials; and
 - representative native qualification using the actual packaged key/catalog.
 
 They are release inputs and evidence, not missing application architecture.
 
-## Relationship to packaging
+## Relationship to the completed packaging foundation
 
-Packaging is deliberately the next milestone after pre-packaging cleanup. It will:
+The packaging foundation is no longer the next unknown. PR #164 established exact unsigned Windows/macOS packages and real packaged-runtime acceptance; PR #166 added deterministic release provenance and evidence-safe Windows uninstall/reinstall qualification; PR #167 made packaged FFmpeg/FFprobe repository-owned, reviewable, hash-bound, and independent of ambient host PATH.
 
-- add the reviewed Rust verifier dependency and generated lockfile;
+The next release tranche will:
+
+- exact-pin the reviewed native Ed25519 verifier and generated Cargo lockfile;
 - bundle the approved public-key set;
 - wire native verification into the already-implemented update channel;
-- bundle the reviewed model-trust catalog;
-- activate Tauri installers/bundles and managed runtime dependencies; and
-- qualify the resulting signed artifacts.
+- review and bundle the real faster-whisper model-trust catalog; and
+- qualify those production trust inputs without weakening source-build fail-closed behavior.
 
-Until then, the safe behavior remains simple: **no production verifier means no update network request**.
+After that, Windows signing and macOS signing/notarization should cover the production-shaped package bytes before native update activation is allowed to execute an installer. Representative-device qualification follows the signed/native activation boundary, then final release publication can bind checksums, provenance, SBOM material, signatures, and device evidence to the same candidate.
+
+Until production public verification material is present, the safe behavior remains simple: **no production verifier means no update network request**.

@@ -39,6 +39,8 @@ You do **not** need to understand CUDA, DuckDB, SQLite, BM25, model revisions, s
 | Understand an unfamiliar screen | keeps re-openable, keyboard/touch-accessible contextual help in the app instead of relying on hover-only tips |
 | Change appearance | offers Archive, Midnight, Paper, Moss, Plum, Ember, Pride, and Monochrome through one accessible Theme picker |
 
+Packaged Windows/macOS preview qualification now also owns its FFmpeg/FFprobe dependency. Frozen Scholion resolves only the reviewed media tools bundled inside its managed runtime, release evidence records their identity, and packaged acceptance proves those exact bytes rather than inheriting whichever FFmpeg happens to be installed on the host. This is a release-engineering/security boundary, not something an ordinary user needs to configure.
+
 ### Model trust in plain language
 
 Model installation is explicit. Scholion records the immutable provider revision it received, keeps that managed state local, and revalidates the snapshot before using it.
@@ -53,7 +55,7 @@ See **[Signed update and model trust channel](security/update-model-trust.md)** 
 
 Scholion's update UI is manual. It distinguishes Off, Never checked, Checking, Up to date, Trusted update available, Staging/Staged, and bounded failure. Signed metadata must pass key/signature, publication/expiry, stable-channel, platform, anti-rollback, and equivocation checks before it can authorize an artifact. A downloaded artifact must then match the signed byte count and SHA-256 exactly.
 
-A staged package is **not installed**. Native activation plus Windows/macOS signing/notarization belongs to the later packaging milestone.
+A staged package is **not installed**. Production public verification material, native verification, Windows/macOS signing/notarization, and native activation remain separate release gates.
 
 An update check is network activity, but it is not behavioral telemetry. GitHub/CDN can observe ordinary connection metadata such as IP address and request time. Scholion does not send an installation ID, corpus/research content, hardware/model inventory, or product-behavior data.
 
@@ -122,12 +124,16 @@ The architecture/redundancy audit remains closed after a post-#144 re-audit. The
 
 ## What comes next
 
-The Scholion identity migration, application-side update/model-trust mechanics, and pre-packaging milestone #145 are complete. The current milestone is packaging and exact-artifact qualification:
+The Scholion identity migration, application-side update/model-trust mechanics, pre-packaging milestone #145, Windows/macOS package foundation, deterministic package lifecycle/provenance, and managed packaged FFmpeg/FFprobe custody are complete.
 
-1. freeze/package the managed runtime and native dependencies, build Windows/macOS preview installers, and qualify the exact artifact bytes with real media;
-2. provision production update verification material, reviewed model trust, signing/notarization, native update activation, and representative-device evidence; official Linux binary packaging remains blocked by #135; and
-3. release the MVP when those gates pass.
+The remaining first-release sequence is intentionally narrow:
 
-Backup/restore + selected research portability, packaged semantic custody, and broader research-native features are useful **post-MVP** work. They are not reasons to hold the first packaged Scholion build hostage.
+1. **Production trust inputs:** review and bundle the real faster-whisper model-trust catalog, provision the approved public update-key set, and wire the exact-pinned native Ed25519 verifier;
+2. **OS signing/notarization:** sign Windows package bytes and sign/notarize macOS package bytes once the production trust inputs are stable;
+3. **Native update activation:** execute only an already trusted, OS-signed staged candidate and keep staging distinct from installation until that proof exists;
+4. **Representative release qualification:** exercise real packaged CPU-only/accelerator/Apple/Windows behavior, offline/update/repair/lifecycle cases, accessibility/device behavior, and #114's remaining native task-transport evidence; and
+5. **MVP release:** publish the final candidate with checksums, deterministic provenance, SBOM material, signatures, and qualification evidence bound to the same bytes.
+
+Official Linux binary packaging remains blocked by #135. Backup/restore + selected research portability, packaged semantic custody, and broader research-native features remain useful **post-MVP** work rather than reasons to hold the first Windows/macOS release hostage.
 
 See **[ROADMAP.md](../ROADMAP.md)** for the capability audit and detailed sequencing. Editorial/Mermaid rules live in **[documentation-style.md](documentation-style.md)**.
