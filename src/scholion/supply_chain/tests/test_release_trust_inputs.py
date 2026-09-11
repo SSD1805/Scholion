@@ -322,7 +322,11 @@ def test_prepared_evidence_must_be_valid_json(tmp_path: Path) -> None:
         verify_prepared_release_trust_inputs(prepared.directory)
 
 
-@pytest.mark.parametrize("contents", [b"", b"x" * (32 * 1024 + 1)])
+@pytest.mark.parametrize(
+    "contents",
+    [b"", b"x" * (32 * 1024 + 1)],
+    ids=["empty", "oversized"],
+)
 def test_update_catalog_size_is_bounded(tmp_path: Path, contents: bytes) -> None:
     path = tmp_path / "update-keys.json"
     path.write_bytes(contents)
