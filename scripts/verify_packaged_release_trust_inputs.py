@@ -25,9 +25,7 @@ def verify(runtime: Path, prepared_dir: Path) -> None:
         / "supply_chain"
         / "model-trust.json": prepared.model_trust,
         runtime_dir / "release-trust" / "update-keys.json": prepared.update_keys,
-        runtime_dir
-        / "release-trust"
-        / "release-trust-inputs.json": prepared.evidence,
+        runtime_dir / "release-trust" / "release-trust-inputs.json": prepared.evidence,
     }
     for packaged, source in expected.items():
         try:
