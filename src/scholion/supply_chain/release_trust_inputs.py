@@ -317,14 +317,20 @@ def install_prepared_release_trust_inputs(
         raise ReleaseTrustInputError("frozen runtime layout is unavailable")
     prepared = verify_prepared_release_trust_inputs(prepared_dir)
 
-    model_destination = internal / "scholion" / "supply_chain" / _MODEL_TRUST_CATALOG_NAME
+    model_destination = (
+        internal / "scholion" / "supply_chain" / _MODEL_TRUST_CATALOG_NAME
+    )
     model_destination.parent.mkdir(parents=True, exist_ok=True)
     try:
         model_parent = model_destination.parent.resolve(strict=True)
     except OSError as exc:
-        raise ReleaseTrustInputError("frozen model trust destination is unavailable") from exc
+        raise ReleaseTrustInputError(
+            "frozen model trust destination is unavailable"
+        ) from exc
     if not model_parent.is_relative_to(runtime):
-        raise ReleaseTrustInputError("frozen model trust destination escaped the runtime")
+        raise ReleaseTrustInputError(
+            "frozen model trust destination escaped the runtime"
+        )
     if model_destination.is_symlink():
         model_destination.unlink()
     elif model_destination.exists():
