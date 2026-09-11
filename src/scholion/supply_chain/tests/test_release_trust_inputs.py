@@ -14,9 +14,7 @@ from scholion.supply_chain.release_trust_inputs import (
     verify_prepared_release_trust_inputs,
 )
 
-_RFC8032_PUBLIC_KEY = (
-    "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
-)
+_RFC8032_PUBLIC_KEY = "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
 _OTHER_PUBLIC_KEY = "01" * 32
 
 
@@ -106,12 +104,14 @@ def test_prepare_preserves_exact_bytes_and_emits_path_free_evidence(
     evidence_bytes = prepared.evidence.read_bytes()
     evidence = json.loads(evidence_bytes)
     assert str(tmp_path) not in evidence_bytes.decode("utf-8")
-    assert evidence["inputs"]["update_keys"]["sha256"] == hashlib.sha256(
-        update_payload
-    ).hexdigest()
-    assert evidence["inputs"]["model_trust"]["sha256"] == hashlib.sha256(
-        model_payload
-    ).hexdigest()
+    assert (
+        evidence["inputs"]["update_keys"]["sha256"]
+        == hashlib.sha256(update_payload).hexdigest()
+    )
+    assert (
+        evidence["inputs"]["model_trust"]["sha256"]
+        == hashlib.sha256(model_payload).hexdigest()
+    )
     assert evidence["inputs"]["update_keys"]["keys"] == [
         {"key_id": "release-2026-a", "state": "current"}
     ]
