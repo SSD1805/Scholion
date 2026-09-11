@@ -62,11 +62,13 @@ def load_bundled_model_trust_catalog() -> ModelTrustCatalog | None:
             raise ValueError("bundled model trust catalog is unavailable") from exc
         return parse_model_trust_catalog(payload)
 
-    candidate = files("scholion.supply_chain").joinpath(_BUNDLED_MODEL_TRUST_CATALOG)
-    if not candidate.is_file():
+    resource_candidate = files("scholion.supply_chain").joinpath(
+        _BUNDLED_MODEL_TRUST_CATALOG
+    )
+    if not resource_candidate.is_file():
         return None
     try:
-        payload = candidate.read_bytes()
+        payload = resource_candidate.read_bytes()
     except OSError as exc:
         raise ValueError("bundled model trust catalog is unavailable") from exc
     return parse_model_trust_catalog(payload)
