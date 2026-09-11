@@ -107,7 +107,9 @@ def test_frozen_loader_uses_only_meipass_catalog(
     monkeypatch.setattr(
         catalog_loader,
         "files",
-        lambda _package: (_ for _ in ()).throw(AssertionError("resource fallback used")),
+        lambda _package: (_ for _ in ()).throw(
+            AssertionError("resource fallback used")
+        ),
     )
 
     catalog = catalog_loader.load_bundled_model_trust_catalog()
@@ -142,7 +144,9 @@ def test_frozen_loader_returns_none_without_valid_meipass(
     assert catalog_loader.load_bundled_model_trust_catalog() is None
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation is not reliable in CI")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="symlink creation is not reliable in CI"
+)
 def test_frozen_loader_rejects_catalog_symlink_escape(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
