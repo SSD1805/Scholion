@@ -65,7 +65,9 @@ def _write_inputs(root: Path) -> tuple[Path, Path]:
     return update, model
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation is not reliable in CI")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="symlink creation is not reliable in CI"
+)
 def test_prepare_unlinks_preexisting_output_symlink(tmp_path: Path) -> None:
     update, model = _write_inputs(tmp_path)
     output = tmp_path / "prepared"
@@ -85,7 +87,9 @@ def test_prepare_unlinks_preexisting_output_symlink(tmp_path: Path) -> None:
     assert prepared.update_keys.read_bytes() == update.read_bytes()
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation is not reliable in CI")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="symlink creation is not reliable in CI"
+)
 def test_prepared_verifier_rejects_input_symlink(tmp_path: Path) -> None:
     update, model = _write_inputs(tmp_path)
     prepared = prepare_release_trust_inputs(
@@ -102,7 +106,9 @@ def test_prepared_verifier_rejects_input_symlink(tmp_path: Path) -> None:
         verify_prepared_release_trust_inputs(prepared.directory)
 
 
-@pytest.mark.skipif(sys.platform == "win32", reason="symlink creation is not reliable in CI")
+@pytest.mark.skipif(
+    sys.platform == "win32", reason="symlink creation is not reliable in CI"
+)
 def test_install_rejects_model_destination_parent_escape(tmp_path: Path) -> None:
     update, model = _write_inputs(tmp_path)
     prepared = prepare_release_trust_inputs(
