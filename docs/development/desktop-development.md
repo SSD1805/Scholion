@@ -98,7 +98,7 @@ frontend or work on presentation/interactions.
 macOS/Linux shell:
 
 ```bash
-git clone https://github.com/SSD1805/Scholion.git
+git clone https://github.com/raccoon-compile/Scholion.git
 cd Scholion/frontend
 npm ci
 npm run doctor:desktop -- --mode=mock
@@ -108,7 +108,7 @@ npm run dev:mock
 Windows PowerShell:
 
 ```powershell
-git clone https://github.com/SSD1805/Scholion.git
+git clone https://github.com/raccoon-compile/Scholion.git
 Set-Location Scholion\frontend
 npm ci
 npm run doctor:desktop -- --mode=mock
