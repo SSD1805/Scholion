@@ -72,11 +72,11 @@ After signature verification, the payload is:
   "version": "1.0.0",
   "published_at": "2026-08-24T15:00:00Z",
   "expires_at": "2026-08-31T15:00:00Z",
-  "release_notes_url": "https://github.com/SSD1805/Scholion/releases/tag/v1.0.0",
+  "release_notes_url": "https://github.com/raccoon-compile/Scholion/releases/tag/v1.0.0",
   "artifacts": [
     {
       "platform": "windows-x86_64",
-      "url": "https://github.com/SSD1805/Scholion/releases/download/v1.0.0/scholion.exe",
+      "url": "https://github.com/raccoon-compile/Scholion/releases/download/v1.0.0/scholion.exe",
       "size_bytes": 123,
       "sha256": "<64 lowercase hexadecimal characters>"
     }
@@ -86,7 +86,7 @@ After signature verification, the payload is:
 
 The fixed first-release metadata location is:
 
-`https://github.com/SSD1805/Scholion/releases/latest/download/scholion-update.json`
+`https://github.com/raccoon-compile/Scholion/releases/latest/download/scholion-update.json`
 
 That mutable transport location is **not** the trust root. A compromised/misconfigured host can deny availability or serve garbage, but a payload cannot authorize an update unless it passes the independent signature and local policy checks.
 

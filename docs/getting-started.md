@@ -19,7 +19,7 @@ The repository bootstrap installs Scholion's pinned `uv` into `.tools/uv` and us
 ## Frontend-only mock path
 
 ```bash
-git clone https://github.com/SSD1805/Scholion.git
+git clone https://github.com/raccoon-compile/Scholion.git
 cd Scholion/frontend
 npm ci
 npm run doctor:desktop -- --mode=mock

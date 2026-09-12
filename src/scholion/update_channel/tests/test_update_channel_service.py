@@ -106,11 +106,11 @@ def _payload(
         "version": version,
         "published_at": (_NOW - timedelta(hours=1)).isoformat().replace("+00:00", "Z"),
         "expires_at": (_NOW + timedelta(days=7)).isoformat().replace("+00:00", "Z"),
-        "release_notes_url": "https://github.com/SSD1805/Scholion/releases/tag/v0.2.0",
+        "release_notes_url": "https://github.com/raccoon-compile/Scholion/releases/tag/v0.2.0",
         "artifacts": [
             {
                 "platform": platform_id,
-                "url": "https://github.com/SSD1805/Scholion/releases/download/v0.2.0/app.bin",
+                "url": "https://github.com/raccoon-compile/Scholion/releases/download/v0.2.0/app.bin",
                 "size_bytes": 42,
                 "sha256": "a" * 64,
             }
@@ -277,7 +277,7 @@ def test_stage_reverifies_cached_manifest_and_uses_only_signed_artifact_data(
     assert verifier.calls == 2
     assert transport.stage_calls == [
         {
-            "url": "https://github.com/SSD1805/Scholion/releases/download/v0.2.0/app.bin",
+            "url": "https://github.com/raccoon-compile/Scholion/releases/download/v0.2.0/app.bin",
             "destination": tmp_path
             / "cache"
             / "updates"

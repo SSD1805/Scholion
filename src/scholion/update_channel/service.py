@@ -21,9 +21,7 @@ from scholion.supply_chain.update_manifest import (
     verify_signed_update_manifest,
 )
 
-FIXED_UPDATE_MANIFEST_URL = (
-    "https://github.com/SSD1805/Scholion/releases/latest/download/scholion-update.json"
-)
+FIXED_UPDATE_MANIFEST_URL = "https://github.com/raccoon-compile/Scholion/releases/latest/download/scholion-update.json"
 _STATE_SCHEMA_VERSION = 1
 _MAX_MANIFEST_BYTES = 64 * 1024
 _HTTP_TIMEOUT_SECONDS = 12.0
