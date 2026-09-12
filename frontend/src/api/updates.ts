@@ -96,7 +96,7 @@ class MockUpdateClient implements UpdateClient {
       this.mode === "available"
         ? mockStatus("trusted_update_available", {
             release_notes_url:
-              "https://github.com/SSD1805/Scholion/releases/tag/v0.2.0",
+              "https://github.com/raccoon-compile/Scholion/releases/tag/v0.2.0",
             download_size_bytes: 48_234_496,
           })
         : mockStatus("up_to_date");
