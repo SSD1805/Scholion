@@ -28,7 +28,7 @@ def _artifact(
     return ReleaseArtifactInput(
         platform=platform,
         path=path,
-        url=f"https://github.com/SSD1805/Scholion/releases/download/v1.0.0/{name}",
+        url=f"https://github.com/raccoon-compile/Scholion/releases/download/v1.0.0/{name}",
     )
 
 
@@ -42,7 +42,7 @@ def test_payload_is_deterministic_sorted_and_runtime_parseable(tmp_path: Path) -
         version="1.0.0",
         published_at=_NOW,
         expires_at=_NOW + timedelta(days=7),
-        release_notes_url="https://github.com/SSD1805/Scholion/releases/tag/v1.0.0",
+        release_notes_url="https://github.com/raccoon-compile/Scholion/releases/tag/v1.0.0",
         artifacts=(windows, macos),
     )
     second = build_update_payload_bytes(
@@ -51,7 +51,7 @@ def test_payload_is_deterministic_sorted_and_runtime_parseable(tmp_path: Path) -
         version="1.0.0",
         published_at=_NOW,
         expires_at=_NOW + timedelta(days=7),
-        release_notes_url="https://github.com/SSD1805/Scholion/releases/tag/v1.0.0",
+        release_notes_url="https://github.com/raccoon-compile/Scholion/releases/tag/v1.0.0",
         artifacts=(macos, windows),
     )
 
