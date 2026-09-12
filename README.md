@@ -110,7 +110,7 @@ Read **[Desktop themes and accessibility](docs/development/desktop-accessibility
 The supported development/source path uses Python 3.12 and Scholion's repository-local bootstrap. A system-wide `uv` installation is not required:
 
 ```bash
-git clone https://github.com/SSD1805/Scholion.git
+git clone https://github.com/raccoon-compile/Scholion.git
 cd Scholion
 python3.12 scripts/bootstrap_python.py
 source .venv/bin/activate
