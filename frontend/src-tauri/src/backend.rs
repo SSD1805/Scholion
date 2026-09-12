@@ -66,7 +66,10 @@ pub(crate) struct DesktopRuntime {
 fn packaged_native_update_verifier(resource_dir: &Path) -> Option<PathBuf> {
     let current_executable = env::current_exe().ok()?;
     let expected_catalog = crate::update_verify::catalog_path_for_executable(&current_executable)?;
-    let resource_catalog = resource_dir.join("update-keys.json");
+    let resource_catalog = resource_dir
+        .join("runtime")
+        .join("release-trust")
+        .join("update-keys.json");
     if expected_catalog != resource_catalog
         || !crate::update_verify::catalog_is_valid(&resource_catalog)
     {

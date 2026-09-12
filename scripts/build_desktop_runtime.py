@@ -7,6 +7,11 @@ import sys
 import tempfile
 from pathlib import Path
 
+from scholion.supply_chain.release_trust_inputs import (
+    install_prepared_release_trust_inputs,
+    verify_prepared_release_trust_inputs,
+)
+
 _EXPECTED_PYINSTALLER = "6.22.2"
 _RUNTIME_METADATA = (
     "scholion",
@@ -94,7 +99,11 @@ def _pyinstaller_arguments(
     return arguments
 
 
-def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
+def build_runtime(
+    output_dir: Path,
+    media_tools_dir: Path,
+    release_trust_dir: Path | None = None,
+) -> Path:
     try:
         pyinstaller_version = importlib.metadata.version("pyinstaller")
     except importlib.metadata.PackageNotFoundError as exc:
@@ -112,6 +121,9 @@ def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
     output_dir = output_dir.resolve()
     media_tools_dir = media_tools_dir.resolve(strict=True)
     _managed_media_files(media_tools_dir)
+    if release_trust_dir is not None:
+        release_trust_dir = release_trust_dir.resolve(strict=True)
+        verify_prepared_release_trust_inputs(release_trust_dir)
     staging_dir = output_dir.parent / ".runtime-build"
     output_dir.parent.mkdir(parents=True, exist_ok=True)
     shutil.rmtree(staging_dir, ignore_errors=True)
@@ -137,6 +149,8 @@ def build_runtime(output_dir: Path, media_tools_dir: Path) -> Path:
             )
         shutil.copytree(built, staging_dir)
         _overlay_managed_media_files(staging_dir, media_tools_dir)
+        if release_trust_dir is not None:
+            install_prepared_release_trust_inputs(staging_dir, release_trust_dir)
 
     staging_dir.replace(output_dir)
     executable = _runtime_executable(output_dir)
@@ -159,8 +173,20 @@ def main() -> int:
         type=Path,
         default=_repository_root() / "build" / "managed-media-tools",
     )
+    parser.add_argument(
+        "--release-trust-dir",
+        type=Path,
+        help=(
+            "Prepared release trust directory. Omit it for trust-free preview/source "
+            "builds that must keep updates disabled."
+        ),
+    )
     arguments = parser.parse_args()
-    executable = build_runtime(arguments.output_dir, arguments.media_tools_dir)
+    executable = build_runtime(
+        arguments.output_dir,
+        arguments.media_tools_dir,
+        arguments.release_trust_dir,
+    )
     print(executable)
     return 0
 

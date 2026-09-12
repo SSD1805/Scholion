@@ -32,6 +32,16 @@ def main() -> int:
     parser.add_argument("--runner-os", required=True)
     parser.add_argument("--runner-arch", required=True)
     parser.add_argument("--output", type=Path, required=True)
+    parser.add_argument(
+        "--input",
+        action="append",
+        default=[],
+        dest="additional_inputs",
+        help=(
+            "Additional repository-relative reviewed input to bind into provenance. "
+            "Repeat for prepared production trust files."
+        ),
+    )
     arguments = parser.parse_args()
 
     repository_root = arguments.repository_root.resolve(strict=True)
@@ -43,7 +53,7 @@ def main() -> int:
         commit=arguments.commit,
         runner_os=arguments.runner_os,
         runner_arch=arguments.runner_arch,
-        inputs=_DEFAULT_INPUTS,
+        inputs=(*_DEFAULT_INPUTS, *arguments.additional_inputs),
         toolchain=collect_release_toolchain(repository_root),
     )
     arguments.output.parent.mkdir(parents=True, exist_ok=True)

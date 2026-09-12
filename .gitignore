@@ -26,6 +26,9 @@ frontend/playwright-report/
 frontend/test-results/
 frontend/src-tauri/target/
 
+# Prepared release inputs/evidence (reviewed source policy belongs elsewhere)
+build/release-trust-inputs/
+
 # Documentation tooling artifacts
 tools/mermaid/node_modules/
 
