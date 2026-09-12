@@ -22,7 +22,7 @@ from scholion.supply_chain.update_manifest import (
 )
 
 FIXED_UPDATE_MANIFEST_URL = (
-    "https://github.com/SSD1805/Scholion/releases/latest/download/scholion-update.json"
+    "https://github.com/raccoon-compile/Scholion/releases/latest/download/scholion-update.json"
 )
 _STATE_SCHEMA_VERSION = 1
 _MAX_MANIFEST_BYTES = 64 * 1024
